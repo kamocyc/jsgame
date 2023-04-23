@@ -6,5 +6,25 @@
     <script src="./1.js"></script>
     <canvas id="canvas" width="500" height="500"></canvas>
     <button id="button-slow-speed">遅くする</button>
+    <div id="time"></div>
+    <input type="file" id="file-selector" accept=".oud, .oud2 ">
+    <script>
+      const fileSelector = document.getElementById('file-selector');
+      fileSelector.addEventListener('change', (event) => {
+        const [file] = event.target.files;
+        const reader = new FileReader();
+        reader.addEventListener(
+          "load",
+          () => {
+            console.log(reader.result);
+          },
+          false
+        );
+
+        if (file) {
+          reader.readAsText(file, "Shift_JIS");
+        }
+      });
+    </script>
   </body>
 </html>

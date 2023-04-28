@@ -8,6 +8,7 @@
     <button id="button-slow-speed">遅くする</button>
     <div id="time"></div>
     <input type="file" id="file-selector" accept=".oud, .oud2 ">
+    <script src="./timetable.ts.js"></script>
     <script>
       const fileSelector = document.getElementById('file-selector');
       fileSelector.addEventListener('change', (event) => {
@@ -17,6 +18,7 @@
           "load",
           () => {
             console.log(reader.result);
+            getEkiJikokus(reader.result);
           },
           false
         );

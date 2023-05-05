@@ -1,0 +1,72 @@
+type FileType = 'aud' | 'diafreaks';
+
+// fieldName変更
+// relationを戻す
+function getDiaFreaks(buf: string) {
+  function getPlatforms(obj: any) {
+    return obj.map((o: any) => ({
+      platformId: o.id,
+      name: o.n,
+    }));
+  }
+  function getStations(obj: any) {
+    return obj.map((o: any) => ({
+      stationId: o.id,
+      name: o.n,
+      distance: o.m,
+      platforms: getPlatforms(o.t),
+    }));
+  }
+  function getTrainTimeTable(obj: any) {
+    return obj.map((o: any) => ({
+      stationId: o.s,
+      platformId: o.t,
+      arrivalTime: o.a,
+      departureTime: o.d,
+    }));
+  }
+  function getTrains(obj: any) {
+    return obj.map((o: any) => ({
+      trainId: o.id,
+      name: o.n,
+      trainTimetable: getTrainTimeTable(o.s)
+    }));
+  }
+
+  const obj = JSON.parse(buf);
+  
+  const stations = getStations(obj.stations);
+  const trains = getTrains(obj.trains);
+  
+  return {stations, trains};
+}
+
+function onFileSelectorChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files![0];
+  const reader = new FileReader();
+  let fileType: FileType | null = null;
+  reader.addEventListener(
+    "load",
+    () => {
+      console.log(reader.result);
+      if (fileType === 'aud') {
+        getEkiJikokus(reader.result as string, undefined);
+      } else {
+        getDiaFreaks(reader.result as string);
+      }
+    },
+    false
+  );
+
+  if (file) {
+    if (/.*\.aud2?$/.test(file.name)) {
+      // aud形式
+      fileType = 'aud';
+      reader.readAsText(file, "Shift_JIS");
+    } else {
+      // json形式 (diafreaks)
+      fileType = 'diafreaks';
+      reader.readAsText(file, "utf-8");
+    }
+  }
+}

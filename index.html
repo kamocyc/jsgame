@@ -3,29 +3,24 @@
     <meta charset="UTF-8">
   </head>
   <body>
-    <script src="./1.js"></script>
     <canvas id="canvas" width="500" height="500"></canvas>
     <button id="button-slow-speed">遅くする</button>
     <div id="time"></div>
     <input type="file" id="file-selector" accept=".oud, .oud2 ">
+    <script src="./drawer.ts.js"></script>
+    <script src="./model.ts.js"></script>
+    <script src="./dia.ts.js"></script>
+    <script src="./serialize.ts.js"></script>
+    <script src="./1.ts.js"></script>
     <script src="./timetable.ts.js"></script>
     <script>
+      onload = function () {
+        drawDiagram_();
+        // initialize();
+      }
+
       const fileSelector = document.getElementById('file-selector');
       fileSelector.addEventListener('change', (event) => {
-        const [file] = event.target.files;
-        const reader = new FileReader();
-        reader.addEventListener(
-          "load",
-          () => {
-            console.log(reader.result);
-            getEkiJikokus(reader.result);
-          },
-          false
-        );
-
-        if (file) {
-          reader.readAsText(file, "Shift_JIS");
-        }
       });
     </script>
   </body>

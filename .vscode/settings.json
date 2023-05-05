@@ -3,7 +3,7 @@
     "commands": [
       {
         "match": "\\.ts$",
-        "cmd": "node node_modules\\@swc\\cli\\bin\\swc.js ${file} -o ${fileBasename}.js -s"
+        "cmd": "node node_modules\\@swc\\cli\\bin\\swc.js ${file} -o dist/${fileBasenameNoExt}.js -s"
       }
     ]
   }

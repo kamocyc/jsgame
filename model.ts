@@ -55,6 +55,16 @@ interface Train {
   wasDeparted: boolean;
 }
 
+interface OperationTrain {
+  train: Train;
+}
+
+interface TimetableItem {
+  station: Station;
+  operatingTrain: OperationTrain;
+  departTime: number
+}
+
 let _currentId = 0;
 function generateId(): number {
   return ++_currentId;

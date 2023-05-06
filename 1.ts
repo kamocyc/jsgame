@@ -1,114 +1,13 @@
+interface DiaOperatingTrain extends DiaTrain {
+  operatingTrain: Train
+}
 
 const switches: Switch[] = [];
-const stations: Station[] = [
-  {
-    stationId: generateId(),
-    stationName: 'A',
-    shouldDepart: (train: Train, globalTime: number) => {
-      return true;//globalTime % 50 === 0;
-    }
-  },
-];
-
-const tracks: HalfTrack[] = [
-  ...createBothTrack({
-    _begin: { x: 0, y: 0 },
-    _nextTracks: [],
-    _nextSwitch: undefined,
-    _end: { x: 100, y: 100 },
-    _prevTracks: [],
-    _prevSwitch: undefined,
-    track: {
-      station: null,
-    }
-  }, true),
-  ...createBothTrack({
-    _begin: { x: 100, y: 100 },
-    _end: { x: 200, y: 100 },
-    _nextTracks: [],
-    _prevTracks: [],
-    _nextSwitch: undefined,
-    _prevSwitch: undefined,
-    track: {
-      station: stations[0]
-    }
-  }, true)
-];
-
-switches.push(...[
-  {
-    switchId: generateId(),
-    toTracks: [tracks[0]],
-    fromTracks: [tracks[1]],
-    _branchedTrackFrom: tracks[1],
-    _branchedTrackTo: tracks[0],
-  },
-  {
-    switchId: generateId(),
-    toTracks: [tracks[1], tracks[2]],
-    fromTracks: [tracks[0], tracks[3]],
-    _branchedTrackFrom: tracks[0],
-    _branchedTrackTo: tracks[2],
-  },
-  {
-    switchId: generateId(),
-    toTracks: [tracks[3]],
-    fromTracks: [tracks[2]],
-    _branchedTrackFrom: tracks[2],
-    _branchedTrackTo: tracks[3],
-  },
-]);
-
-tracks[0]._nextSwitch = switches[1];
-tracks[0]._prevSwitch = switches[0];
-tracks[2]._nextSwitch = switches[2];
-tracks[2]._prevSwitch = switches[1];
-
-tracks[0]._nextTracks.push(tracks[2]);
-tracks[2]._prevTracks.push(tracks[0]);
-syncBothTrack(tracks[0]);
-syncBothTrack(tracks[2]);
-
-const trains: Train[] = [
-  {
-    trainId: generateId(),
-    speed: 10,
-    track: tracks[0],
-    position: { x: 0, y: 0 },
-    stationWaitTime: 0,
-    wasDeparted: false,
-  },
-  {
-    trainId: generateId(),
-    speed: 10,
-    track: tracks[1],
-    position: { x: 110, y: 100 },
-    stationWaitTime: 0,
-    wasDeparted: false,
-  }
-];
-const operatingTrains = [
-  {
-    train: trains[0]
-  }
-];
-
-const timetable = [{
-  station: stations[0],
-  operatingTrain: operatingTrains[0],
-  departTime: 50,
-}]
-
-stations[0].shouldDepart = (train, globalTime) => {
-  const ttItems = timetable.filter(tt => tt.station === stations[0] && tt.operatingTrain.train === train);
-  if (ttItems.length === 0) {
-    return true;
-  }
-  
-  const ttItem = ttItems[0];
-
-  return globalTime % ttItem.departTime === 0;
-}
+const stations: Station[] = [];
+const tracks: HalfTrack[] = [];
+const trains: Train[] = [];
+const operatingTrains: OperationTrain[] = [];
+const timetable: DiaOperatingTrain[] = []
 
 let globalTime = 0;
 
@@ -118,6 +17,8 @@ let currentMousePosition = { x: 0, y: 0 };
 
 let mouseDownStartPoint: Point | null = null;
 let mouseDownStartTracks: HalfTrack[] = [];
+
+let mode: 'SwitchMode' | 'TimetableMode' = 'SwitchMode';
 
 const railImage = new Image();
 
@@ -166,85 +67,6 @@ function getTrackByPoint(point: Point) {
   return minTrack;
 }
 
-function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, pointEnd: Point) {
-  ctx.beginPath();
-  ctx.moveTo(_x(pointBegin.x), _y(pointBegin.y));
-  ctx.lineTo(_x(pointEnd.x), _y(pointEnd.y));
-  ctx.stroke();
-}
-
-// // railの描画
-// const railPattern = ctx.createPattern(railImage, 'repeat');
-// ctx.fillStyle = railPattern;
-
-// ctx.translate(pointBegin.x, pointBegin.y);
-// ctx.rotate(Math.atan2(pointEnd.y - pointBegin.y, pointEnd.x - pointBegin.x));
-// ctx.fillRect(0, 0, Math.sqrt((pointEnd.x - pointBegin.x) * (pointEnd.x - pointBegin.x) + (pointEnd.y - pointBegin.y) * (pointEnd.y - pointBegin.y)), 16);
-// ctx.rotate(-Math.atan2(pointEnd.y - pointBegin.y, pointEnd.x - pointBegin.x));
-// ctx.translate(-pointBegin.x, -pointBegin.y);
-
-function timesVector(vector: Point, times: number): Point {
-  return {
-    x: vector.x * times,
-    y: vector.y * times,
-  };
-}
-
-function draw() {
-  const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d')!;
-  
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  for (const track of tracks) {
-    drawLine(ctx, track._begin, track._end);
-    if (track.track.station) {
-      ctx.beginPath();
-      ctx.strokeStyle = 'red';
-      ctx.arc(_x((track._begin.x + track._end.x) / 2), _y((track._begin.y + track._end.y) / 2), 5, 0, 2 * Math.PI);
-      ctx.stroke();
-
-      // stationの名前を描画
-      ctx.font = fontSize + 'px sans-serif';
-      ctx.fillText(track.track.station.stationName, _x((track._begin.x + track._end.x) / 2 - 10), _y((track._begin.y + track._end.y) / 2 - 10));
-
-      ctx.strokeStyle = 'black';
-    }
-  }
-
-  // switchを描画
-  const switchDrawLength = 10;
-  for (const sw of switches) {
-    const track = sw._branchedTrackFrom;
-    const trackDirection = getTrackDirection(track);
-    const trackDirection2 = getTrackDirection(sw._branchedTrackTo);
-    ctx.beginPath();
-    ctx.moveTo(_x(track._end.x - trackDirection.x * switchDrawLength), _y(track._end.y - trackDirection.y * switchDrawLength));
-    ctx.lineTo(_x(track._end.x), _y(track._end.y));
-    ctx.lineTo(_x(track._end.x + trackDirection2.x * switchDrawLength), _y(track._end.y + trackDirection2.y * switchDrawLength));
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = 'green'
-    ctx.stroke();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'black'
-  }
-
-  if (mouseDownStartPoint !== null) {
-    const rect = canvas.getBoundingClientRect();
-    const mouseDownEndPoint = {
-      x: currentMousePosition.x - rect.left,
-      y: currentMousePosition.y - rect.top,
-    };
-    drawLine(ctx, mouseDownStartPoint, mouseDownEndPoint);
-  }
-
-  for (const train of trains) {
-    ctx.beginPath();
-    ctx.arc(_x(train.position.x), _y(train.position.y), 5, 0, 2 * Math.PI);
-    ctx.stroke();
-  }
-}
-
 function isTrainOutTrack(position: Point, track: HalfTrack) {
   const trackMinX = Math.min(track._begin.x, track._end.x);
   const trackMaxX = Math.max(track._begin.x, track._end.x);
@@ -258,16 +80,54 @@ function isTrainOutTrack(position: Point, track: HalfTrack) {
   );
 }
 
-function getNextTrack(track: HalfTrack): HalfTrack {
-  if (track._nextSwitch._branchedTrackTo === track.reverseTrack) {
-    if (track._nextSwitch.toTracks.length === 1) {
+function getRadian(track1: HalfTrack, track2: HalfTrack) {
+  const r1 = Math.atan2(track1._begin.y - track1._end.y, track1._begin.x - track1._end.x);
+  const r2 = Math.atan2(track2._begin.y - track2._end.y, track2._begin.x - track2._end.x);
+  return r1 - r2;
+}
+
+function getNextTrack(track: HalfTrack, train: Train): HalfTrack {
+  if (mode === 'SwitchMode') {
+    if (track._nextSwitch._branchedTrackTo === track.reverseTrack) {
+      if (track._nextSwitch.toTracks.length === 1) {
+        return track._nextSwitch._branchedTrackTo;
+      }
+  
+      return track._nextSwitch._branchedTrackFrom.reverseTrack;
+    }
+
+    return track._nextSwitch._branchedTrackTo;
+  } else {
+    if (track._nextSwitch._branchedTrackTo === track.reverseTrack && track._nextSwitch.toTracks.length === 1) {
       return track._nextSwitch._branchedTrackTo;
     }
 
-    return track._nextSwitch._branchedTrackFrom.reverseTrack;
-  }
+    const timetableItems = timetable.filter(t => t.operatingTrain === train);
+    if (timetableItems.length !== 1) throw new Error('timetableItems.length');
+    const timetableItem = timetableItems[0];
+    
+    // 次の駅に向かう方向に進む（つまり現在よりも「先の」方向で、一番近い位置の駅）
+    // まずはtoのtoのみ見る
+    let nextTracks =
+      train.track._nextSwitch.toTracks.filter(branchTrack =>
+        Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2 && branchTrack._nextSwitch.toTracks.filter(stationTrack =>
+           timetableItem.trainTimetable.filter(tt => tt.stationId === stationTrack.track.station?.stationId).length > 0
+        ).length > 0
+      );
+    
+    if (nextTracks.length === 0) {
+      nextTracks = train.track._nextSwitch.toTracks.filter(branchTrack =>
+        Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2);
+    }
+    console.log({nextTracks});
+    if (nextTracks.length >= 1) {
+      const nextTrack = nextTracks[0];
+      return nextTrack;
+    } else {
+      throw new Error('end');
+    }
 
-  return track._nextSwitch._branchedTrackTo;
+  }
 }
 
 function getMidPoint(point1: Point, point2: Point): Point {
@@ -297,7 +157,7 @@ function moveTrain(train: Train) {
     train.stationWaitTime = 0;
     train.wasDeparted = false;
 
-    const nextTrack = getNextTrack(train.track);
+    const nextTrack = getNextTrack(train.track, train);
     if (nextTrack) {
       // trackの終点から行き過ぎた距離を求める
       const distance = getDistance(train.track._end, train.position);
@@ -386,7 +246,8 @@ function initialize() {
           // TODO: 複数の無関係な点が同じ距離だった場合に対応する
           mouseDownStartTracks = tracks.filter(track => deepEqual(track._end, mouseDownStartPoint));
         } else {
-          mouseDownStartPoint = null;
+          // 近くのtrackが存在しない場合は独立した線路を作成する
+          mouseDownStartPoint = { x, y };
           mouseDownStartTracks = [];
         }
       } else if (e.button === 2) {
@@ -439,10 +300,10 @@ function initialize() {
         
         const nextTracks = tracks.filter(track => deepEqual(track._begin, nearestTrackPoint));
         
-        createNewTrack(begin, end, nextTracks, mouseDownStartTracks);
+        createNewTrack(begin, end, nextTracks, mouseDownStartTracks, null);
       } else {
         // 離れているときは新たに線路を作る
-        createNewTrack(begin, end, [], mouseDownStartTracks);
+        createNewTrack(begin, end, [], mouseDownStartTracks, null);
       }
 
       mouseDownStartPoint = null;
@@ -453,7 +314,7 @@ function initialize() {
   }
 }
 
-function createNewTrack(_begin: Point, _end: Point, _nextTracks: HalfTrack[], _prevTracks: HalfTrack[]) {
+function createNewTrack(_begin: Point, _end: Point, _nextTracks: HalfTrack[], _prevTracks: HalfTrack[], station: Station | null): [HalfTrack, HalfTrack] {
   const newTrack = createBothTrack({
     _begin,
     _end,
@@ -462,7 +323,7 @@ function createNewTrack(_begin: Point, _end: Point, _nextTracks: HalfTrack[], _p
     _nextSwitch: _nextTracks.length > 0 ? _nextTracks[0]._prevSwitch : undefined,
     _prevSwitch: _prevTracks.length > 0 ? _prevTracks[0]._nextSwitch : undefined,
     track: {
-      station: null,
+      station: station,
     }
   });
 
@@ -485,8 +346,18 @@ function createNewTrack(_begin: Point, _end: Point, _nextTracks: HalfTrack[], _p
     track._prevTracks.push(newTrack[0]);
     syncBothTrack(track);
   }
+  
+  // 始点または終点のtrackがちょうど2つになったとき => わたるようにする
+  if (_nextTracks.length === 1) {
+    _nextTracks[0]._prevSwitch._branchedTrackFrom = _nextTracks[0]._prevSwitch.fromTracks.filter(t => t !== _nextTracks[0].reverseTrack)[0];
+  }
+  if (_prevTracks.length === 1) {
+    _prevTracks[0]._nextSwitch._branchedTrackTo = _prevTracks[0]._nextSwitch.toTracks.filter(t => t !== _prevTracks[0].reverseTrack)[0];
+  }
 
   tracks.push(...newTrack);
+
+  return newTrack;
 }
 
 function createBothTrack(trackBase: HalfTrackWip, skipCreateSwitch: boolean = false): [HalfTrack, HalfTrack] {

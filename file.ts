@@ -2,7 +2,7 @@ type FileType = 'aud' | 'diafreaks';
 
 // fieldName変更
 // relationを戻す
-function getDiaFreaks(buf: string) {
+function getDiaFreaks(buf: string): Diagram {
   function getPlatforms(obj: any) {
     return obj.map((o: any) => ({
       platformId: o.id,

@@ -3,20 +3,24 @@
     <meta charset="UTF-8">
   </head>
   <body>
-    <canvas id="canvas" width="500" height="500"></canvas>
+    <canvas id="canvas" width="2000" height="500"></canvas>
     <button id="button-slow-speed">遅くする</button>
     <div id="time"></div>
     <input type="file" id="file-selector" accept=".oud, .oud2 ">
-    <script src="./drawer.ts.js"></script>
-    <script src="./model.ts.js"></script>
-    <script src="./dia.ts.js"></script>
-    <script src="./serialize.ts.js"></script>
-    <script src="./1.ts.js"></script>
-    <script src="./timetable.ts.js"></script>
+    <script src="./dist/drawer.js"></script>
+    <script src="./dist/model.js"></script>
+    <script src="./dist/generateLine.js"></script>
+    <script src="./dist/file.js"></script>
+    <script src="./dist/dia.js"></script>
+    <script src="./dist/serialize.js"></script>
+    <script src="./dist/initializeData.js"></script>
+    <script src="./dist/1.js"></script>
+    <script src="./dist/timetable.js"></script>
     <script>
       onload = function () {
-        drawDiagram_();
+        // drawDiagram_();
         // initialize();
+        initialize2();
       }
 
       const fileSelector = document.getElementById('file-selector');

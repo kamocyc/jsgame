@@ -48,6 +48,11 @@ interface DiaTrain {
   trainTimetable: StationTrain[];
 }
 
+interface Diagram {
+  stations: DiaStation[];
+  trains: DiaTrain[];
+}
+
 const timeOffset = 10000;
 const timeWidth = 20000;
 let zoomY = 10;
@@ -189,17 +194,17 @@ function drawDiagram(ctx: CanvasRenderingContext2D, stations: DiaStation[], trai
 
 function drawDiagram_() {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-  canvas.onmousedown = function (e) {
-    // ドラッグスタート
-  }
-  canvas.onmousemove = function (e) {
+  // canvas.onmousedown = function (e) {
+  //   // ドラッグスタート
+  // }
+  // canvas.onmousemove = function (e) {
 
-  }
-  canvas.onwheel = function (e) {
-    // ?
-    e.deltaY;
-    console.log(e.deltaY);
-  }
+  // }
+  // canvas.onwheel = function (e) {
+  //   // ?
+  //   e.deltaY;
+  //   console.log(e.deltaY);
+  // }
 
   fetch('./sample-diagram.json').then(data => data.text()).then(diaRawData => {
     const d = getDiaFreaks(diaRawData);

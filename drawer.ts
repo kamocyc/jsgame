@@ -37,6 +37,24 @@ function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, pointEnd: Po
 //   };
 // }
 
+function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
+  if (train.diaTrain?.color) {
+    ctx.strokeStyle = train.diaTrain?.color;
+  }
+
+  if (train.diaTrain?.name) {
+    ctx.fillText(train.diaTrain?.name, _x(train.position.x), _y(train.position.y - 20));
+  }
+
+  ctx.beginPath();
+  ctx.arc(_x(train.position.x), _y(train.position.y), 5, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  if (train.diaTrain?.color) {
+    ctx.strokeStyle = 'black';
+  }
+}
+
 function draw() {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -86,8 +104,6 @@ function draw() {
   }
 
   for (const train of trains) {
-    ctx.beginPath();
-    ctx.arc(_x(train.position.x), _y(train.position.y), 5, 0, 2 * Math.PI);
-    ctx.stroke();
+    drawTrain2(ctx, train);
   }
 }

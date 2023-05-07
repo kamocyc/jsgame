@@ -22,8 +22,6 @@ interface HalfTrack {
   trackId: number;
   _begin: Point;
   _end: Point;
-  _nextTracks: HalfTrack[];
-  _prevTracks: HalfTrack[];
   _nextSwitch: Switch;
   _prevSwitch: Switch;
   reverseTrack: HalfTrack;
@@ -34,8 +32,6 @@ interface HalfTrackWip {
   trackId?: number;
   _begin: Point;
   _end: Point;
-  _nextTracks: HalfTrack[];
-  _prevTracks: HalfTrack[];
   _nextSwitch?: Switch;
   _prevSwitch?: Switch;
   reverseTrack?: HalfTrack;
@@ -48,6 +44,8 @@ interface Track_ {
 
 interface Train {
   trainId: number;
+  diaTrain?: DiaTrain;
+  currentTimetableIndex: number;
   speed: number;
   track: HalfTrack;
   position: Point;

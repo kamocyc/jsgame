@@ -28,6 +28,7 @@ function getDiaFreaks(buf: string): Diagram {
   function getTrains(obj: any) {
     return obj.map((o: any) => ({
       trainId: o.id,
+      color: o.c,
       name: o.n,
       trainTimetable: getTrainTimeTable(o.s)
     }));

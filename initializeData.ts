@@ -13,10 +13,8 @@ function initializeData() {
   tracks.push(...[
     ...createBothTrack({
       _begin: { x: 0, y: 0 },
-      _nextTracks: [],
       _nextSwitch: undefined,
       _end: { x: 100, y: 100 },
-      _prevTracks: [],
       _prevSwitch: undefined,
       track: {
         station: null,
@@ -25,8 +23,6 @@ function initializeData() {
     ...createBothTrack({
       _begin: { x: 100, y: 100 },
       _end: { x: 200, y: 100 },
-      _nextTracks: [],
-      _prevTracks: [],
       _nextSwitch: undefined,
       _prevSwitch: undefined,
       track: {
@@ -64,14 +60,13 @@ function initializeData() {
   tracks[2]._nextSwitch = switches[2];
   tracks[2]._prevSwitch = switches[1];
   
-  tracks[0]._nextTracks.push(tracks[2]);
-  tracks[2]._prevTracks.push(tracks[0]);
   syncBothTrack(tracks[0]);
   syncBothTrack(tracks[2]);
   
   trains.push(...[
     {
       trainId: generateId(),
+      currentTimetableIndex: 0,
       speed: 10,
       track: tracks[0],
       position: { x: 0, y: 0 },
@@ -80,6 +75,7 @@ function initializeData() {
     },
     {
       trainId: generateId(),
+      currentTimetableIndex: 0,
       speed: 10,
       track: tracks[1],
       position: { x: 110, y: 100 },

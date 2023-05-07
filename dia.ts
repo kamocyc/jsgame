@@ -19,6 +19,7 @@ interface RawStationTrain {
 
 interface RawDiaTrain {
   id: number; /* trainId */
+  c?: string; /* color */
   n: string; /* name */
   s: StationTrain[];
 }
@@ -44,6 +45,7 @@ interface StationTrain {
 
 interface DiaTrain {
   trainId: number; /* trainId */
+  color?: string;
   name: string; /* name */
   trainTimetable: StationTrain[];
 }

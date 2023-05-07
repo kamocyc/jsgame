@@ -81,9 +81,11 @@ function isTrainOutTrack(position: Point, track: HalfTrack) {
 }
 
 function getRadian(track1: HalfTrack, track2: HalfTrack) {
-  const r1 = Math.atan2(track1._begin.y - track1._end.y, track1._begin.x - track1._end.x);
-  const r2 = Math.atan2(track2._begin.y - track2._end.y, track2._begin.x - track2._end.x);
-  return r1 - r2;
+  const r1 = Math.atan2(track1._end.y - track1._begin.y, track1._end.x - track1._begin.x);
+  const r2 = Math.atan2(track2._end.y - track2._begin.y, track2._end.x - track2._begin.x);
+  const diffR = r1 - r2;
+  const diffR_ = (diffR + 2 * Math.PI) % (2 * Math.PI);
+  return diffR_ < 2 * Math.PI - diffR_ ? diffR_ : 2 * Math.PI - diffR_;
 }
 
 function getNextTrack(track: HalfTrack, train: Train): HalfTrack {
@@ -108,20 +110,13 @@ function getNextTrack(track: HalfTrack, train: Train): HalfTrack {
     
     // 次の駅に向かう方向に進む（つまり現在よりも「先の」方向で、一番近い位置の駅）
     // まずはtoのtoのみ見る
-    let nextTracks =
-      train.track._nextSwitch.toTracks.filter(branchTrack =>
-        Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2 && branchTrack._nextSwitch.toTracks.filter(stationTrack =>
-           timetableItem.trainTimetable.filter(tt => tt.stationId === stationTrack.track.station?.stationId).length > 0
-        ).length > 0
-      );
-    
-    if (nextTracks.length === 0) {
-      nextTracks = train.track._nextSwitch.toTracks.filter(branchTrack =>
-        Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2);
+    let nextTrack = getNextTrackToReach(train.track, timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
+    if (!nextTrack) {
+      nextTrack = train.track._nextSwitch.toTracks.filter(branchTrack =>
+        Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2)[0];
     }
-    console.log({nextTracks});
-    if (nextTracks.length >= 1) {
-      const nextTrack = nextTracks[0];
+    // console.log({nextTrack});
+    if (nextTrack) {
       return nextTrack;
     } else {
       throw new Error('end');
@@ -140,6 +135,35 @@ function getMidPoint(point1: Point, point2: Point): Point {
 function moveTrain(train: Train) {
   // 現在stationだったら出発条件を満たすまで停止する
   if (train.track.track.station && !train.wasDeparted && train.stationWaitTime < maxStationWaitTime) {
+    const timetableItems = timetable.filter(t => t.operatingTrain === train);
+    if (timetableItems.length !== 1) throw new Error('timetableItems.length');
+    const timetableItem = timetableItems[0];
+
+    if (timetableItem.trainTimetable[train.currentTimetableIndex].stationId === train.track.track.station.stationId) {
+      // 時刻表の駅に到着した
+      const currentTimetable = timetableItem.trainTimetable[train.currentTimetableIndex];
+      if (globalTime < currentTimetable.departureTime) {
+        // console.log('WAIT');
+        return;
+      } else if (globalTime >= currentTimetable.departureTime) {
+        if (globalTime > currentTimetable.departureTime) {
+          console.log('PASSED');
+          console.log({
+            train,
+            currentTimetable
+          })
+        }
+      }
+
+      // 出発する => 次のindexに進める
+      if (timetableItem.trainTimetable.length - 1 === train.currentTimetableIndex) {
+        // TODO: 運用が終わったとき: 時刻表の運用データを元になんとかする
+        trains.splice(trains.map((a, i) => [a, i] as const).filter(([t, i]) => t === train)[0][1], 1);
+        return;
+      }
+      train.currentTimetableIndex ++;
+    }
+    
     // const stationCenter = getMidPoint(train.track._begin, train.track._end);
     if (!train.track.track.station.shouldDepart(train, globalTime)) {
       train.stationWaitTime ++;
@@ -174,14 +198,26 @@ function moveTrain(train: Train) {
   }
 }
 
+function showGlobalTime() {
+  const m = Math.floor(globalTime / 60 % 60);
+  return Math.floor(globalTime / 60 / 60) + ':' + (m < 10 ? '0' + m : '' + m)
+}
+
 function main() {
+  for (const train of diagram.trains) {
+    if (min(train.trainTimetable.map(t => t.arrivalTime)) === globalTime) {
+      addTrain(stationIdMap, train);
+    }
+  }
+
   draw();
   for (const train of trains) {
     moveTrain(train);
   }
 
-  globalTime ++;
-  document.getElementById('time')!.innerText = globalTime.toString();
+  globalTime += 10; // TODO
+  // document.getElementById('time')!.innerText = globalTime.toString();
+  document.getElementById('time')!.innerText = globalTime.toString()  + ' / ' + showGlobalTime();
 }
 
 function getNearestTrackPoint(point: Point) {
@@ -318,8 +354,6 @@ function createNewTrack(_begin: Point, _end: Point, _nextTracks: HalfTrack[], _p
   const newTrack = createBothTrack({
     _begin,
     _end,
-    _nextTracks,
-    _prevTracks,
     _nextSwitch: _nextTracks.length > 0 ? _nextTracks[0]._prevSwitch : undefined,
     _prevSwitch: _prevTracks.length > 0 ? _prevTracks[0]._nextSwitch : undefined,
     track: {
@@ -335,16 +369,6 @@ function createNewTrack(_begin: Point, _end: Point, _nextTracks: HalfTrack[], _p
   if (_nextTracks.length > 0) {
     _nextTracks[0]._prevSwitch.toTracks.push(newTrack[1]);
     _nextTracks[0]._prevSwitch.fromTracks.push(newTrack[0]);
-  }
-
-  for (const track of _prevTracks) {
-    track._nextTracks.push(newTrack[0]);
-    syncBothTrack(track);
-  }
-
-  for (const track of _nextTracks) {
-    track._prevTracks.push(newTrack[0]);
-    syncBothTrack(track);
   }
   
   // 始点または終点のtrackがちょうど2つになったとき => わたるようにする
@@ -365,8 +389,6 @@ function createBothTrack(trackBase: HalfTrackWip, skipCreateSwitch: boolean = fa
     trackId: generateId(),
     _begin: trackBase._end,
     _end: trackBase._begin,
-    _nextTracks: trackBase._prevTracks.map(t => t.reverseTrack),
-    _prevTracks: trackBase._nextTracks.map(t => t.reverseTrack),
     _nextSwitch: trackBase._prevSwitch,
     _prevSwitch: trackBase._nextSwitch,
     reverseTrack: trackBase as HalfTrack,
@@ -406,8 +428,6 @@ function syncBothTrack(trackBase: HalfTrack) {
   const rTrack = trackBase.reverseTrack;
   rTrack._begin = trackBase._end;
   rTrack._end = trackBase._begin;
-  rTrack._nextTracks = trackBase._prevTracks.map(t => t.reverseTrack);
-  rTrack._prevTracks = trackBase._nextTracks.map(t => t.reverseTrack);
   rTrack._nextSwitch = trackBase._prevSwitch;
   rTrack._prevSwitch = trackBase._nextSwitch;
   rTrack.reverseTrack = trackBase as HalfTrack;

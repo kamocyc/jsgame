@@ -19,7 +19,7 @@ function initializeData() {
       track: {
         station: null,
       }
-    }, true),
+    }),
     ...createBothTrack({
       _begin: { x: 100, y: 100 },
       _end: { x: 200, y: 100 },
@@ -28,40 +28,40 @@ function initializeData() {
       track: {
         station: stations[0]
       }
-    }, true)
+    })
   ]);
   
-  switches.push(...[
-    {
-      switchId: generateId(),
-      toTracks: [tracks[0]],
-      fromTracks: [tracks[1]],
-      _branchedTrackFrom: tracks[1],
-      _branchedTrackTo: tracks[0],
-    },
-    {
-      switchId: generateId(),
-      toTracks: [tracks[1], tracks[2]],
-      fromTracks: [tracks[0], tracks[3]],
-      _branchedTrackFrom: tracks[0],
-      _branchedTrackTo: tracks[2],
-    },
-    {
-      switchId: generateId(),
-      toTracks: [tracks[3]],
-      fromTracks: [tracks[2]],
-      _branchedTrackFrom: tracks[2],
-      _branchedTrackTo: tracks[3],
-    },
-  ]);
+  // switches.push(...[
+  //   {
+  //     switchId: generateId(),
+  //     beginTracks: [tracks[0]],
+  //     endTracks: [tracks[1]],
+  //     _branchedTrackFrom: tracks[1],
+  //     _branchedTrackTo: tracks[0],
+  //   },
+  //   {
+  //     switchId: generateId(),
+  //     toTracks: [tracks[1], tracks[2]],
+  //     fromTracks: [tracks[0], tracks[3]],
+  //     _branchedTrackFrom: tracks[0],
+  //     _branchedTrackTo: tracks[2],
+  //   },
+  //   {
+  //     switchId: generateId(),
+  //     toTracks: [tracks[3]],
+  //     fromTracks: [tracks[2]],
+  //     _branchedTrackFrom: tracks[2],
+  //     _branchedTrackTo: tracks[3],
+  //   },
+  // ]);
   
   tracks[0]._nextSwitch = switches[1];
   tracks[0]._prevSwitch = switches[0];
   tracks[2]._nextSwitch = switches[2];
   tracks[2]._prevSwitch = switches[1];
   
-  syncBothTrack(tracks[0]);
-  syncBothTrack(tracks[2]);
+  // syncBothTrack(tracks[0]);
+  // syncBothTrack(tracks[2]);
   
   trains.push(...[
     {

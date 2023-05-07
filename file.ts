@@ -36,7 +36,8 @@ function getDiaFreaks(buf: string): Diagram {
 
   const obj = JSON.parse(buf);
   
-  const stations = getStations(obj.stations);
+  const stations: DiaStation[] = getStations(obj.stations);
+  stations.sort((a, b) => a.distance - b.distance);
   const trains = getTrains(obj.trains);
   
   return {stations, trains};

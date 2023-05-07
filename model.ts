@@ -6,10 +6,10 @@ interface Point {
 // 同じ点では同じオブジェクトを共有する
 interface Switch {
   switchId: number;
-  fromTracks: HalfTrack[];
-  toTracks: HalfTrack[]; // switchがbeginのtrackのみ入れる
-  _branchedTrackFrom: HalfTrack;
-  _branchedTrackTo: HalfTrack;
+  endTracks: HalfTrack[];
+  beginTracks: HalfTrack[]; // switchがbeginのtrackのみ入れる
+  switchPatterns: [HalfTrack, HalfTrack][]; // 切り替わるswitchの組み合わせ
+  switchPatternIndex: [number, number] | null;
 }
 
 interface Station {

@@ -13,7 +13,7 @@ function generateLine(stations: DiaStation[]) {
   let xOffset = 15;
   const platformSpan = 30;
 
-  const [startTrack] = createNewTrack({x: 0, y: 50}, {x: xOffset, y: 50}, [], [], null);
+  const [startTrack] = createNewTrack({x: 0, y: 50}, {x: xOffset, y: 50}, undefined, undefined, [], [], null);
   let prevTrack = startTrack;
 
   const stationIdMap = new Map<string, Station>();
@@ -23,34 +23,40 @@ function generateLine(stations: DiaStation[]) {
     const newTracks: HalfTrack[] = [];
     for (let platformIndex = 0; platformIndex < station.platforms.length; platformIndex ++) {
       // 中継の線路
-      const [branchTrack] = createNewTrack(prevTrack._end, addPoint(prevTrack._end, {x: 15, y: platformIndex * platformSpan}), [], [prevTrack], null);
-      const [stationTrack] = createNewTrack(branchTrack._end, addPoint(branchTrack._end, {x: 50, y: 0}), [], [branchTrack], {
+      const [branchTrack] = createNewTrack(prevTrack._end, addPoint(prevTrack._end, {x: 15, y: platformIndex * platformSpan}), undefined, prevTrack._nextSwitch, [], [prevTrack], null);
+      const [stationTrack] = createNewTrack(branchTrack._end, addPoint(branchTrack._end, {x: 50, y: 0}), undefined, branchTrack._nextSwitch, [], [branchTrack], {
         shouldDepart: () => true,
         stationId: generateId(),
         stationName: station.name + (station.platforms[platformIndex].name ?? ''),
       });
-      const [afterBranchTrack] = createNewTrack(stationTrack._end, addPoint(stationTrack._end, {x: 15, y: -platformIndex * platformSpan}), newTracks.map(t => t.reverseTrack), [stationTrack], null);
+      const [afterBranchTrack] =
+        createNewTrack(
+          stationTrack._end,
+          addPoint(stationTrack._end, {x: 15, y: -platformIndex * platformSpan}),
+          newTracks.length === 0 ? undefined : newTracks[0]._nextSwitch,
+          stationTrack._nextSwitch,
+          [], [stationTrack], null);
       newTracks.push(afterBranchTrack);
 
       stationIdMap.set(station.stationId + '__' + station.platforms[platformIndex].platformId, stationTrack.track.station!);
     }
     const distance = stationIndex === stations.length - 1 ? 15 : (stations[stationIndex + 1].distance - station.distance) * xTimes;
-    const [newTrack2] = createNewTrack(newTracks[0]._end, addPoint(newTracks[0]._end, {x: distance, y: 0}), [], newTracks, null);
+    const [newTrack2] = createNewTrack(newTracks[0]._end, addPoint(newTracks[0]._end, {x: distance, y: 0}), undefined, newTracks[0]._nextSwitch, [], newTracks, null);
     prevTrack = newTrack2;
   }
 
   return stationIdMap;
 }
 
-function getNextTrackToReach(track: HalfTrack, stationId: number, found: Map<number, boolean> = new Map()): HalfTrack | undefined {
-  if (track.track.station?.stationId === stationId) return track;
+function getNextTrackToReach(track: HalfTrack, stationId: number, length: number = 0, count: number = 0, found: Map<number, boolean> = new Map()): [HalfTrack, number, number] | undefined {
+  if (track.track.station?.stationId === stationId) return [track, length, count];
   
   found.set(track.trackId, true);
 
-  for (const toTrack of track._nextSwitch.toTracks) {
-    if (!found.has(toTrack.trackId) && Math.abs(getRadian(track, toTrack)) <= Math.PI / 2) {
-      const r = getNextTrackToReach(toTrack, stationId, found);  
-      if (r) return toTrack;
+  for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
+    if (!found.has(toTrack.trackId)) {
+      const r = getNextTrackToReach(toTrack, stationId, length + getDistance(toTrack._end, toTrack._begin), count + 1, found);
+      if (r) return [toTrack, r[1], r[2]];
     }
   }
 
@@ -100,18 +106,97 @@ function addTrain(stationIdMap: Map<string, Station>, train: DiaTrain) {
 let stationIdMap: Map<string, Station>;
 let diagram: Diagram;
 
+function saveTime() {
+  const minGlobalTime = min(diagram.trains.map(t => t.trainTimetable.map(tt => tt.arrivalTime)).flat());
+  const maxGlobalTime = max(diagram.trains.map(t => t.trainTimetable.map(tt => tt.departureTime)).flat());
+
+  const records = getRecords(minGlobalTime, maxGlobalTime);
+  console.log(records);
+  console.log(JSON.stringify(records));
+}
+
+function loadTime() {
+
+  let timeSpeed: number;
+
+  fetch('./saved_time.json').then(data => data.json()).then((savedData : TimedPositionData) => {
+    globalTime = savedData.minGlobalTime;
+    timeSpeed = savedData.globalTimeSpeed;
+
+    const slowButton = document.getElementById('button-speed-slow') as HTMLInputElement;
+    slowButton.onclick = () => {
+      timeSpeed -= 10;
+    }
+    const fastButton = document.getElementById('button-speed-fast') as HTMLInputElement;
+    fastButton.onclick = () => {
+      timeSpeed += 10;
+    }
+
+
+    tracks.slice(0);
+    tracks.push(...savedData.tracks);
+
+    let i = 0;
+
+    let inClick = false;
+    const seekBar = document.getElementById('seek-bar') as HTMLInputElement;
+    const seekBarWidth = 1000;
+    function moveSeekBar(mouseX: number) {
+      globalTime = Math.round((savedData.maxGlobalTime - savedData.minGlobalTime) * (mouseX / seekBarWidth) + savedData.minGlobalTime);
+      i = Math.floor((globalTime - savedData.minGlobalTime) / savedData.globalTimeSpeed);
+    }
+    seekBar.onmousedown = (e) => {
+      inClick = true;
+      const mouseX = e.clientX - seekBar.getBoundingClientRect().left;
+      moveSeekBar(mouseX);
+    }
+    seekBar.onmousemove = (e) => {
+      if (inClick) {
+        const mouseX = e.clientX - seekBar.getBoundingClientRect().left;
+        moveSeekBar(mouseX);
+      }
+    }
+    seekBar.onmouseup = (e) => {
+      inClick = false;
+    }
+
+    setInterval(() => {
+      trains.splice(0);
+      const rawTrains = savedData.records[i];
+
+      trains.push(...rawTrains.map(rawTrain => ({
+        trainId: rawTrain.trainId,
+        diaTrain: {
+          color: rawTrain.color,
+          name: rawTrain.name,
+        },
+        position: rawTrain.position,
+      } as Train)));
+
+      draw({x: 0, y: 0}, null);
+
+      globalTime += timeSpeed / 10;
+      i = Math.floor((globalTime - savedData.minGlobalTime) / savedData.globalTimeSpeed);
+
+      const seekBar = document.getElementById('seek-bar-item') as HTMLDivElement;
+      seekBar.style.left = Math.round(seekBarWidth * i / savedData.records.length) + 'px';
+    }, 100 / 10 /* TODO */);
+  })
+}
+
 function initialize2() {
   fetch('./sample-diagram.json').then(data => data.text()).then(diaRawData => {
     diagram = getDiaFreaks(diaRawData);
-    diagram.stations.sort((a, b) => a.distance - b.distance);
     
     stationIdMap = generateLine(diagram.stations);
 
     mode = 'TimetableMode';
 
-    globalTime = 26700;
-    globalTime = min(diagram.trains.map(t => t.trainTimetable.map(tt => tt.arrivalTime)).flat());
+    normalizeDia(diagram);
 
+    globalTime = min(diagram.trains.map(t => t.trainTimetable.map(tt => tt.arrivalTime)).flat());
+    // globalTime = 26700;
+    saveTime();
     initialize();
   });
 }

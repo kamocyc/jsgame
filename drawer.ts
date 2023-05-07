@@ -40,6 +40,7 @@ function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, pointEnd: Po
 function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
   if (train.diaTrain?.color) {
     ctx.strokeStyle = train.diaTrain?.color;
+    ctx.fillStyle = train.diaTrain?.color;
   }
 
   if (train.diaTrain?.name) {
@@ -48,14 +49,15 @@ function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
 
   ctx.beginPath();
   ctx.arc(_x(train.position.x), _y(train.position.y), 5, 0, 2 * Math.PI);
-  ctx.stroke();
+  ctx.fill();
 
   if (train.diaTrain?.color) {
     ctx.strokeStyle = 'black';
+    ctx.fillStyle = '#000000';
   }
 }
 
-function draw() {
+function draw(currentMousePosition: Point, mouseDownStartPoint: null | Point) {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
   
@@ -78,21 +80,21 @@ function draw() {
   }
 
   // switchを描画
-  const switchDrawLength = 10;
-  for (const sw of switches) {
-    const track = sw._branchedTrackFrom;
-    const trackDirection = getTrackDirection(track);
-    const trackDirection2 = getTrackDirection(sw._branchedTrackTo);
-    ctx.beginPath();
-    ctx.moveTo(_x(track._end.x - trackDirection.x * switchDrawLength), _y(track._end.y - trackDirection.y * switchDrawLength));
-    ctx.lineTo(_x(track._end.x), _y(track._end.y));
-    ctx.lineTo(_x(track._end.x + trackDirection2.x * switchDrawLength), _y(track._end.y + trackDirection2.y * switchDrawLength));
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = 'green'
-    ctx.stroke();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'black'
-  }
+  // const switchDrawLength = 10;
+  // for (const sw of switches) {
+  //   const track = sw._branchedTrackFrom;
+  //   const trackDirection = getTrackDirection(track);
+  //   const trackDirection2 = getTrackDirection(sw._branchedTrackTo);
+  //   ctx.beginPath();
+  //   ctx.moveTo(_x(track._end.x - trackDirection.x * switchDrawLength), _y(track._end.y - trackDirection.y * switchDrawLength));
+  //   ctx.lineTo(_x(track._end.x), _y(track._end.y));
+  //   ctx.lineTo(_x(track._end.x + trackDirection2.x * switchDrawLength), _y(track._end.y + trackDirection2.y * switchDrawLength));
+  //   ctx.lineWidth = 5;
+  //   ctx.strokeStyle = 'green'
+  //   ctx.stroke();
+  //   ctx.lineWidth = 1;
+  //   ctx.strokeStyle = 'black'
+  // }
 
   if (mouseDownStartPoint !== null) {
     const rect = canvas.getBoundingClientRect();
@@ -106,4 +108,6 @@ function draw() {
   for (const train of trains) {
     drawTrain2(ctx, train);
   }
+
+  document.getElementById('time')!.innerText = globalTime.toString()  + ' / ' + showGlobalTime();
 }

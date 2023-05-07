@@ -11,6 +11,8 @@ const timetable: DiaOperatingTrain[] = []
 
 let globalTime = 0;
 
+const globalTimeSpeed = 10;
+
 const maxStationWaitTime = Number.MAX_VALUE;
 
 let currentMousePosition = { x: 0, y: 0 };
@@ -90,18 +92,24 @@ function getRadian(track1: HalfTrack, track2: HalfTrack) {
 
 function getNextTrack(track: HalfTrack, train: Train): HalfTrack {
   if (mode === 'SwitchMode') {
-    if (track._nextSwitch._branchedTrackTo === track.reverseTrack) {
-      if (track._nextSwitch.toTracks.length === 1) {
-        return track._nextSwitch._branchedTrackTo;
-      }
+    // if (track._nextSwitch._branchedTrackTo === track.reverseTrack) {
+    //   if (track._nextSwitch.toTracks.length === 1) {
+    //     return track._nextSwitch._branchedTrackTo;
+    //   }
   
-      return track._nextSwitch._branchedTrackFrom.reverseTrack;
-    }
+    //   return track._nextSwitch._branchedTrackFrom.reverseTrack;
+    // }
 
-    return track._nextSwitch._branchedTrackTo;
+    // return track._nextSwitch._branchedTrackTo;
+    // TODO
+    return track;
   } else {
-    if (track._nextSwitch._branchedTrackTo === track.reverseTrack && track._nextSwitch.toTracks.length === 1) {
-      return track._nextSwitch._branchedTrackTo;
+    const nextTracks = track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, t]) => t);
+    if (nextTracks.length === 0) {
+      return track.reverseTrack;
+    }
+    if (nextTracks.length === 1) {
+      return nextTracks[0];
     }
 
     const timetableItems = timetable.filter(t => t.operatingTrain === train);
@@ -111,13 +119,29 @@ function getNextTrack(track: HalfTrack, train: Train): HalfTrack {
     // 次の駅に向かう方向に進む（つまり現在よりも「先の」方向で、一番近い位置の駅）
     // まずはtoのtoのみ見る
     let nextTrack = getNextTrackToReach(train.track, timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
-    if (!nextTrack) {
-      nextTrack = train.track._nextSwitch.toTracks.filter(branchTrack =>
-        Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2)[0];
-    }
+    // if (!nextTrack) {
+    //   nextTrack = train.track._nextSwitch.toTracks.filter(branchTrack =>
+    //     Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2)[0];
+    // }
     // console.log({nextTrack});
     if (nextTrack) {
-      return nextTrack;
+      // 駅の入線のタイミング
+      // if (nextTrack[2] === 2) {
+      //   const occupyingTrains = trains.filter(t => t.track.track.station?.stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
+      //   if (occupyingTrains.length > 0) {
+      //     const [key, _] = [...stationIdMap.entries()].filter(v => v[1].stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId)[0];
+      //     const [orgStationId, orgPlatformId] = key.split('__').map(s => Number(s));
+      //     const stationObj = diagram.stations.filter(s => s.stationId === orgStationId)[0];
+      //     const platforms = stationObj.platforms.filter(p => p.platformId !== orgPlatformId);
+      //     if (platforms.length > 0) {
+      //       return getNextTrackToReach(train.track, stationIdMap.get(orgStationId + '__' + platforms[0].platformId)!.stationId)![0];
+      //     } else {
+      //       return nextTrack[0];
+      //     }
+      //   }
+      // }
+
+      return nextTrack[0];
     } else {
       throw new Error('end');
     }
@@ -158,10 +182,16 @@ function moveTrain(train: Train) {
       // 出発する => 次のindexに進める
       if (timetableItem.trainTimetable.length - 1 === train.currentTimetableIndex) {
         // TODO: 運用が終わったとき: 時刻表の運用データを元になんとかする
+        // とりあえず、運用が終わったら削除する
         trains.splice(trains.map((a, i) => [a, i] as const).filter(([t, i]) => t === train)[0][1], 1);
         return;
       }
       train.currentTimetableIndex ++;
+
+      const nextStationTimetable = timetableItem.trainTimetable[train.currentTimetableIndex];
+      const distance = getNextTrackToReach(train.track, nextStationTimetable.stationId)![1];
+      train.speed = distance / (nextStationTimetable.arrivalTime - 30 - globalTime) * globalTimeSpeed;
+      if (train.speed < 0.1) train.speed = 1;
     }
     
     // const stationCenter = getMidPoint(train.track._begin, train.track._end);
@@ -203,21 +233,79 @@ function showGlobalTime() {
   return Math.floor(globalTime / 60 / 60) + ':' + (m < 10 ? '0' + m : '' + m)
 }
 
-function main() {
+function roundPoint(point: Point): Point {
+  const roundFactor = 10;
+  return {
+    x: Math.round(point.x * roundFactor) / roundFactor,
+    y: Math.round(point.y * roundFactor) / roundFactor
+  }
+}
+
+interface SerializedTrain {
+  trainId: number;
+  name: string | undefined;
+  color: string | undefined;
+  position: Point;
+}
+
+interface TimedPositionData {
+  minGlobalTime: number;
+  maxGlobalTime: number;
+  globalTimeSpeed: number;
+  tracks: HalfTrack[];
+  records: SerializedTrain[][];
+}
+
+function toSerializable(train: Train): SerializedTrain {
+  return {
+    trainId: train.trainId,
+    name: train.diaTrain?.name,
+    color: train.diaTrain?.color,
+    position: roundPoint(train.position),
+  };
+}
+
+function getRecords(minGlobalTime: number, maxGlobalTime: number): TimedPositionData {
+  const records: SerializedTrain[][] = [];
+  for (globalTime = minGlobalTime; globalTime <= maxGlobalTime;) {
+    main(false);
+    records.push(
+      trains.map(train => toSerializable(train))
+    );
+  }
+
+  const tracks_ = tracks.map(track => ({
+    _begin: track._begin,
+    _end: track._end,
+    track: { station: track.track.station != null ? {stationName: track.track.station.stationName} : null}
+  } as HalfTrack))
+
+  return {
+    minGlobalTime,
+    maxGlobalTime,
+    globalTimeSpeed,
+    records,
+    tracks: tracks_
+  };
+}
+
+function main(willDraw: boolean = true) {
   for (const train of diagram.trains) {
     if (min(train.trainTimetable.map(t => t.arrivalTime)) === globalTime) {
       addTrain(stationIdMap, train);
     }
   }
 
-  draw();
+  if (willDraw) {
+    draw(currentMousePosition, mouseDownStartPoint);
+  }
+
   for (const train of trains) {
     moveTrain(train);
   }
 
-  globalTime += 10; // TODO
+  globalTime += globalTimeSpeed; // TODO
   // document.getElementById('time')!.innerText = globalTime.toString();
-  document.getElementById('time')!.innerText = globalTime.toString()  + ' / ' + showGlobalTime();
 }
 
 function getNearestTrackPoint(point: Point) {
@@ -235,26 +323,27 @@ function getNearestTrackPoint(point: Point) {
 }
 
 function changeSwitch(nearestTrackPoint: Point) {
-  const nearestTracks = tracks
-    .filter(track => deepEqual(track._begin, nearestTrackPoint));
-  const targetSwitch = nearestTracks[0]._prevSwitch;
+  // TODO
+  // const nearestTracks = tracks
+  //   .filter(track => deepEqual(track._begin, nearestTrackPoint));
+  // const targetSwitch = nearestTracks[0]._prevSwitch;
   
-  if (targetSwitch.fromTracks.length === 1 && targetSwitch.toTracks.length === 1) return;
+  // if (targetSwitch.fromTracks.length === 1 && targetSwitch.toTracks.length === 1) return;
 
-  // とりあえず適当にランダムに選ぶ
-  while (true) {
-    targetSwitch._branchedTrackFrom = getRandomElementOfArray(targetSwitch.fromTracks);
-    targetSwitch._branchedTrackTo = getRandomElementOfArray(targetSwitch.toTracks);
+  // // とりあえず適当にランダムに選ぶ
+  // while (true) {
+  //   targetSwitch._branchedTrackFrom = getRandomElementOfArray(targetSwitch.fromTracks);
+  //   targetSwitch._branchedTrackTo = getRandomElementOfArray(targetSwitch.toTracks);
     
-    if (targetSwitch._branchedTrackFrom !== targetSwitch._branchedTrackTo.reverseTrack) break;
-  }
+  //   if (targetSwitch._branchedTrackFrom !== targetSwitch._branchedTrackTo.reverseTrack) break;
+  // }
 }
 
 function initialize() {
-  const thresholdTrackDistance = 10;
-
   railImage.src = 'rail.png';
   railImage.onload = () => {
+    const thresholdTrackDistance = 10;
+
     let timeoutId = setInterval(main, 100);
 
     const button = document.getElementById('button-slow-speed') as HTMLInputElement;
@@ -336,10 +425,10 @@ function initialize() {
         
         const nextTracks = tracks.filter(track => deepEqual(track._begin, nearestTrackPoint));
         
-        createNewTrack(begin, end, nextTracks, mouseDownStartTracks, null);
+        createNewTrack(begin, end, nextTracks.length > 0 ? nextTracks[0]._prevSwitch : undefined, mouseDownStartTracks.length > 0 ? mouseDownStartTracks[0]._nextSwitch : undefined, nextTracks, mouseDownStartTracks, null);
       } else {
         // 離れているときは新たに線路を作る
-        createNewTrack(begin, end, [], mouseDownStartTracks, null);
+        createNewTrack(begin, end, undefined, mouseDownStartTracks.length > 0 ? mouseDownStartTracks[0]._nextSwitch : undefined, [], mouseDownStartTracks, null);
       }
 
       mouseDownStartPoint = null;
@@ -350,41 +439,53 @@ function initialize() {
   }
 }
 
-function createNewTrack(_begin: Point, _end: Point, _nextTracks: HalfTrack[], _prevTracks: HalfTrack[], station: Station | null): [HalfTrack, HalfTrack] {
+function assert(b: boolean) {
+  if (!b) throw new Error('assert');
+}
+
+function createNewTrack(_begin: Point, _end: Point, _nextSwitch: Switch | undefined, _prevSwitch: Switch | undefined, nextTracks: HalfTrack[], prevTracks: HalfTrack[], station: Station | null): [HalfTrack, HalfTrack] {
   const newTrack = createBothTrack({
     _begin,
     _end,
-    _nextSwitch: _nextTracks.length > 0 ? _nextTracks[0]._prevSwitch : undefined,
-    _prevSwitch: _prevTracks.length > 0 ? _prevTracks[0]._nextSwitch : undefined,
+    _nextSwitch: _nextSwitch,
+    _prevSwitch: _prevSwitch,
     track: {
       station: station,
     }
   });
-
-  if (_prevTracks.length > 0) {
-    _prevTracks[0]._nextSwitch.toTracks.push(newTrack[0]);
-    _prevTracks[0]._nextSwitch.fromTracks.push(newTrack[1]);
-  }
-
-  if (_nextTracks.length > 0) {
-    _nextTracks[0]._prevSwitch.toTracks.push(newTrack[1]);
-    _nextTracks[0]._prevSwitch.fromTracks.push(newTrack[0]);
-  }
   
-  // 始点または終点のtrackがちょうど2つになったとき => わたるようにする
-  if (_nextTracks.length === 1) {
-    _nextTracks[0]._prevSwitch._branchedTrackFrom = _nextTracks[0]._prevSwitch.fromTracks.filter(t => t !== _nextTracks[0].reverseTrack)[0];
-  }
-  if (_prevTracks.length === 1) {
-    _prevTracks[0]._nextSwitch._branchedTrackTo = _prevTracks[0]._nextSwitch.toTracks.filter(t => t !== _prevTracks[0].reverseTrack)[0];
-  }
+  const prevSwitch_ = newTrack[0]._prevSwitch;
+  const nextSwitch_ = newTrack[0]._nextSwitch;
+
+  // 整合性チェック
+  prevTracks.forEach(track => assert(track._nextSwitch === prevSwitch_));
+  nextTracks.forEach(track => assert(track._prevSwitch === nextSwitch_));
+
+  prevSwitch_.switchPatterns.push(...prevTracks.map(track => [track, newTrack[0]] as [HalfTrack, HalfTrack]));
+  nextSwitch_.switchPatterns.push(...nextTracks.map(track => [newTrack[0], track] as [HalfTrack, HalfTrack]));
+
+  // reverse
+  prevSwitch_.switchPatterns.push(...prevTracks.map(track => [newTrack[1], track.reverseTrack] as [HalfTrack, HalfTrack]));
+  nextSwitch_.switchPatterns.push(...nextTracks.map(track => [track.reverseTrack, newTrack[1]] as [HalfTrack, HalfTrack]));
+
+  // 整合性チェック
+  prevSwitch_.switchPatterns.forEach(([track1, track2]) => assert(prevSwitch_.endTracks.filter(t => t === track1).length === 1 && prevSwitch_.beginTracks.filter(t => t === track2).length === 1));
+  nextSwitch_.switchPatterns.forEach(([track1, track2]) => assert(nextSwitch_.endTracks.filter(t => t === track1).length === 1 && nextSwitch_.beginTracks.filter(t => t === track2).length === 1));
+  
+  // // 始点または終点のtrackがちょうど2つになったとき => わたるようにする
+  // if (_nextTracks.length === 1) {
+  //   _nextTracks[0]._prevSwitch._branchedTrackFrom = _nextTracks[0]._prevSwitch.fromTracks.filter(t => t !== _nextTracks[0].reverseTrack)[0];
+  // }
+  // if (_prevTracks.length === 1) {
+  //   _prevTracks[0]._nextSwitch._branchedTrackTo = _prevTracks[0]._nextSwitch.toTracks.filter(t => t !== _prevTracks[0].reverseTrack)[0];
+  // }
 
   tracks.push(...newTrack);
 
   return newTrack;
 }
 
-function createBothTrack(trackBase: HalfTrackWip, skipCreateSwitch: boolean = false): [HalfTrack, HalfTrack] {
+function createBothTrack(trackBase: HalfTrackWip): [HalfTrack, HalfTrack] {
   const reverseTrack = {
     trackId: generateId(),
     _begin: trackBase._end,
@@ -397,42 +498,48 @@ function createBothTrack(trackBase: HalfTrackWip, skipCreateSwitch: boolean = fa
   trackBase.reverseTrack = reverseTrack as HalfTrack;
   trackBase.trackId = generateId();
 
-  if (!skipCreateSwitch && !trackBase._nextSwitch) {
+  if (!trackBase._nextSwitch) {
     trackBase._nextSwitch = {
       switchId: generateId(),
-      fromTracks: [trackBase as HalfTrack],
-      toTracks: [reverseTrack as HalfTrack],
-      _branchedTrackFrom: trackBase as HalfTrack,
-      _branchedTrackTo: reverseTrack as HalfTrack,
+      endTracks: [trackBase as HalfTrack],
+      beginTracks: [reverseTrack as HalfTrack],
+      switchPatterns: [],
+      switchPatternIndex: null,
     };
     reverseTrack._prevSwitch = trackBase._nextSwitch;
     switches.push(trackBase._nextSwitch);
+  } else {
+    trackBase._nextSwitch.endTracks.push(trackBase as HalfTrack);
+    trackBase._nextSwitch.beginTracks.push(reverseTrack as HalfTrack);
   }
 
-  if (!skipCreateSwitch && !reverseTrack._nextSwitch) {
+  if (!reverseTrack._nextSwitch) {
     reverseTrack._nextSwitch = {
       switchId: generateId(),
-      fromTracks: [reverseTrack as HalfTrack],
-      toTracks: [trackBase as HalfTrack],
-      _branchedTrackFrom: reverseTrack as HalfTrack,
-      _branchedTrackTo: trackBase as HalfTrack
+      endTracks: [reverseTrack as HalfTrack],
+      beginTracks: [trackBase as HalfTrack],
+      switchPatterns: [],
+      switchPatternIndex: null,
     };
     trackBase._prevSwitch = reverseTrack._nextSwitch;
     switches.push(reverseTrack._nextSwitch);
+  } else {
+    reverseTrack._nextSwitch.endTracks.push(reverseTrack as HalfTrack);
+    reverseTrack._nextSwitch.beginTracks.push(trackBase as HalfTrack);
   }
 
   return [trackBase as HalfTrack, reverseTrack as HalfTrack];
 }
 
-function syncBothTrack(trackBase: HalfTrack) {
-  const rTrack = trackBase.reverseTrack;
-  rTrack._begin = trackBase._end;
-  rTrack._end = trackBase._begin;
-  rTrack._nextSwitch = trackBase._prevSwitch;
-  rTrack._prevSwitch = trackBase._nextSwitch;
-  rTrack.reverseTrack = trackBase as HalfTrack;
-  rTrack.track = trackBase.track;
-}
+// function syncBothTrack(trackBase: HalfTrack) {
+//   const rTrack = trackBase.reverseTrack;
+//   rTrack._begin = trackBase._end;
+//   rTrack._end = trackBase._begin;
+//   rTrack._nextSwitch = trackBase._prevSwitch;
+//   rTrack._prevSwitch = trackBase._nextSwitch;
+//   rTrack.reverseTrack = trackBase as HalfTrack;
+//   rTrack.track = trackBase.track;
+// }
 
 function getRandomElementOfArray<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];

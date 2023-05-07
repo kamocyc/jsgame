@@ -195,7 +195,7 @@ function drawDiagram(ctx: CanvasRenderingContext2D, stations: DiaStation[], trai
 }
 
 function drawDiagram_() {
-  const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+  // const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   // canvas.onmousedown = function (e) {
   //   // ドラッグスタート
   // }
@@ -209,8 +209,15 @@ function drawDiagram_() {
   // }
 
   fetch('./sample-diagram.json').then(data => data.text()).then(diaRawData => {
-    const d = getDiaFreaks(diaRawData);
+    diagram = getDiaFreaks(diaRawData);
+    diagram.trains.forEach(t => t.trainTimetable.forEach(tt => {
+      tt.arrivalTime = tt.arrivalTime - 10000;
+      tt.departureTime = tt.departureTime - 10000;
+    }))
+
+    diagram.trains = diagram.trains.map(train => ({...train, trainTimetable: interpolateTrainTimetable(train.trainTimetable, diagram.stations)}));
+
     drawDiagram((document.getElementById('canvas') as HTMLCanvasElement)
-    .getContext("2d")!, d.stations, d.trains);
+    .getContext("2d")!, diagram.stations, diagram.trains);
   })
 }

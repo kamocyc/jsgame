@@ -26,15 +26,17 @@ interface EkiJikoku {
   jikoku: Time;
 }
 
-function parseEkiJikoku(jikoku: string): Time | undefined {
+interface EkiJikokuData {
+  bansen: number | undefined,
+  chakuJikoku: Time | undefined,
+  hatsuJikoku: Time | undefined,
+  ekiOperation: number | undefined,
+}
+
+function parseEkiJikoku(jikoku: string): EkiJikokuData {
   console.log(jikoku);
   
-  const result: {
-    bansen: number | undefined,
-    chakuJikoku: Time | undefined,
-    hatsuJikoku: Time | undefined,
-    ekiOperation: number | undefined,
-  } = {
+  const result: EkiJikokuData = {
     bansen: undefined,
     chakuJikoku: undefined,
     hatsuJikoku: undefined,
@@ -77,7 +79,7 @@ function parseEkiJikoku(jikoku: string): Time | undefined {
   result.ekiOperation = Number(jikoku.substring(startIndex));
 
   console.log(result);
-  return result.hatsuJikoku;
+  return result;
 }
 
 function parseJikoku(text: string): Time | undefined {
@@ -104,12 +106,27 @@ function getDias(lines: string[]): Dia[] {
   return dias;
 }
 
+function getEkiTracks(lines: string[], i: number) {
+  const tracks = [];
+
+  while (true) {
+    const line = lines[i];
+    if (line === 'EkiTrack2.') {
+      const trackName = getProperty(lines, i, "TrackName");
+      const trackRyakushou = getProperty(lines, i, "TrackRyakushou");
+      tracks.push({ trackName, trackRyakushou });
+    }
+    i ++;
+  }
+}
+
 function getEkis(lines: string[]): Eki[] {
   const ekis = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line === "Eki.") {
       const eki = getProperty(lines, i, "Ekimei");
+      const ekiTracks = getEkiTracks(lines, i);
       ekis.push({ name: eki, index: i });
     }
   }
@@ -185,24 +202,40 @@ function getEkiJikokus(audBuf: string, diaName: string | undefined) {
       ] as const;
     });
   
-    var ekiJikokus = new Map<string, Time[]>();
+  const stations = ekis.map((eki, i) => ({
+    stationId: generateId(),
+    name: eki.name,
+    distance: i * 10  /* TODO */
+  }));
 
-    for (let ekiIndex = 0; ekiIndex < ekis.length - 1; ekiIndex++) {
-      ekiJikokus.set(createKey(ekis[ekiIndex].name, ekis[ekiIndex + 1].name), []);
-      ekiJikokus.set(createKey(ekis[ekis.length - ekiIndex - 1].name, ekis[ekis.length - ekiIndex - 2].name), []);
-    }
-    for (const [ressya, houkou] of ressyas) {
-      let ekiIndex = 0;
-      for (const jikoku of ressya) {
-        if (jikoku != null) {
-          var adjustedEkiIndex = houkou === "Kudari" ? ekiIndex : ekis.length - 1 - ekiIndex;
-          var currentEki = ekis[adjustedEkiIndex];
-          var nextEki = ekis[adjustedEkiIndex + (houkou === "Kudari" ? 1 : -1)];
-          ekiJikokus.get(createKey(currentEki.name, nextEki.name))!.push(jikoku);
-        }
-        ekiIndex++;
+  const trains = [];
+
+  for (const [ressya, houkou] of ressyas) {
+    let ekiIndex = 0;
+    const timetable = [];
+    for (const jikoku of ressya) {
+      if (jikoku != null) {
+        const adjustedEkiIndex = houkou === "Kudari" ? ekiIndex : ekis.length - 1 - ekiIndex;
+        const currentStation = stations[adjustedEkiIndex];
+        const currentPlatform = currentStation.platforms[jikoku.bansen /* todo */];
+        timetable.push({
+          stationId: currentStation.stationId,
+          arrivalTime: jikoku.chakuJikoku,
+          platformId: currentPlatform.platformId,
+          departureTime: jikoku.hatsuJikoku,
+        });
       }
+      ekiIndex++;
     }
+    trains.push({
+      trainId: generateId(),
+      name: ,
+      timetable: timetable,
+    })
+  }
 
-    return ekiJikokus;
+  return {
+    stations,
+    trains,
+  };
 }

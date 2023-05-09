@@ -1,4 +1,4 @@
-type FileType = 'aud' | 'diafreaks';
+type FileType = 'oud' | 'diafreaks';
 
 // fieldName変更
 // relationを戻す
@@ -51,19 +51,21 @@ function onFileSelectorChange(event: Event) {
     "load",
     () => {
       console.log(reader.result);
-      if (fileType === 'aud') {
-        getEkiJikokus(reader.result as string, undefined);
+      if (fileType === 'oud') {
+        const r = getEkiJikokus(reader.result as string, undefined);
+        console.log(r);
       } else {
-        getDiaFreaks(reader.result as string);
+        const r = getDiaFreaks(reader.result as string);
+        console.log(r)
       }
     },
     false
   );
 
   if (file) {
-    if (/.*\.aud2?$/.test(file.name)) {
+    if (/.*\.oud2?$/.test(file.name)) {
       // aud形式
-      fileType = 'aud';
+      fileType = 'oud';
       reader.readAsText(file, "Shift_JIS");
     } else {
       // json形式 (diafreaks)

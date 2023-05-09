@@ -52,7 +52,7 @@ function onFileSelectorChange(event: Event) {
     () => {
       console.log(reader.result);
       if (fileType === 'oud') {
-        const r = getEkiJikokus(reader.result as string, undefined);
+        const r = getEkiJikokus(reader.result as string);
         console.log(r);
       } else {
         const r = getDiaFreaks(reader.result as string);

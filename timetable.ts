@@ -1,29 +1,53 @@
+// oud形式をjson形式に変換する
+function oudToJson(oudBuf: string): any {
+  const obj: any = {};
+  let currentObj = obj;
+  let parentObjects = [];
+  const lines = oudBuf.split(/\r\n|\n/);
+  for (let i = 0; i < lines.length; i ++) {
+    const line = lines[i];
+    
+    // 文字列プロパティ
+    // 同名は後のもので上書きする
+    const propertyMatches = line.match(/^(\w+)=(.*)$/);
+    if (propertyMatches !== null) {
+      const propertyName = propertyMatches[1];
+      const propertyValue = propertyMatches[2];
+      currentObj[propertyName] = propertyValue;
+    }
+
+    // オブジェクトプロパティ
+    // 同名は配列にする
+    const objectMatches = line.match(/^(\w+)\./);
+    if (objectMatches !== null) {
+      const propertyName = objectMatches[1];
+      if (currentObj[propertyName] === undefined) {
+        currentObj[propertyName] = [];
+      }
+      const newObject = {};
+      currentObj[propertyName].push(newObject);
+      parentObjects.push(currentObj);
+      currentObj = newObject;
+    }
+
+    if (line === '.') {
+      currentObj = parentObjects[parentObjects.length - 1];
+      parentObjects.splice(parentObjects.length - 1);
+    }
+  }
+
+  if (parentObjects.length !== 0) {
+    throw new Error('illegal format');
+  }
+
+  return obj;
+}
+
 type Houkou = "Kudari" | "Nobori";
 
 interface Time {
   hour: number;
   minute: number;
-}
-
-interface Dia {
-  name: string;
-  index: number;
-}
-
-interface Eki {
-  name: string;
-  index: number;
-}
-
-interface Ressya {
-  name: string;
-  houkou: Houkou;
-}
-
-interface EkiJikoku {
-  currentEki: string;
-  nextEki: string;
-  jikoku: Time;
 }
 
 interface EkiJikokuData {
@@ -33,8 +57,10 @@ interface EkiJikokuData {
   ekiOperation: number | undefined,
 }
 
-function parseEkiJikoku(jikoku: string): EkiJikokuData {
-  console.log(jikoku);
+function parseEkiJikoku(jikoku: string): EkiJikokuData | undefined {
+  // console.log(jikoku);
+
+  if (jikoku.trim() === '') return undefined;
   
   const result: EkiJikokuData = {
     bansen: undefined,
@@ -78,7 +104,7 @@ function parseEkiJikoku(jikoku: string): EkiJikokuData {
 
   result.ekiOperation = Number(jikoku.substring(startIndex));
 
-  console.log(result);
+  // console.log(result);
   return result;
 }
 
@@ -94,146 +120,80 @@ function parseJikoku(text: string): Time | undefined {
   return { hour, minute };
 }
 
-function getDias(lines: string[]): Dia[] {
-  const dias = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line === "Dia.") {
-      const dia = getProperty(lines, i, "DiaName");
-      dias.push({ name: dia, index: i });
-    }
-  }
-  return dias;
+function timeToSeconds(time: Time): number {
+  return time.hour * 60 * 60 + time.minute * 60;
 }
 
-function getEkiTracks(lines: string[], i: number) {
-  const tracks = [];
-
-  while (true) {
-    const line = lines[i];
-    if (line === 'EkiTrack2.') {
-      const trackName = getProperty(lines, i, "TrackName");
-      const trackRyakushou = getProperty(lines, i, "TrackRyakushou");
-      tracks.push({ trackName, trackRyakushou });
-    }
-    i ++;
-  }
-}
-
-function getEkis(lines: string[]): Eki[] {
-  const ekis = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line === "Eki.") {
-      const eki = getProperty(lines, i, "Ekimei");
-      const ekiTracks = getEkiTracks(lines, i);
-      ekis.push({ name: eki, index: i });
-    }
-  }
-  return ekis;
-}
-
-function getRessyas(lines: string[]): Ressya[] {
-  const ressyas = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line === "Ressya.") {
-      const ressya = getProperty(lines, i, "EkiJikoku");
-      const houkou: Houkou = getProperty(lines, i, "Houkou") === "Nobori" ? "Nobori" : "Kudari";
-      ressyas.push({ name: ressya, houkou });
-    }
-  }
-  return ressyas;
-}
-
-function getProperty(lines: string[], i: number, propertyName: string): string {
-  const lastIndexOfBlock = getLastIndexOfBlock(lines, i);
-  for (let j = i + 1; j < lastIndexOfBlock; j++) {
-    const line = lines[j];
-    if (line.startsWith(propertyName + "=")) {
-      return line.substring(propertyName.length + 1);
-    }
-  }
-  throw new Error("Property not found (" + propertyName + ")");
-}
-
-function getLastIndexOfBlock(lines: string[], startIndex: number): number {
-  for (let i = startIndex + 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (line[line.length - 1] === ".") {
-      return i;
-    }
-  }
-  return lines.length;
-}
-
-function createKey(s1: string, s2: string): string {
-  return s1 + "-" + s2;
-}
-
-function getEkiJikokus(audBuf: string, diaName: string | undefined) {
-  let lines = audBuf.split(/\r\n|\n/);
-  
-  const dias = getDias(lines);
-  if (diaName === undefined && dias.length > 1) {
-    throw new Error("diaName is not specified");
-  }
-
-  const dia = diaName === undefined ? dias[0] : dias.find(d => d.name === diaName);
-  if (dia === undefined) {
-    throw new Error("diaName is not found");
-  }
-
-  const ekis = getEkis(lines);
-  
-  lines = lines.slice(dia.index);
-  const ressyas = getRessyas(lines)
-    .map(x => {
-      return [
-        x.name
-          .split(',')
-          .map(jikoku => {
-            if (jikoku === '') {
-              return undefined;
-            }
-            return parseEkiJikoku(jikoku);
-          }),
-        x.houkou
-      ] as const;
-    });
-  
-  const stations = ekis.map((eki, i) => ({
+function convertEkis(ekis: any[]): DiaStation[] {
+  return ekis.map((eki, i) => ({
     stationId: generateId(),
-    name: eki.name,
-    distance: i * 10  /* TODO */
+    name: eki["Ekimei"] as string,
+    distance: i * 10 /* TODO */,
+    platforms:
+      (eki["EkiTrack2Cont"][0]["EkiTrack2"] as any[]).map(track => ({
+        platformId: generateId(),
+        name: track["TrackName"] as string
+      }))
   }));
+}
 
-  const trains = [];
+function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus: any[]): DiaTrain[] {
+  return ressyas.map(ressya => {
+    const houkou = ressya["Houkou"] as Houkou;
+    const timetable =
+      (ressya["EkiJikoku"] as string).split(',')
+      .map(parseEkiJikoku)
+      .map((ekiJikoku, index) => {
+        if (!ekiJikoku) {
+          return undefined;
+        }
 
-  for (const [ressya, houkou] of ressyas) {
-    let ekiIndex = 0;
-    const timetable = [];
-    for (const jikoku of ressya) {
-      if (jikoku != null) {
-        const adjustedEkiIndex = houkou === "Kudari" ? ekiIndex : ekis.length - 1 - ekiIndex;
-        const currentStation = stations[adjustedEkiIndex];
-        const currentPlatform = currentStation.platforms[jikoku.bansen /* todo */];
-        timetable.push({
-          stationId: currentStation.stationId,
-          arrivalTime: jikoku.chakuJikoku,
-          platformId: currentPlatform.platformId,
-          departureTime: jikoku.hatsuJikoku,
-        });
-      }
-      ekiIndex++;
-    }
-    trains.push({
+        const stationIndex = houkou === 'Kudari' ? index : (stations.length - index - 1);
+        const station = stations[stationIndex];
+        const platform = ekiJikoku.bansen !== undefined ? station.platforms[ekiJikoku.bansen - 1] : station.platforms[0]; /* TODO: これで大丈夫？ */
+        let departureTime = ekiJikoku.hatsuJikoku;
+        const arrivalTime = ekiJikoku.chakuJikoku ?? departureTime;
+        departureTime = departureTime ?? arrivalTime;
+        // 通過や軽油しないの時とかは時刻がない。。。 => 伴戦の扱いとか後で対応したい
+        // if (departureTime === undefined && arrivalTime === undefined) throw new Error('departureTime and arrivalTime are undefined');
+        if (departureTime === undefined && arrivalTime === undefined) {
+          return undefined;
+        }
+
+        return {
+          stationId: station.stationId,
+          platformId: platform.platformId,
+          arrivalTime: timeToSeconds(arrivalTime as Time),
+          departureTime: timeToSeconds(departureTime as Time),
+        };
+      })
+      .filter(e => e !== undefined) as StationTrain[];
+
+    const trainType = ressya["Syubetsu"] !== undefined ? ressyasyubetsus[ressya["Syubetsu"]] : undefined;
+    const trainTypeName = trainType?.["Syubetsumei"];
+    const trainTypeColor = trainType?.["JikokuhyouMojiColor"];
+    const trainName = (ressya["Ressyabangou"] ?? "") + (trainTypeName ?? "") + (ressya["Ressyamei"] ?? "") + (ressya["Gousuu"] ?? "")
+
+    return {
       trainId: generateId(),
-      name: ,
-      timetable: timetable,
-    })
-  }
+      color: trainTypeColor !== undefined ? '#' + trainTypeColor.substring(2) : undefined,
+      name: trainName,
+      trainTimetable: timetable
+    };
+  })
+}
 
+function getEkiJikokus(oudBuf: string) {
+  const oudJson = oudToJson(oudBuf);
+  const rosen = oudJson["Rosen"][0];
+  const stations = convertEkis(rosen["Eki"]);
+  const ressyasyubetsus = rosen["Ressyasyubetsu"];
+  const dia = rosen["Dia"][0];
+  const trains =
+    convertRessyas(dia["Kudari"][0]["Ressya"], stations, ressyasyubetsus).concat(
+      convertRessyas(dia["Nobori"][0]["Ressya"], stations, ressyasyubetsus)
+    );
+  
   return {
     stations,
     trains,

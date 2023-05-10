@@ -1,3 +1,5 @@
+import { TrainMove } from "./trainMove.js";
+
 function extractIdSub(ee: object) {
   const kk = Object.keys(ee);
   const idKks = kk.filter(kkk => kkk.indexOf('Id') > 0);
@@ -60,7 +62,7 @@ function restoreJson(obj: object, entry: object) {
   return constructed;
 }
 
-function toJSON() {
+export function toJSON(trainMove: TrainMove) {
   // const obj = {
   //   trains: trains.map(train => ({ ...train, track: train.track.id })),
   //   switches: switches.map(sw => ({ ...sw, fromTracks: sw.fromTracks.map(t => t.id), toTracks: sw.toTracks.map(t => t.id), _branchedTrackFrom: sw._branchedTrackFrom.id, _branchedTrackTo: sw._branchedTrackTo.id })),
@@ -68,10 +70,10 @@ function toJSON() {
   //   stations: stations,
   // };
   const obj = {
-    trains: trains.map(extractId),
-    switches: switches.map(extractId),
-    tracks: tracks.map(extractId),
-    stations: stations.map(extractId),
+    trains: trainMove.trains.map(extractId),
+    switches: trainMove.switches.map(extractId),
+    tracks: trainMove.tracks.map(extractId),
+    stations: trainMove.stations.map(extractId),
   };
 
   const json = JSON.stringify(obj); 

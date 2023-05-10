@@ -1,5 +1,6 @@
+import { DiaStation, Diagram, StationTrain } from "./model.js";
 
-function interpolateTrainTimetable(timetable: StationTrain[], stations: DiaStation[]): StationTrain[] {
+export function interpolateTrainTimetable(timetable: StationTrain[], stations: DiaStation[]): StationTrain[] {
   const stationsI = stations.map((s, i) => [s, i] as const);
   let prevStation = stationsI.filter(s => s[0].stationId === timetable[0].stationId)[0];
   const timetableResult: StationTrain[] = [timetable[0]]
@@ -37,7 +38,7 @@ function interpolateTrainTimetable(timetable: StationTrain[], stations: DiaStati
   return timetableResult;
 }
 
-function normalizeDia(diagram: Diagram) {
+export function normalizeDia(diagram: Diagram): void {
   // 同じ時間に同じホームに列車がいたら、同じ駅の別のホームに変更する
   const stations = diagram.stations;
   const trains = diagram.trains;

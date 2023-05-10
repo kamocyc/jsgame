@@ -1,39 +1,28 @@
-<html>
+<html lang="ja">
   <head>
     <meta charset="UTF-8">
   </head>
   <body>
+
     <canvas id="canvas" width="2000" height="500"></canvas>
+
     <button id="button-slow-speed">遅くする</button><br>
     <button id="button-speed-slow">＜＜</button>
-    <button id="button-speed-fast">＞＞</button><br>
+    <button id="button-speed-fast">＞＞</button>
+    <div id="speed-text"></div><br>
+
     <div id="seek-bar" style="width: 1000px; height: 20px; background-color: aquamarine;">
       <div id="seek-bar-item" style="width: 6px; height: 20px; background-color: black; position: relative;"></div>
     </div>
     <div id="time"></div>
-    <input type="file" id="file-selector" accept=".oud, .oud2 ">
-    <script src="./dist/drawer.js"></script>
-    <script src="./dist/model.js"></script>
-    <script src="./dist/normalizeDia.js"></script>
-    <script src="./dist/generateLine.js"></script>
-    <script src="./dist/file.js"></script>
-    <script src="./dist/dia.js"></script>
-    <script src="./dist/serialize.js"></script>
-    <script src="./dist/initializeData.js"></script>
-    <script src="./dist/1.js"></script>
-    <script src="./dist/timetable.js"></script>
-    <script>
-      onload = function () {
-        // drawDiagram_();
-        // initialize();
-        // initialize2();
-        loadTime();
-      }
 
-      const fileSelector = document.getElementById('file-selector');
-      fileSelector.addEventListener('change', (event) => {
-        onFileSelectorChange(event);
-      });
+    <input type="file" id="file-selector" accept=".oud, .oud2 ">
+
+    <script type="module">
+      import { initialize } from './dist/main.js';
+      onload = function () {
+        initialize();
+      }
     </script>
   </body>
 </html>

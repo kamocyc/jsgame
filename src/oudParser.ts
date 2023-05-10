@@ -1,3 +1,5 @@
+import { DiaStation, DiaTrain, Diagram, StationTrain, generateId } from "./model.js";
+
 // oud形式をjson形式に変換する
 function oudToJson(oudBuf: string): any {
   const obj: any = {};
@@ -43,7 +45,7 @@ function oudToJson(oudBuf: string): any {
   return obj;
 }
 
-type Houkou = "Kudari" | "Nobori";
+type Houkou = "Kudari" | "Nobori" /* */;
 
 interface Time {
   hour: number;
@@ -183,7 +185,7 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
   })
 }
 
-function getEkiJikokus(oudBuf: string) {
+export function getEkiJikokus(oudBuf: string): Diagram {
   const oudJson = oudToJson(oudBuf);
   const rosen = oudJson["Rosen"][0];
   const stations = convertEkis(rosen["Eki"]);

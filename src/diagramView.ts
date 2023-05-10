@@ -1,59 +1,35 @@
-interface RawPlatform {
-  id: number; /* platformId */
-  n?: string; /* name */
-}
+import { max } from "./common.js";
+import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from "./drawer.js";
+import { getDiaFreaks } from "./diaFreaksParser.js";
+import { DiaStation, DiaTrain } from "./model.js";
+import { interpolateTrainTimetable } from "./normalizeDia.js";
 
-interface RawDiaStation {
-  id: number; /* stationId */
-  n: string; /* name */
-  m: number; /* distance */
-  t: Platform[]; /* platforms */
-}
+// 元のjsonフォーマット
+// interface RawPlatform {
+//   id: number; /* platformId */
+//   n?: string; /* name */
+// }
 
-interface RawStationTrain {
-  s: number; /* stationId */
-  t: number; /* platformId */
-  a: number; /* arrivalTime */
-  d: number; /* departureTime */
-}
+// interface RawDiaStation {
+//   id: number; /* stationId */
+//   n: string; /* name */
+//   m: number; /* distance */
+//   t: Platform[]; /* platforms */
+// }
 
-interface RawDiaTrain {
-  id: number; /* trainId */
-  c?: string; /* color */
-  n: string; /* name */
-  s: StationTrain[];
-}
+// interface RawStationTrain {
+//   s: number; /* stationId */
+//   t: number; /* platformId */
+//   a: number; /* arrivalTime */
+//   d: number; /* departureTime */
+// }
 
-interface Platform {
-  platformId: number; /* platformId */
-  name?: string; /* name */
-}
-
-interface DiaStation {
-  stationId: number; /* stationId */
-  name: string; /* name */
-  distance: number; /* distance */
-  platforms: Platform[]; /* platforms */
-}
-
-interface StationTrain {
-  stationId: number; /* stationId */
-  platformId: number; /* platformId */
-  arrivalTime: number; /* arrivalTime */
-  departureTime: number; /* departureTime */
-}
-
-interface DiaTrain {
-  trainId: number; /* trainId */
-  color?: string;
-  name: string; /* name */
-  trainTimetable: StationTrain[];
-}
-
-interface Diagram {
-  stations: DiaStation[];
-  trains: DiaTrain[];
-}
+// interface RawDiaTrain {
+//   id: number; /* trainId */
+//   c?: string; /* color */
+//   n: string; /* name */
+//   s: StationTrain[];
+// }
 
 const timeOffset = 10000;
 const timeWidth = 20000;
@@ -167,22 +143,6 @@ function drawTrain(ctx: CanvasRenderingContext2D, stations: DiaStation[], train:
   }
 }
 
-function max(arr: number[]): number {
-  let cur = Number.MIN_SAFE_INTEGER;
-  for (const n of arr) {
-    if (n > cur) cur = n;
-  }
-  return cur;
-}
-
-function min(arr: number[]): number {
-  let cur = Number.MAX_SAFE_INTEGER;
-  for (const n of arr) {
-    if (n < cur) cur = n;
-  }
-  return cur;
-}
-
 function drawDiagram(ctx: CanvasRenderingContext2D, stations: DiaStation[], trains: DiaTrain[]) {
   drawTimeLine(ctx);
 
@@ -194,7 +154,7 @@ function drawDiagram(ctx: CanvasRenderingContext2D, stations: DiaStation[], trai
   }
 }
 
-function drawDiagram_() {
+export function drawDiagram_() {
   // const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   // canvas.onmousedown = function (e) {
   //   // ドラッグスタート
@@ -209,7 +169,7 @@ function drawDiagram_() {
   // }
 
   fetch('./sample-diagram.json').then(data => data.text()).then(diaRawData => {
-    diagram = getDiaFreaks(diaRawData);
+    const diagram = getDiaFreaks(diaRawData);
     diagram.trains.forEach(t => t.trainTimetable.forEach(tt => {
       tt.arrivalTime = tt.arrivalTime - 10000;
       tt.departureTime = tt.departureTime - 10000;

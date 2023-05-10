@@ -1,19 +1,22 @@
+import { Point, Train } from "./model.js";
+import { TrainMove } from "./trainMove.js";
+
 let offsetX = 0;
 let offsetY = 0;
 
-const fontSize = 20;
-const canvasWidth = 2000;
-const canvasHeight = 500;
+export const fontSize = 20;
+export const canvasWidth = 2000;
+export const canvasHeight = 500;
 
-function _x(x: number): number {
+export function _x(x: number): number {
   return x + offsetX;
 }
 
-function _y(y: number): number {
+export function _y(y: number): number {
   return y + offsetY;
 }
 
-function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, pointEnd: Point) {
+export function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, pointEnd: Point) {
   ctx.beginPath();
   ctx.moveTo(_x(pointBegin.x), _y(pointBegin.y));
   ctx.lineTo(_x(pointEnd.x), _y(pointEnd.y));
@@ -57,13 +60,13 @@ function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
   }
 }
 
-function draw(currentMousePosition: Point, mouseDownStartPoint: null | Point) {
+export function draw(trainMove: TrainMove, currentMousePosition: null | Point, mouseDownStartPoint: null | Point) {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
   
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  for (const track of tracks) {
+  for (const track of trainMove.tracks) {
     drawLine(ctx, track._begin, track._end);
     if (track.track.station) {
       ctx.beginPath();
@@ -96,7 +99,7 @@ function draw(currentMousePosition: Point, mouseDownStartPoint: null | Point) {
   //   ctx.strokeStyle = 'black'
   // }
 
-  if (mouseDownStartPoint !== null) {
+  if (mouseDownStartPoint !== null && currentMousePosition !== null) {
     const rect = canvas.getBoundingClientRect();
     const mouseDownEndPoint = {
       x: currentMousePosition.x - rect.left,
@@ -105,9 +108,9 @@ function draw(currentMousePosition: Point, mouseDownStartPoint: null | Point) {
     drawLine(ctx, mouseDownStartPoint, mouseDownEndPoint);
   }
 
-  for (const train of trains) {
+  for (const train of trainMove.trains) {
     drawTrain2(ctx, train);
   }
 
-  document.getElementById('time')!.innerText = globalTime.toString()  + ' / ' + showGlobalTime();
+  document.getElementById('time')!.innerText = trainMove.globalTime.toString()  + ' / ' + trainMove.showGlobalTime();
 }

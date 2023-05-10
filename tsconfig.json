@@ -3,7 +3,5 @@
     "strict": true,
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
-    "module": "UMD",
-    "esModuleInterop": true
   }
 }

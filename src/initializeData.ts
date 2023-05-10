@@ -1,6 +1,9 @@
+import { Train, generateId } from "./model.js";
+import { createBothTrack } from "./trackUtil.js";
+import { TrainMove } from "./trainMove.js";
 
-function initializeData() {
-  stations.push(...[
+export function initializeData(trainMove: TrainMove) {
+  trainMove.stations.push(...[
     {
       stationId: generateId(),
       stationName: 'A',
@@ -10,8 +13,8 @@ function initializeData() {
     },
   ]);
   
-  tracks.push(...[
-    ...createBothTrack({
+  trainMove.tracks.push(...[
+    ...createBothTrack(trainMove.switches, {
       _begin: { x: 0, y: 0 },
       _nextSwitch: undefined,
       _end: { x: 100, y: 100 },
@@ -20,13 +23,13 @@ function initializeData() {
         station: null,
       }
     }),
-    ...createBothTrack({
+    ...createBothTrack(trainMove.switches, {
       _begin: { x: 100, y: 100 },
       _end: { x: 200, y: 100 },
       _nextSwitch: undefined,
       _prevSwitch: undefined,
       track: {
-        station: stations[0]
+        station: trainMove.stations[0]
       }
     })
   ]);
@@ -55,20 +58,20 @@ function initializeData() {
   //   },
   // ]);
   
-  tracks[0]._nextSwitch = switches[1];
-  tracks[0]._prevSwitch = switches[0];
-  tracks[2]._nextSwitch = switches[2];
-  tracks[2]._prevSwitch = switches[1];
+  trainMove.tracks[0]._nextSwitch = trainMove.switches[1];
+  trainMove.tracks[0]._prevSwitch = trainMove.switches[0];
+  trainMove.tracks[2]._nextSwitch = trainMove.switches[2];
+  trainMove.tracks[2]._prevSwitch = trainMove.switches[1];
   
   // syncBothTrack(tracks[0]);
   // syncBothTrack(tracks[2]);
   
-  trains.push(...[
+  trainMove.trains.push(...[
     {
       trainId: generateId(),
       currentTimetableIndex: 0,
       speed: 10,
-      track: tracks[0],
+      track: trainMove.tracks[0],
       position: { x: 0, y: 0 },
       stationWaitTime: 0,
       wasDeparted: false,
@@ -77,16 +80,16 @@ function initializeData() {
       trainId: generateId(),
       currentTimetableIndex: 0,
       speed: 10,
-      track: tracks[1],
+      track: trainMove.tracks[1],
       position: { x: 110, y: 100 },
       stationWaitTime: 0,
       wasDeparted: false,
     }
   ]);
 
-  operatingTrains.push(...[
+  trainMove.operatingTrains.push(...[
     {
-      train: trains[0]
+      train: trainMove.trains[0]
     }
   ]);
   

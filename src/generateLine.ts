@@ -51,23 +51,6 @@ export function generateLines(tracks: HalfTrack[], switches: Switch[], stations:
   }
 }
 
-export function getNextTrackToReach(track: HalfTrack, stationId: number, length: number = 0, count: number = 0, found: Map<number, boolean> = new Map()): [HalfTrack, number, number] | undefined {
-  if (track.track.station?.stationId === stationId) return [track, length, count];
-  
-  found.set(track.trackId, true);
-
-  for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
-    if (!found.has(toTrack.trackId)) {
-      const r = getNextTrackToReach(toTrack, stationId, length + getDistance(toTrack._end, toTrack._begin), count + 1, found);
-      if (r) return [toTrack, r[1], r[2]];
-    }
-  }
-
-  found.delete(track.trackId);
-
-  return undefined;
-}
-
 function convertTimetableItem(obj: StationTrain, stationIdMap: Map<string, number>): StationTrain {
   return {
     stationId: stationIdMap.get(getStationIdMapKey(obj.stationId, obj.platformId))!,

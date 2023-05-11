@@ -1,5 +1,10 @@
 lockfileVersion: '6.0'
 
+dependencies:
+  '@datastructures-js/priority-queue':
+    specifier: ^6.2.0
+    version: 6.2.0
+
 devDependencies:
   '@swc/cli':
     specifier: ^0.1.62
@@ -15,6 +20,16 @@ devDependencies:
     version: 5.0.0
 
 packages:
+
+  /@datastructures-js/heap@4.3.1:
+    resolution: {integrity: sha512-au4fYa4fprREES58FnMOTFjg8lCYpSenF5tBu8C/iweMaj02rAOZUqlLUCqR3HIWzNfgTeCmAiyRHdjJVHrsIQ==}
+    dev: false
+
+  /@datastructures-js/priority-queue@6.2.0:
+    resolution: {integrity: sha512-z4Nikrb3PqlYn1+2bF+LArm2kWC5kvm13E1h+HYm0exGuUEp2Av0S31tDG+h8hVIbg+FlJIzWiF/T38XIexs5w==}
+    dependencies:
+      '@datastructures-js/heap': 4.3.1
+    dev: false
 
   /@isaacs/cliui@8.0.2:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}

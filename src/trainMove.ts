@@ -1,10 +1,50 @@
 import { min } from "./common.js";
-import { getNextTrackToReach } from "./generateLine.js";
 import { DiaTrain, Diagram, HalfTrack, OperationTrain, Point, SerializedTrain, Station, StationTrain, Switch, TimedPositionData, Train, generateId } from "./model.js";
+import { Queue } from "./queue.js";
 import { getDistance, getTrackDirection, isTrainOutTrack } from "./trackUtil.js";
 
 interface DiaOperatingTrain extends DiaTrain {
   operatingTrain: Train
+}
+
+// 辺の数の最短を返すので、ダイクストラ法で求めたい。そんなに難しくない
+function bfsTrack(startTrack: HalfTrack, stationId: number): [HalfTrack, number] | undefined {
+  const queue = new Queue<HalfTrack>();
+  const found = new Map<number, HalfTrack | undefined>();
+
+  queue.enqueue(startTrack);
+  found.set(startTrack.trackId, undefined);
+
+  let i = 0;
+  while (!queue.isEmpty()) {
+    const track = queue.front();
+    queue.dequeue();
+    i ++;
+
+    for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
+      if (!found.has(toTrack.trackId)) {
+        found.set(toTrack.trackId, track);
+
+        if (toTrack.track.station?.stationId === stationId) {
+          // 最初のパスを返す
+          let prevTrack: HalfTrack = toTrack;
+          let distance = 0;
+          while (true) {
+            i ++;
+            const track = found.get(prevTrack.trackId)!;
+            distance += getDistance(track._begin, track._end);
+            if (track?.trackId === startTrack.trackId) {
+              if (i > 10) console.log(i);
+              return [prevTrack, distance];
+            }
+            prevTrack = track;
+          }
+        }
+
+        queue.enqueue(toTrack);
+      }
+    }
+  }
 }
 
 export class TrainMove {
@@ -49,29 +89,9 @@ export class TrainMove {
       
       // 次の駅に向かう方向に進む（つまり現在よりも「先の」方向で、一番近い位置の駅）
       // まずはtoのtoのみ見る
-      let nextTrack = getNextTrackToReach(train.track, timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
-      // if (!nextTrack) {
-      //   nextTrack = train.track._nextSwitch.toTracks.filter(branchTrack =>
-      //     Math.abs(getRadian(track, branchTrack)) <= Math.PI / 2)[0];
-      // }
+      let nextTrack = bfsTrack(train.track, timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
       // console.log({nextTrack});
-      if (nextTrack) {
-        // 駅の入線のタイミング
-        // if (nextTrack[2] === 2) {
-        //   const occupyingTrains = trains.filter(t => t.track.track.station?.stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
-        //   if (occupyingTrains.length > 0) {
-        //     const [key, _] = [...stationIdMap.entries()].filter(v => v[1].stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId)[0];
-        //     const [orgStationId, orgPlatformId] = key.split('__').map(s => Number(s));
-        //     const stationObj = diagram.stations.filter(s => s.stationId === orgStationId)[0];
-        //     const platforms = stationObj.platforms.filter(p => p.platformId !== orgPlatformId);
-        //     if (platforms.length > 0) {
-        //       return getNextTrackToReach(train.track, stationIdMap.get(orgStationId + '__' + platforms[0].platformId)!.stationId)![0];
-        //     } else {
-        //       return nextTrack[0];
-        //     }
-        //   }
-        // }
-  
+      if (nextTrack) {  
         return nextTrack[0];
       } else {
         throw new Error('end');
@@ -113,7 +133,7 @@ export class TrainMove {
         train.currentTimetableIndex ++;
   
         const nextStationTimetable = timetableItem.trainTimetable[train.currentTimetableIndex];
-        const distance = getNextTrackToReach(train.track, nextStationTimetable.stationId)![1];
+        const distance = bfsTrack(train.track, nextStationTimetable.stationId)![1];
         train.speed = distance / (nextStationTimetable.arrivalTime - 30 - this.globalTime) * this.globalTimeSpeed;
         if (train.speed < 0.1) train.speed = 1;
       }

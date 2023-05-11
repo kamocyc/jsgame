@@ -1,14 +1,11 @@
 import { min } from "./common.js";
-import { draw } from "./drawer.js";
-import { getNextTrackToReach, stationIdMap } from "./generateLine.js";
+import { getNextTrackToReach } from "./generateLine.js";
 import { DiaTrain, Diagram, HalfTrack, OperationTrain, Point, SerializedTrain, Station, StationTrain, Switch, TimedPositionData, Train, generateId } from "./model.js";
 import { getDistance, getTrackDirection, isTrainOutTrack } from "./trackUtil.js";
 
 interface DiaOperatingTrain extends DiaTrain {
   operatingTrain: Train
 }
-
-const railImage = new Image();
 
 export class TrainMove {
   readonly switches: Switch[] = [];

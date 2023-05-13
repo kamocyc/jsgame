@@ -3,6 +3,7 @@ import { draw } from "./drawer.js";
 import { onFileSelectorChange } from "./file.js";
 import { generateLines, prepare } from "./generateLine.js";
 import { Diagram } from "./model.js";
+import { svgLoaderMain } from "./svgLoader.js";
 import { TrainMove } from "./trainMove.js";
 
 let intervalId: null | number = null;
@@ -18,7 +19,7 @@ function initializeTrainMove(diagram: Diagram) {
   const stationIdMap = prepare(diagram);
 
   const trainMove = new TrainMove();
-  generateLines(trainMove.tracks, trainMove.switches, diagram.stations, stationIdMap);
+  generateLines(trainMove, diagram.stations, stationIdMap);
 
   trainMove.mode = 'TimetableMode';
   trainMove.globalTime = min(diagram.trains.map(t => t.trainTimetable.map(tt => tt.arrivalTime)).flat());
@@ -44,15 +45,17 @@ export function initialize() {
   //     timeoutId = setInterval(main, 1000);
   //   }
   // }
-  
-  const fileSelector = document.getElementById('file-selector')!;
-  fileSelector.addEventListener('change', async (event) => {
-    const diagram = await onFileSelectorChange(event);
-    if (diagram != null) {
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-      initializeTrainMove(diagram);
-    }
-  });
+  svgLoaderMain();
+
+  return;
+  // const fileSelector = document.getElementById('file-selector')!;
+  // fileSelector.addEventListener('change', async (event) => {
+  //   const diagram = await onFileSelectorChange(event);
+  //   if (diagram != null) {
+  //     if (intervalId !== null) {
+  //       clearInterval(intervalId);
+  //     }
+  //     initializeTrainMove(diagram);
+  //   }
+  // });
 }

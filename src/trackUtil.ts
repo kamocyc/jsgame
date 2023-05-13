@@ -58,12 +58,12 @@ export function isTrainOutTrack(position: Point, track: HalfTrack) {
   );
 }
 
-export function getRadian(track1: HalfTrack, track2: HalfTrack) {
+export function getRadian(track1: { _begin: Point, _end: Point }, track2: { _begin: Point, _end: Point }) {
   const r1 = Math.atan2(track1._end.y - track1._begin.y, track1._end.x - track1._begin.x);
   const r2 = Math.atan2(track2._end.y - track2._begin.y, track2._end.x - track2._begin.x);
   const diffR = r1 - r2;
   const diffR_ = (diffR + 2 * Math.PI) % (2 * Math.PI);
-  return diffR_ < 2 * Math.PI - diffR_ ? diffR_ : 2 * Math.PI - diffR_;
+  return diffR_ - Math.PI;
 }
 
 export function getNearestTrackPoint(tracks: HalfTrack[], point: Point) {
@@ -80,8 +80,14 @@ export function getNearestTrackPoint(tracks: HalfTrack[], point: Point) {
   return minTrackPoint as Point;
 }
 
-export function createNewTrack(tracks: HalfTrack[], switches: Switch[], _begin: Point, _end: Point, _nextSwitch: Switch | undefined, _prevSwitch: Switch | undefined, nextTracks: HalfTrack[], prevTracks: HalfTrack[], station: Station | null): [HalfTrack, HalfTrack] {
-  const newTrack = createBothTrack(switches, {
+// 接続しているtrackは、必ずswitchを共有することで、switchにより、列車のtrack間の移動を実現する。
+// prevTrack / nextTrackは、作るtrackの前後に移動できるtrackを指定する
+// prevTrack / nextTrackがあるときは、そのtrackのswitchを使う必要があるので、自動でそのswitchを使う
+// しかし、prevTrack / nextTrackが無くても既存のswitchを共有したい場合がある（同じ地点に合流する線路を作るなど）。そのときは引数でswitchを指定する。
+export function createNewTrack(_begin: Point, _end: Point, nextTracks: HalfTrack[], prevTracks: HalfTrack[], station: Station | null, explicitNextSwitch?: Switch, explicitPrevSwitch?: Switch): [HalfTrack, HalfTrack, Switch[]] {
+  const _nextSwitch = explicitNextSwitch ?? nextTracks.length === 0 ? undefined : nextTracks[0]._prevSwitch;
+  const _prevSwitch = explicitPrevSwitch ?? prevTracks.length === 0 ? undefined : prevTracks[0]._nextSwitch;
+  const newTrack = createBothTrack({
     _begin,
     _end,
     _nextSwitch: _nextSwitch,
@@ -108,21 +114,13 @@ export function createNewTrack(tracks: HalfTrack[], switches: Switch[], _begin: 
   // 整合性チェック
   prevSwitch_.switchPatterns.forEach(([track1, track2]) => assert(prevSwitch_.endTracks.filter(t => t === track1).length === 1 && prevSwitch_.beginTracks.filter(t => t === track2).length === 1));
   nextSwitch_.switchPatterns.forEach(([track1, track2]) => assert(nextSwitch_.endTracks.filter(t => t === track1).length === 1 && nextSwitch_.beginTracks.filter(t => t === track2).length === 1));
-  
-  // // 始点または終点のtrackがちょうど2つになったとき => わたるようにする
-  // if (_nextTracks.length === 1) {
-  //   _nextTracks[0]._prevSwitch._branchedTrackFrom = _nextTracks[0]._prevSwitch.fromTracks.filter(t => t !== _nextTracks[0].reverseTrack)[0];
-  // }
-  // if (_prevTracks.length === 1) {
-  //   _prevTracks[0]._nextSwitch._branchedTrackTo = _prevTracks[0]._nextSwitch.toTracks.filter(t => t !== _prevTracks[0].reverseTrack)[0];
-  // }
 
-  tracks.push(...newTrack);
-
-  return newTrack;
+  return [newTrack[0], newTrack[1], newTrack[2]];
 }
 
-export function createBothTrack(switches: Switch[], trackBase: HalfTrackWip): [HalfTrack, HalfTrack] {
+export function createBothTrack(trackBase: HalfTrackWip): [HalfTrack, HalfTrack, Switch[]] {
+  const newSwitches: Switch[] = [];
+
   const reverseTrack = {
     trackId: generateId(),
     _begin: trackBase._end,
@@ -144,7 +142,7 @@ export function createBothTrack(switches: Switch[], trackBase: HalfTrackWip): [H
       switchPatternIndex: null,
     };
     reverseTrack._prevSwitch = trackBase._nextSwitch;
-    switches.push(trackBase._nextSwitch);
+    newSwitches.push(trackBase._nextSwitch);
   } else {
     trackBase._nextSwitch.endTracks.push(trackBase as HalfTrack);
     trackBase._nextSwitch.beginTracks.push(reverseTrack as HalfTrack);
@@ -159,13 +157,13 @@ export function createBothTrack(switches: Switch[], trackBase: HalfTrackWip): [H
       switchPatternIndex: null,
     };
     trackBase._prevSwitch = reverseTrack._nextSwitch;
-    switches.push(reverseTrack._nextSwitch);
+    newSwitches.push(reverseTrack._nextSwitch);
   } else {
     reverseTrack._nextSwitch.endTracks.push(reverseTrack as HalfTrack);
     reverseTrack._nextSwitch.beginTracks.push(trackBase as HalfTrack);
   }
 
-  return [trackBase as HalfTrack, reverseTrack as HalfTrack];
+  return [trackBase as HalfTrack, reverseTrack as HalfTrack, newSwitches];
 }
 
 export function getRandomElementOfArray<T>(array: T[]): T {

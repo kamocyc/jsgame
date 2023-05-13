@@ -89,10 +89,14 @@ export function initializeMouseEvents(canvas: HTMLCanvasElement, tracks: HalfTra
       
       const nextTracks = tracks.filter(track => deepEqual(track._begin, nearestTrackPoint));
       
-      createNewTrack(tracks, switches, begin, end, nextTracks.length > 0 ? nextTracks[0]._prevSwitch : undefined, mouseDownStartTracks.length > 0 ? mouseDownStartTracks[0]._nextSwitch : undefined, nextTracks, mouseDownStartTracks, null);
+      const [track1, track2, switches_] = createNewTrack(begin, end, nextTracks, mouseDownStartTracks, null);
+      tracks.push(track1, track2);
+      switches.push(...switches_);
     } else {
       // 離れているときは新たに線路を作る
-      createNewTrack(tracks, switches, begin, end, undefined, mouseDownStartTracks.length > 0 ? mouseDownStartTracks[0]._nextSwitch : undefined, [], mouseDownStartTracks, null);
+      const [track1, track2, switches_] = createNewTrack(begin, end, [], mouseDownStartTracks, null);
+      tracks.push(track1, track2);
+      switches.push(...switches_);
     }
 
     mouseDownStartPoint = null;

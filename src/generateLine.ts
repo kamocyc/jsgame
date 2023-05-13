@@ -16,12 +16,18 @@ export function addPoint(point1: Point, point2: Point) {
 
 // 最初に何か線路を引いたほうがとりあえず楽そう？
 // 順にしたにずらす感じでいいかと。platformはとりあえず別駅の扱いで
-export function generateLines(tracks: HalfTrack[], switches: Switch[], stations: DiaStation[], stationIdMap: Map<string, number>) {
+export function generateLines(trainMove: TrainMove, stations: DiaStation[], stationIdMap: Map<string, number>) {
+  function add_(x: [HalfTrack, HalfTrack, Switch[]]) {
+    trainMove.tracks.push(x[0], x[1]);
+    trainMove.switches.push(...x[2]);
+    return [x[0], x[1]];
+  }
+
   const xTimes = 10;
   let xOffset = 15;
   const platformSpan = 30;
 
-  const [startTrack] = createNewTrack(tracks, switches, {x: 0, y: 50}, {x: xOffset, y: 50}, undefined, undefined, [], [], null);
+  const [startTrack] = add_(createNewTrack({x: 0, y: 50}, {x: xOffset, y: 50}, [], [], null));
   let prevTrack = startTrack;
 
   for (let stationIndex = 0; stationIndex < stations.length; stationIndex ++) {
@@ -29,24 +35,24 @@ export function generateLines(tracks: HalfTrack[], switches: Switch[], stations:
     const newTracks: HalfTrack[] = [];
     for (let platformIndex = 0; platformIndex < station.platforms.length; platformIndex ++) {
       // 中継の線路
-      const [branchTrack] = createNewTrack(tracks, switches, prevTrack._end, addPoint(prevTrack._end, {x: 15, y: platformIndex * platformSpan}), undefined, prevTrack._nextSwitch, [], [prevTrack], null);
-      const [stationTrack] = createNewTrack(tracks, switches, branchTrack._end, addPoint(branchTrack._end, {x: 50, y: 0}), undefined, branchTrack._nextSwitch, [], [branchTrack], {
+      const [branchTrack] = add_(createNewTrack(prevTrack._end, addPoint(prevTrack._end, {x: 15, y: platformIndex * platformSpan}), [], [prevTrack], null));
+      const [stationTrack] = add_(createNewTrack(branchTrack._end, addPoint(branchTrack._end, {x: 50, y: 0}), [], [branchTrack], {
         shouldDepart: () => true,
         stationId: stationIdMap.get(getStationIdMapKey(station.stationId, station.platforms[platformIndex].platformId))!,
         stationName: station.name + (station.platforms[platformIndex].name ?? ''),
-      });
+      }));
       const [afterBranchTrack] =
-        createNewTrack(
-          tracks, switches, 
+        add_(createNewTrack(
           stationTrack._end,
           addPoint(stationTrack._end, {x: 15, y: -platformIndex * platformSpan}),
-          newTracks.length === 0 ? undefined : newTracks[0]._nextSwitch,
-          stationTrack._nextSwitch,
-          [], [stationTrack], null);
+          [],
+          [stationTrack],
+          null,
+          newTracks.length === 0 ? undefined : newTracks[0]._nextSwitch));
       newTracks.push(afterBranchTrack);
     }
     const distance = stationIndex === stations.length - 1 ? 15 : (stations[stationIndex + 1].distance - station.distance) * xTimes;
-    const [newTrack2] = createNewTrack(tracks, switches, newTracks[0]._end, addPoint(newTracks[0]._end, {x: distance, y: 0}), undefined, newTracks[0]._nextSwitch, [], newTracks, null);
+    const [newTrack2] = add_(createNewTrack(newTracks[0]._end, addPoint(newTracks[0]._end, {x: distance, y: 0}), [], newTracks, null));
     prevTrack = newTrack2;
   }
 }

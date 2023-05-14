@@ -72,14 +72,14 @@ function parseEkiJikoku(jikoku: string): EkiJikokuData | undefined {
   };
 
   let startIndex = 0;
-  let mode = 'bansen';
+  let mode = 'ekiOperation';
 
   for (let i = 0; i < jikoku.length; i++) {
     if (jikoku[i] === ';' || jikoku[i] === '$') {
       
       switch (mode) {
-        case 'bansen':
-          result.bansen = Number(jikoku.substring(startIndex, i));
+        case 'ekiOperation':
+          result.ekiOperation = Number(jikoku.substring(startIndex));
           break;
         case 'jikoku':
           const s = jikoku.substring(startIndex, i);
@@ -100,11 +100,13 @@ function parseEkiJikoku(jikoku: string): EkiJikokuData | undefined {
       mode = 'jikoku';
     }
     if (jikoku[i] === '$') {
-      mode = 'ekiOperation';
-    } 
+      mode = 'bansen';
+    }
   }
 
-  result.ekiOperation = Number(jikoku.substring(startIndex));
+  if (mode === 'bansen') {
+    result.bansen = Number(jikoku.substring(startIndex));
+  }
 
   // console.log(result);
   return result;
@@ -152,7 +154,7 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
 
         const stationIndex = houkou === 'Kudari' ? index : (stations.length - index - 1);
         const station = stations[stationIndex];
-        const platform = ekiJikoku.bansen !== undefined ? station.platforms[ekiJikoku.bansen - 1] : station.platforms[0]; /* TODO: これで大丈夫？ */
+        const platform = ekiJikoku.bansen !== undefined ? station.platforms[ekiJikoku.bansen] : station.platforms[0]; /* TODO: これで大丈夫？ */
         let departureTime = ekiJikoku.hatsuJikoku;
         const arrivalTime = ekiJikoku.chakuJikoku ?? departureTime;
         departureTime = departureTime ?? arrivalTime;
@@ -191,10 +193,8 @@ export function getEkiJikokus(oudBuf: string): Diagram {
   const stations = convertEkis(rosen["Eki"]);
   const ressyasyubetsus = rosen["Ressyasyubetsu"];
   const dia = rosen["Dia"][0];
-  const trains =
-    convertRessyas(dia["Kudari"][0]["Ressya"], stations, ressyasyubetsus).concat(
-      convertRessyas(dia["Nobori"][0]["Ressya"], stations, ressyasyubetsus)
-    );
+  const ressyas = (dia["Kudari"][0]["Ressya"] ?? []).concat(dia["Nobori"][0]["Ressya"] ?? []);
+  const trains = convertRessyas(ressyas, stations, ressyasyubetsus);
   
   return {
     stations,

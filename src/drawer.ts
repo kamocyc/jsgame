@@ -21,6 +21,14 @@ export function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, point
   ctx.moveTo(_x(pointBegin.x), _y(pointBegin.y));
   ctx.lineTo(_x(pointEnd.x), _y(pointEnd.y));
   ctx.stroke();
+
+  // ctx.beginPath();
+  // ctx.arc(_x(pointBegin.x), _y(pointBegin.y), 5, 0, 2 * Math.PI);
+  // ctx.fill();
+
+  // ctx.beginPath();
+  // ctx.arc(_x(pointBegin.x), _y(pointBegin.y), 5, 0, 2 * Math.PI);
+  // ctx.stroke();
 }
 
 // // railの描画
@@ -76,7 +84,7 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
 
       // stationの名前を描画
       ctx.font = fontSize + 'px sans-serif';
-      ctx.fillText(track.track.station.stationName, _x((track._begin.x + track._end.x) / 2 - 10), _y((track._begin.y + track._end.y) / 2 - 10));
+      ctx.fillText(track.track.station.stationName + ':' + track.track.station.stationId, _x((track._begin.x + track._end.x) / 2 - 10), _y((track._begin.y + track._end.y) / 2 - 10));
 
       ctx.strokeStyle = 'black';
     }

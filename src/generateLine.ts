@@ -81,8 +81,9 @@ function getStationIdMap(stations: DiaStation[]): Map<string, number> {
 }
 
 export function prepare(diagram: Diagram) {
-  normalizeDia(diagram);
+  // normalizeDia(diagram);
   const stationIdMap = getStationIdMap(diagram.stations);
+  console.log(stationIdMap);
   diagram.trains.forEach(train => {
     train.trainTimetable = train.trainTimetable.map(t => convertTimetableItem(t, stationIdMap));
   });

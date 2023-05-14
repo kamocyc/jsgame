@@ -85,8 +85,8 @@ export function getNearestTrackPoint(tracks: HalfTrack[], point: Point) {
 // prevTrack / nextTrackがあるときは、そのtrackのswitchを使う必要があるので、自動でそのswitchを使う
 // しかし、prevTrack / nextTrackが無くても既存のswitchを共有したい場合がある（同じ地点に合流する線路を作るなど）。そのときは引数でswitchを指定する。
 export function createNewTrack(_begin: Point, _end: Point, nextTracks: HalfTrack[], prevTracks: HalfTrack[], station: Station | null, explicitNextSwitch?: Switch, explicitPrevSwitch?: Switch): [HalfTrack, HalfTrack, Switch[]] {
-  const _nextSwitch = explicitNextSwitch ?? nextTracks.length === 0 ? undefined : nextTracks[0]._prevSwitch;
-  const _prevSwitch = explicitPrevSwitch ?? prevTracks.length === 0 ? undefined : prevTracks[0]._nextSwitch;
+  const _nextSwitch = explicitNextSwitch ?? (nextTracks.length === 0 ? undefined : nextTracks[0]._prevSwitch);
+  const _prevSwitch = explicitPrevSwitch ?? (prevTracks.length === 0 ? undefined : prevTracks[0]._nextSwitch);
   const newTrack = createBothTrack({
     _begin,
     _end,

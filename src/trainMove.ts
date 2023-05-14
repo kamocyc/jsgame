@@ -34,7 +34,7 @@ function bfsTrack(startTrack: HalfTrack, stationId: number): [HalfTrack, number]
             const track = found.get(prevTrack.trackId)!;
             distance += getDistance(track._begin, track._end);
             if (track?.trackId === startTrack.trackId) {
-              if (i > 10) console.log(i);
+              if (i > 20) console.log(i);
               return [prevTrack, distance];
             }
             prevTrack = track;
@@ -133,13 +133,27 @@ export class TrainMove {
         train.currentTimetableIndex ++;
   
         const nextStationTimetable = timetableItem.trainTimetable[train.currentTimetableIndex];
-        const distance = bfsTrack(train.track, nextStationTimetable.stationId)![1];
+        console.log('train:' + train.diaTrain?.name + ', stationId:' + nextStationTimetable.stationId);
+        let result = bfsTrack(train.track, nextStationTimetable.stationId);
+        if (!result) {
+          const reverseResult = bfsTrack(train.track.reverseTrack, nextStationTimetable.stationId);
+          if (!reverseResult) {
+            throw new Error('not reachable station ' + JSON.stringify({
+              stationId: nextStationTimetable.stationId,
+              stationName: this.tracks.filter(t => t.track.station?.stationId === nextStationTimetable.stationId)[0]?.track.station?.stationName,
+              train: train.diaTrain?.name,
+            }, null, '  '));
+          }
+          train.track = train.track.reverseTrack;
+          result = reverseResult;
+        }
+        const distance = result[1];
         train.speed = distance / (nextStationTimetable.arrivalTime - 30 - this.globalTime) * this.globalTimeSpeed;
         if (train.speed < 0.1) train.speed = 1;
       }
       
       // const stationCenter = getMidPoint(train.track._begin, train.track._end);
-      if (!train.track.track.station.shouldDepart(train, this.globalTime)) {
+      if (!train.track.track.station!.shouldDepart(train, this.globalTime)) {
         train.stationWaitTime ++;
         return;
       }
@@ -162,6 +176,13 @@ export class TrainMove {
   
         train.position.x = nextTrack._begin.x + distance * getTrackDirection(nextTrack).x;
         train.position.y = nextTrack._begin.y + distance * getTrackDirection(nextTrack).y;
+
+        if (isTrainOutTrack(train.position, nextTrack)) {
+          // それが行き過ぎならとりあえずtrackの終点にする
+          // TODO: さらに次のtrackに移るとかしないと動きがおかしくなる
+          train.position.x = nextTrack._end.x;
+          train.position.y = nextTrack._end.y;
+        }
         
         train.track = nextTrack;
       } else {

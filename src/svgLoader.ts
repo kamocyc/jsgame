@@ -1,201 +1,8 @@
 import { HalfTrack, Point, generateId } from './model.js';
 import { createNewTrack, getRadian } from './trackUtil.js';
 import { TrainMove } from './trainMove.js';
-import { deepEqual } from './common.js';
+import { assert, deepEqual, max } from './common.js';
 import { draw } from './drawer.js';
-
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0,0,1090,222.70269775390625" width="1090"
-height="223">
-<g transform="translate(-200, -150)">
-  <g transform="translate(320,180)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="110"
-      height="20" />
-  </g>
-  <g transform="translate(320,250)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="110"
-      height="20" />
-  </g>
-  <g transform="translate(540,210)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="120"
-      height="20" />
-  </g>
-  <g transform="translate(540,280)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="120"
-      height="20" />
-  </g>
-  <g transform="translate(750,210)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="110"
-      height="20" />
-  </g>
-  <g transform="translate(750,280)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="110"
-      height="20" />
-  </g>
-  <g transform="translate(950,240)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="120"
-      height="20" />
-  </g>
-  <g transform="translate(950,190)">
-    <rect stroke-width="2" stroke="#2c3e50" fill="#ecf0f1" stroke-dasharray="false" width="120"
-      height="20" />
-  </g>
-  <g transform="translate(370,330)">
-    <rect stroke-width="2" stroke="transparent" fill="transparent" width="1" height="1" />
-    <text font-size="24" xml:space="preserve" text-anchor="middle" fill="#2c3e48"
-      font-weight="bold" font-style="normal"
-      font-family="&quot;Helvetica Neue&quot;, Arial, &quot;Hiragino Kaku Gothic ProN&quot;, Meiryo, YuGothic, &quot;Yu Gothic&quot;, sans-serif"
-      writing-mode="horizontal-tb" transform="matrix(1,0,0,1,0.5,0.5)"><tspan dy="0.3em">城陽</tspan></text>
-  </g>
-  <g transform="translate(600,330)">
-    <rect stroke-width="2" stroke="transparent" fill="transparent" width="1" height="1" />
-    <text font-size="24" xml:space="preserve" text-anchor="middle" fill="#2c3e48"
-      font-weight="bold" font-style="normal"
-      font-family="&quot;Helvetica Neue&quot;, Arial, &quot;Hiragino Kaku Gothic ProN&quot;, Meiryo, YuGothic, &quot;Yu Gothic&quot;, sans-serif"
-      writing-mode="horizontal-tb" transform="matrix(1,0,0,1,0.5,0.5)"><tspan dy="0.3em">新田</tspan></text>
-  </g>
-  <g transform="translate(800,330)">
-    <rect stroke-width="2" stroke="transparent" fill="transparent" width="1" height="1" />
-    <text font-size="24" xml:space="preserve" text-anchor="middle" fill="#2c3e48"
-      font-weight="bold" font-style="normal"
-      font-family="&quot;Helvetica Neue&quot;, Arial, &quot;Hiragino Kaku Gothic ProN&quot;, Meiryo, YuGothic, &quot;Yu Gothic&quot;, sans-serif"
-      writing-mode="horizontal-tb" transform="matrix(1,0,0,1,0.5,0.5)"><tspan dy="0.3em">JR小倉</tspan></text>
-  </g>
-  <g transform="translate(1010,330)">
-    <rect stroke-width="2" stroke="transparent" fill="transparent" width="1" height="1" />
-    <text font-size="24" xml:space="preserve" text-anchor="middle" fill="#2c3e48"
-      font-weight="bold" font-style="normal"
-      font-family="&quot;Helvetica Neue&quot;, Arial, &quot;Hiragino Kaku Gothic ProN&quot;, Meiryo, YuGothic, &quot;Yu Gothic&quot;, sans-serif"
-      writing-mode="horizontal-tb" transform="matrix(1,0,0,1,0.5,0.5)"><tspan dy="0.3em">宇治</tspan></text>
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false"
-      d="M 260 210 L 280 210 L 300 210 L 430 210 L 450 210 L 470 210"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false"
-      d="M 260 240 L 270 240 L 290 240 L 300 240 L 320 240 L 440 240 L 460 240 L 470 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 310 240 L 300 210"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 290 210 L 280 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 260 210 L 230 210"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 440 210 L 450 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 470 240 L 520 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 520 240 L 680 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 510 240 L 520 270"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 520 270 L 680 270"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 680 270 L 920 270 L 940 270 L 1080 270"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 680 240 L 910 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 930 270 L 940 230"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 940 230 L 1080 230"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 1080 220 L 930 220"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 930 220 L 920 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 920 240 L 910 240"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 1080 230 L 1090 270"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 1080 270 L 1090 270"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 1090 270 L 1100 270 L 1120 270 L 1260 270"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 1080 220 L 1090 220"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 930 220 L 940 180"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 940 180 L 1080 180"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 1090 220 L 1110 270"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-  <g>
-    <path fill="none" stroke-linejoin="round" connector="[object Object]" stroke="#2c3e50"
-      stroke-width="2" stroke-dasharray="false" d="M 1080 180 L 1090 220"
-      marker-start="url(#v-891-2063096985)" marker-end="url(#v-891-2019156546)" />
-  </g>
-</g>
-</svg>`;
 
 interface SvgTrack {
   _begin: Point,
@@ -224,6 +31,8 @@ function parseSvgObject(rootObj: any): SvgParsedData {
   const texts: SvgText[] = [];
   const platforms: SvgPlatform[] = [];
 
+  let maxX = 0;
+
   function sub(obj: any, translateX: number, translateY: number) {
     const subGroups = obj['g'] === undefined ? [] : Array.isArray(obj['g']) ? obj['g'] : [obj['g']];
     for (const subGroup of subGroups) {
@@ -232,8 +41,8 @@ function parseSvgObject(rootObj: any): SvgParsedData {
       if (transform && /translate\(/.test(transform.trim())) {
         const matches = transform.trim().match(/translate\((-?\d+),\s*(-?\d+)\)/);
         if (matches != null) {
-          offsetX += Number(matches[1]);
-          offsetY += Number(matches[2]);
+          offsetX = Number(matches[1]);
+          offsetY = Number(matches[2]);
         }
       }
       sub(subGroup, translateX + offsetX, translateY + offsetY);
@@ -255,7 +64,7 @@ function parseSvgObject(rootObj: any): SvgParsedData {
     }
 
     const text = obj['text'];
-    if (text) {
+    if (text && text['tspan']) {
       const textContent = text['tspan']['_text'] as string;
 
       texts.push({
@@ -270,12 +79,19 @@ function parseSvgObject(rootObj: any): SvgParsedData {
     const path = obj['path'];
     if (path) {
       const ds = (path['_attributes']['d'] as string).split(' ');
-      let prevPoint = { x: Number(ds[1]), y: Number(ds[2]) };
-      for (let i = 3; i < ds.length; i ++) {
-        if (ds[i] === 'L') {
-          tracks.push({ _begin: prevPoint, _end: { x: Number(ds[i + 1]), y: Number(ds[i + 2]) } });
-        }
+      let prevPoint = { x: Number(ds[1]) + translateX, y: Number(ds[2]) + + translateY };
+      const currentPoint = { x: Number(ds[ds.length - 2]) + translateX, y: Number(ds[ds.length - 1]) + translateY };
+      if (prevPoint.y === currentPoint.y && currentPoint.x < prevPoint.x) {
+        // TODO: 順番を変えるんじゃなくて重複判定を治すべき
+        tracks.push({ _begin: currentPoint, _end: prevPoint });
+      } else {
+        tracks.push({ _begin: prevPoint, _end: currentPoint });
       }
+      // for (let i = 3; i < ds.length; i ++) {
+      //   if (ds[i] === 'L') {
+      //     tracks.push({ _begin: prevPoint, _end: { x: Number(ds[i + 1]) + translateX, y: Number(ds[i + 2]) + translateY } });
+      //   }
+      // }
     }
   }
   
@@ -288,17 +104,127 @@ function parseSvgObject(rootObj: any): SvgParsedData {
   };
 }
 
-function createKey(point: Point): string {
-  return point.x + '__' + point.y;
-}
+// function createKey(point: Point): string {
+//   return point.x + '__' + point.y;
+// }
 
 function isTransitionableRadian(r: number) {
-  return Math.abs(r) > Math.PI / 2 + Math.PI / 20;
+  return Math.abs(r) > Math.PI / 2;// + Math.PI / 20;
 }
 
 function createTrainMove(data: SvgParsedData): TrainMove {
   // createTrack基本的には座標が一致したらつなげる。
   const trainMove = new TrainMove();
+  
+  if (false) {
+    for (const track of data.tracks) {
+      const [track1, track2, switches_] = createNewTrack(
+        track._begin,
+        track._end,
+        [],
+        [],
+        null)
+      trainMove.tracks.push(track1, track2);
+      
+      draw(trainMove, null, null);
+      console.log('debug');
+    }
+  }
+
+  // 横長の連続する線路をマージする
+  {
+    const merged: SvgTrack[] = [];
+    data.tracks.sort((t1, t2) => t1._begin.x - t2._end.x);
+    while (data.tracks.length > 0) {
+      const track = data.tracks[0];
+      if (track._begin.y !== track._end.y) {
+        merged.push(track);
+        data.tracks.splice(0, 1);
+      } else {
+        const tracksOnSameLine = data.tracks.filter(t => t !== track && t._begin.y === track._begin.y && t._end.y === track._begin.y);
+        let prevX = track._end.x;
+        const toDeleteTracks = [track];
+        for (const t of tracksOnSameLine) {
+          if (t._begin.x === prevX) {
+            prevX = t._end.x;
+            toDeleteTracks.push(t);
+          } else {
+            break;
+          }
+        }
+
+        merged.push({ _begin: { x: track._begin.x, y: track._begin.y }, _end: { x: prevX, y: track._end.y }});
+        
+        for (const t of toDeleteTracks) {
+          const i = data.tracks.map((tt, i) => [tt, i] as const).filter(([tt, _]) => tt === t)[0][1];
+          data.tracks.splice(i, 1);
+        }
+      }
+    }
+
+    data.tracks = merged;
+  }
+
+  // 駅の前後で線路を分割する
+  for (const rect of data.platforms) {
+    // TODO: 絞りこむ
+    const adjacentTracks =
+      data.tracks
+      .filter(p => p._end.x > rect.position.x && rect.position.x + rect.width > p._begin.x)
+      .filter(p => p._begin.y === p._end.y);
+
+    for (const adjacentTrack of adjacentTracks) {
+      if (adjacentTrack._begin.x < rect.position.x) {
+        data.tracks.push({
+          _begin: { ...adjacentTrack._begin },
+          _end: { x: rect.position.x, y: adjacentTrack._begin.y },
+        });
+        adjacentTrack._begin.x = rect.position.x;
+      }
+
+      if (adjacentTrack._end.x > rect.position.x + rect.width) {
+        data.tracks.push({
+          _begin: { x: rect.position.x + rect.width, y: adjacentTrack._begin.y },
+          _end: { ...adjacentTrack._end },
+        });
+
+        adjacentTrack._end.x = rect.position.x + rect.width;
+      }
+    }
+  }
+
+  // 斜めの線のししゅうてんが横の線の途中の場合は分割（TODO: 本当はもっと多様な場合に対応すべきだが）
+  for (const track of data.tracks.filter(t => t._begin.y !== t._end.y)) {
+    if (data.tracks.filter(t => t !== track && (deepEqual(t._begin, track._begin) || deepEqual(t._end, track._begin))).length === 0) {
+      const horizontalTracks = data.tracks.filter(t => t._begin.y === track._begin.y && t._end.y === track._begin.y && t._begin.x < track._begin.x && t._end.x > track._begin.x);
+      if (horizontalTracks.length > 0) {
+        const horizontalTrack = horizontalTracks[0];
+        data.tracks.push({
+          _begin: {
+            x: track._begin.x,
+            y: horizontalTrack._begin.y
+          },
+          _end: { ...horizontalTrack._end }
+        });
+        horizontalTrack._end.x = track._begin.x;
+      }
+    }
+    
+    if (data.tracks.filter(t => t !== track && (deepEqual(t._begin, track._end) || deepEqual(t._end, track._end))).length === 0) {
+      const horizontalTracks = data.tracks.filter(t => t._begin.y === track._end.y && t._end.y === track._end.y && t._begin.x < track._end.x && t._end.x > track._end.x);
+      if (horizontalTracks.length > 0) {
+        const horizontalTrack = horizontalTracks[0];
+        data.tracks.push({
+          _begin: {
+            x: track._end.x,
+            y: horizontalTrack._begin.y
+          },
+          _end: { ...horizontalTrack._end }
+        });
+        horizontalTrack._end.x = track._end.x;
+      }
+    }
+  }
 
   // const beginTracksMap = new Map<string, HalfTrack[]>();
 
@@ -309,6 +235,10 @@ function createTrainMove(data: SvgParsedData): TrainMove {
     const prevTracks = prevTrackCandidates.filter(t => isTransitionableRadian(getRadian(t, track)));
     const nextTrackCandidates = trainMove.tracks.filter(t => deepEqual(t._begin, track._end));
     const nextTracks = nextTrackCandidates.filter(t => isTransitionableRadian(getRadian(t, track)));
+    if (nextTrackCandidates.length > 0) {
+      const s = nextTrackCandidates[0]._prevSwitch;
+      nextTrackCandidates.forEach(t => assert(t._prevSwitch === s));
+    }
 
     const [track1, track2, switches_] = createNewTrack(
       track._begin,
@@ -320,37 +250,44 @@ function createTrainMove(data: SvgParsedData): TrainMove {
       prevTrackCandidates.length > 0 ? prevTrackCandidates[0]._nextSwitch : undefined)
     trainMove.tracks.push(track1, track2);
     trainMove.switches.push(...switches_);
+    
+    draw(trainMove, null, null);
   }
-
   // rectからstationを設定
   // textで駅を設定
   // lineとstationとの隣接でplatformと設定
   // y軸でソート
   // x軸は四角の端と端
   const platformGap = 20;
+  const platformCandidateSet = new Set(data.platforms);
   // 隣接判定。。。
-  for (const rect of data.platforms) {
+  while (platformCandidateSet.size > 0) {
+    const rect = Array.from(platformCandidateSet)[0];
     // TODO: y座標を考慮するなどして、もう少し絞る
     // TODO: 理想的にはstationから連続的に近い部分を取得してグループ化
-    const adjacentRects = data.platforms.filter(p => p.position.x + p.width >= rect.position.x && rect.position.x + rect.width >= p.position.x);
+    const adjacentRects = data.platforms.filter(p => p.position.x + p.width > rect.position.x && rect.position.x + rect.width > p.position.x);
     const adjacentTracks =
       data.tracks
-      .filter(p => p._end.x >= rect.position.x && rect.position.x + rect.width >= p._begin.x)
+      .filter(p => p._end.x > rect.position.x && rect.position.x + rect.width > p._begin.x)
       .filter(p => p._begin.y === p._end.y);
-    const adjacentTexts = data.texts.filter(p => p.position.x >= rect.position.x && rect.position.x + rect.width >= p.position.x);
+    const adjacentTexts = data.texts.filter(p => p.position.x > rect.position.x && rect.position.x + rect.width > p.position.x);
     
+    for(const rect of adjacentRects) {
+      platformCandidateSet.delete(rect);
+    }
+
     if (adjacentTexts.length === 0) continue;
     const stationName = adjacentTexts[0].text;
     
     // rectに隣接するtrackからplatformを決める
-    const stationTracks = adjacentRects.map(rect =>
-        adjacentTracks.filter(track =>
-          // 上
-          (track._begin.y > rect.position.y && track._begin.y <= rect.position.y + platformGap) ||
-          // 下
-          (track._begin.y < rect.position.y && track._begin.y >= rect.position.y + platformGap)
-        )
-      ).flat();
+    const stationTracks = adjacentTracks;/*.filter(track =>
+      adjacentRects.filter(rect =>
+        // 上
+        (track._begin.y < rect.position.y && track._begin.y >= rect.position.y + platformGap) ||
+        // 下
+        (track._begin.y > rect.position.y + rect.height && track._begin.y <= rect.position.y + rect.height + platformGap)
+      ).length > 0
+    );*/
     stationTracks.sort((track1, track2) => track1._begin.y - track2._begin.y);
     stationTracks.forEach((stationTrack, trackIndex) => {
       const tracks_ = trainMove.tracks.filter(track => deepEqual(track._begin, stationTrack._begin) && deepEqual(track._end, stationTrack._end));
@@ -358,22 +295,33 @@ function createTrainMove(data: SvgParsedData): TrainMove {
       const track = tracks_[0];
       track.track.station = {
         stationId: generateId(),
-        stationName: stationName + trackIndex,
+        stationName: stationName + ' ' + (trackIndex + 1),
         shouldDepart: () => true,
       };
     });
+
+    draw(trainMove, null, null);
   }
 
   return trainMove;
 }
 
-export function svgLoaderMain() {
+export async function svgLoaderMain() {
+  const svg = await (await fetch('./narasen.svg')).text();
   // @ts-ignore
   const obj = JSON.parse(xml2json(svg, {compact: true, spaces: 2}));
   console.log(obj['svg']);
   
   const data = parseSvgObject(obj['svg']);
+  const maxX = max(data.tracks.map(t => t._end.x));
   console.log(data);
+  console.log(maxX);
+
+  (document.getElementById('canvas') as HTMLCanvasElement).width = maxX + 10;
+
   const trainMove = createTrainMove(data);
   draw(trainMove, null, null);
+
+  return trainMove;
 }
+

@@ -26,6 +26,8 @@ interface SvgParsedData {
   platforms: SvgPlatform[];
 }
 
+const trackSortMode: 'ASC' | 'DESC' = 'DESC';
+
 function parseSvgObject(rootObj: any): SvgParsedData {
   const tracks: SvgTrack[] = [];
   const texts: SvgText[] = [];
@@ -288,7 +290,11 @@ function createTrainMove(data: SvgParsedData): TrainMove {
         (track._begin.y > rect.position.y + rect.height && track._begin.y <= rect.position.y + rect.height + platformGap)
       ).length > 0
     );*/
-    stationTracks.sort((track1, track2) => track1._begin.y - track2._begin.y);
+    if (trackSortMode === 'ASC') {
+      stationTracks.sort((track1, track2) => track1._begin.y - track2._begin.y);
+    } else {
+      stationTracks.sort((track1, track2) => track2._begin.y - track1._begin.y);
+    }
     stationTracks.forEach((stationTrack, trackIndex) => {
       const tracks_ = trainMove.tracks.filter(track => deepEqual(track._begin, stationTrack._begin) && deepEqual(track._end, stationTrack._end));
       if (tracks_.length !== 1) throw new Error('tracks_.length');

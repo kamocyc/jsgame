@@ -59,6 +59,18 @@ interface EkiJikokuData {
   ekiOperation: number | undefined,
 }
 
+export interface DiaTrainExt extends DiaTrain {
+  trainCode: string | undefined;      // 列車番号
+  // operationCode: string | undefined;  // 運用番号
+  trainTypeName: string | undefined;  // 列車種別名
+  trainMei: string | undefined;       // 列車名
+  trainGo: string | undefined;        // 列車の○号
+}
+
+export interface DiagramExt extends Diagram {
+  trains: DiaTrainExt[];
+}
+
 function parseEkiJikoku(jikoku: string): EkiJikokuData | undefined {
   // console.log(jikoku);
 
@@ -141,7 +153,7 @@ function convertEkis(ekis: any[]): DiaStation[] {
   }));
 }
 
-function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus: any[]): DiaTrain[] {
+function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus: any[]): DiaTrainExt[] {
   return ressyas.map(ressya => {
     const houkou = ressya["Houkou"] as Houkou;
     const timetable =
@@ -181,13 +193,17 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
     return {
       trainId: generateId(),
       color: trainTypeColor !== undefined ? '#' + trainTypeColor.substring(2) : undefined,
+      trainCode: ressya["Ressyabangou"],
+      trainTypeName: trainTypeName,
+      trainMei: ressya["Ressyamei"],
+      trainGo: ressya["Gousuu"],
       name: trainName,
       trainTimetable: timetable
     };
   })
 }
 
-export function getEkiJikokus(oudBuf: string): Diagram {
+export function getEkiJikokus(oudBuf: string): DiagramExt {
   const oudJson = oudToJson(oudBuf);
   const rosen = oudJson["Rosen"][0];
   const stations = convertEkis(rosen["Eki"]);

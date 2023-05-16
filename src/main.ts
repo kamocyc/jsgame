@@ -3,7 +3,9 @@ import { draw } from "./drawer.js";
 import { onFileSelectorChange } from "./file.js";
 import { generateLines, prepare } from "./generateLine.js";
 import { Diagram, Train } from "./model.js";
+import { getEkiJikokus } from "./oudParser.js";
 import { svgLoaderMain } from "./svgLoader.js";
+import { drawTimetable } from "./timetableEditor.js";
 import { TrainMove } from "./trainMove.js";
 
 let intervalId: null | number = null;
@@ -63,16 +65,23 @@ export async function initialize() {
   //     timeoutId = setInterval(main, 1000);
   //   }
   // }
-  const trainMove = await svgLoaderMain();
 
-  const fileSelector = document.getElementById('file-selector')!;
-  fileSelector.addEventListener('change', async (event) => {
-    const diagram = await onFileSelectorChange(event);
-    if (diagram != null) {
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-      initializeTrainMove(diagram, trainMove);
-    }
-  });
+  fetch('./narasen_dia.oud2').then(x => x.text()).then(data => {
+    const r = getEkiJikokus(data);
+    drawTimetable(r);
+  })
+
+  // const trainMove = await svgLoaderMain();
+
+  // const fileSelector = document.getElementById('file-selector')!;
+  // fileSelector.addEventListener('change', async (event) => {
+  //   const diagram = await onFileSelectorChange(event);
+  //   if (diagram != null) {
+  //     if (intervalId !== null) {
+  //       clearInterval(intervalId);
+  //     }
+
+  //     initializeTrainMove(diagram, trainMove);
+  //   }
+  // });
 }

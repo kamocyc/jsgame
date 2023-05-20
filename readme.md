@@ -10,5 +10,5 @@ pnpm install
 ## development
 
 ```powershell
-npx reload -b
+vite dev
 ```

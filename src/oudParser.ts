@@ -170,7 +170,7 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
         let departureTime = ekiJikoku.hatsuJikoku;
         const arrivalTime = ekiJikoku.chakuJikoku ?? departureTime;
         departureTime = departureTime ?? arrivalTime;
-        // 通過や軽油しないの時とかは時刻がない。。。 => 伴戦の扱いとか後で対応したい
+        // 通過や経由しないの時とかは時刻がない。。。 => 番線の扱いとか後で対応したい
         // if (departureTime === undefined && arrivalTime === undefined) throw new Error('departureTime and arrivalTime are undefined');
         if (departureTime === undefined && arrivalTime === undefined) {
           return undefined;

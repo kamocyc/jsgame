@@ -54,7 +54,11 @@ export class TrainMove {
       if (nextTrack) {  
         return nextTrack[0];
       } else {
-        throw new Error('end');
+        throw new Error('not reachable station ' + JSON.stringify({
+          stationId: timetableItem.trainTimetable[train.currentTimetableIndex].stationId,
+          stationName: this.tracks.filter(t => t.track.station?.stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId)[0]?.track.station?.stationName,
+          train: train.diaTrain?.name,
+        }, null, '  '));
       }
   
     }

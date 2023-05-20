@@ -16,7 +16,7 @@ function mainLoop(trainMove: TrainMove, diagram: Diagram) {
   draw(trainMove, null, null);
 }
 
-function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove) {
+function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove): () => boolean {
   const stationIdMap = prepare(diagram);
 
   if (!trainMove) {
@@ -44,6 +44,17 @@ function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove) {
   trainMove.globalTime = min(diagram.trains.map(t => t.trainTimetable.map(tt => tt.arrivalTime)).flat());
 
   intervalId = setInterval(() => mainLoop(trainMove!, diagram), 100);
+
+  return () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+      return false;
+    } else {
+      intervalId = setInterval(() => mainLoop(trainMove!, diagram), 100);
+      return true;
+    }
+  }
 }
 
 export async function initialize() {
@@ -65,7 +76,11 @@ export async function initialize() {
         clearInterval(intervalId);
       }
 
-      initializeTrainMove(diagram, trainMove);
+      const interrupt = initializeTrainMove(diagram, trainMove);
+
+      document.getElementById('button-slow-speed')!.onclick = (ev) => {
+        interrupt();
+      };
     }
   });
 }

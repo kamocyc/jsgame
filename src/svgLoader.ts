@@ -26,6 +26,8 @@ interface SvgParsedData {
   platforms: SvgPlatform[];
 }
 
+// TODO: oudのデータに合わせるために、下（y座標が大きい）ほうが小さい番線を割り当てる
+// なんかいい感じに指定したい
 const trackSortMode: 'ASC' | 'DESC' = 'DESC';
 
 function parseSvgObject(rootObj: any): SvgParsedData {
@@ -84,7 +86,7 @@ function parseSvgObject(rootObj: any): SvgParsedData {
       let prevPoint = { x: Number(ds[1]) + translateX, y: Number(ds[2]) + + translateY };
       const currentPoint = { x: Number(ds[ds.length - 2]) + translateX, y: Number(ds[ds.length - 1]) + translateY };
       if (prevPoint.y === currentPoint.y && currentPoint.x < prevPoint.x) {
-        // TODO: 順番を変えるんじゃなくて重複判定を治すべき
+        // TODO: 順番を変えるんじゃなくて線路の重複判定を治すべき
         tracks.push({ _begin: currentPoint, _end: prevPoint });
       } else {
         tracks.push({ _begin: prevPoint, _end: currentPoint });
@@ -195,7 +197,7 @@ function createTrainMove(data: SvgParsedData): TrainMove {
     }
   }
 
-  // 斜めの線のししゅうてんが横の線の途中の場合は分割（TODO: 本当はもっと多様な場合に対応すべきだが）
+  // 斜めの線の終点が横の線の途中の場合は分割（TODO: 本当はもっと多様な場合に対応すべきだが）
   for (const track of data.tracks.filter(t => t._begin.y !== t._end.y)) {
     if (data.tracks.filter(t => t !== track && (deepEqual(t._begin, track._begin) || deepEqual(t._end, track._begin))).length === 0) {
       const horizontalTracks = data.tracks.filter(t => t._begin.y === track._begin.y && t._end.y === track._begin.y && t._begin.x < track._begin.x && t._end.x > track._begin.x);

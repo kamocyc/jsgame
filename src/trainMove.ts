@@ -1,50 +1,10 @@
 import { min } from "./common.js";
 import { DiaTrain, Diagram, HalfTrack, OperationTrain, Point, SerializedTrain, Station, StationTrain, Switch, TimedPositionData, Train, generateId } from "./model.js";
 import { Queue } from "./queue.js";
-import { getDistance, getTrackDirection, isTrainOutTrack } from "./trackUtil.js";
+import { getDistance, getTrackDirection, isTrainOutTrack, searchTrack } from "./trackUtil.js";
 
 interface DiaOperatingTrain extends DiaTrain {
   operatingTrain: Train
-}
-
-// 辺の数の最短を返すので、ダイクストラ法で求めたい。そんなに難しくない
-function bfsTrack(startTrack: HalfTrack, stationId: number): [HalfTrack, number] | undefined {
-  const queue = new Queue<HalfTrack>();
-  const found = new Map<number, HalfTrack | undefined>();
-
-  queue.enqueue(startTrack);
-  found.set(startTrack.trackId, undefined);
-
-  let i = 0;
-  while (!queue.isEmpty()) {
-    const track = queue.front();
-    queue.dequeue();
-    i ++;
-
-    for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
-      if (!found.has(toTrack.trackId)) {
-        found.set(toTrack.trackId, track);
-
-        if (toTrack.track.station?.stationId === stationId) {
-          // 最初のパスを返す
-          let prevTrack: HalfTrack = toTrack;
-          let distance = 0;
-          while (true) {
-            i ++;
-            const track = found.get(prevTrack.trackId)!;
-            distance += getDistance(track._begin, track._end);
-            if (track?.trackId === startTrack.trackId) {
-              if (i > 20) console.log(i);
-              return [prevTrack, distance];
-            }
-            prevTrack = track;
-          }
-        }
-
-        queue.enqueue(toTrack);
-      }
-    }
-  }
 }
 
 export class TrainMove {
@@ -89,7 +49,7 @@ export class TrainMove {
       
       // 次の駅に向かう方向に進む（つまり現在よりも「先の」方向で、一番近い位置の駅）
       // まずはtoのtoのみ見る
-      let nextTrack = bfsTrack(train.track, timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
+      let nextTrack = searchTrack(train.track, timetableItem.trainTimetable[train.currentTimetableIndex].stationId);
       // console.log({nextTrack});
       if (nextTrack) {  
         return nextTrack[0];
@@ -134,9 +94,9 @@ export class TrainMove {
   
         const nextStationTimetable = timetableItem.trainTimetable[train.currentTimetableIndex];
         console.log('train:' + train.diaTrain?.name + ', stationId:' + nextStationTimetable.stationId);
-        let result = bfsTrack(train.track, nextStationTimetable.stationId);
+        let result = searchTrack(train.track, nextStationTimetable.stationId);
         if (!result) {
-          const reverseResult = bfsTrack(train.track.reverseTrack, nextStationTimetable.stationId);
+          const reverseResult = searchTrack(train.track.reverseTrack, nextStationTimetable.stationId);
           if (!reverseResult) {
             throw new Error('not reachable station ' + JSON.stringify({
               stationId: nextStationTimetable.stationId,
@@ -147,7 +107,7 @@ export class TrainMove {
           train.track = train.track.reverseTrack;
           result = reverseResult;
         }
-        const distance = result[1];
+        const distance = result.map(track => getDistance(track._begin, track._end)).reduce((acc, v) => acc + v, 0);
         train.speed = distance / (nextStationTimetable.arrivalTime - 30 - this.globalTime) * this.globalTimeSpeed;
         if (train.speed < 0.1) train.speed = 1;
       }

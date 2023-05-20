@@ -1,3 +1,4 @@
+import { MinPriorityQueue } from "@datastructures-js/priority-queue";
 import { assert } from "./common.js";
 import { HalfTrack, HalfTrackWip, Point, Station, Switch, generateId } from "./model.js";
 
@@ -186,3 +187,153 @@ export function changeSwitch(nearestTrackPoint: Point) {
   //   if (targetSwitch._branchedTrackFrom !== targetSwitch._branchedTrackTo.reverseTrack) break;
   // }
 }
+
+// ダイクストラ法で探索
+interface NodeWithDistance<T> {
+  node: T;
+  previousNode: NodeWithDistance<T> | undefined;
+  distance: number;
+}
+
+export function abstractSearch<T>(startNode: T, idGetter: (node: T) => number, nextNodeGetter: (node: T) => T[], distanceGetter: (node1: T, node2: T) => number, goalDeterminer: (node: T) => boolean): [T[] | undefined, Map<number, NodeWithDistance<T>>] {
+  function reconstructPath<T>(nodeWithDistance: NodeWithDistance<T>): T[] {
+    const prev = nodeWithDistance.previousNode;
+    if (prev) {
+      const path = reconstructPath(prev);
+      path.push(nodeWithDistance.node);
+      return path;
+    } else {
+      return [nodeWithDistance.node];
+    }
+  }
+
+  const queue = new MinPriorityQueue((a: NodeWithDistance<T>) => a.distance);
+  queue.push({ node: startNode, previousNode: undefined, distance: 0 });
+
+  // 決定済みのノード
+  const determined = new Map<number, NodeWithDistance<T>>();
+
+  while (!queue.isEmpty()) {
+    const nodeWithDistance = queue.dequeue();
+    const { node } = nodeWithDistance;
+    if (determined.has(idGetter(node))) continue;  // 既に最短経路で決定済み
+
+    determined.set(idGetter(node), nodeWithDistance);
+    
+    if (goalDeterminer(node)) {
+      const path = reconstructPath(nodeWithDistance);
+      return [path, determined]
+    }
+    // if (track.track.station?.stationId === stationId) {
+    //   // 目的のstation
+    //   const path = reconstructPath(nodeWithDistance);
+    //   return [path, determined];
+    // }
+
+    const nextNodes = nextNodeGetter(node);
+    for (const nextNode of nextNodes) {
+      if (!determined.has(idGetter(nextNode))) {
+        const newDistance = nodeWithDistance.distance + distanceGetter(node, nextNode);
+        // 1つの頂点につき距離の更新ごとにqueueにpushされる。最短のエントリがpopされるので動くが、効率は？
+        queue.push({ node: nextNode, previousNode: nodeWithDistance, distance: newDistance });
+      }
+    }
+  }
+
+  return [undefined, determined];
+}
+
+export function searchTrack(startTrack: HalfTrack, stationId: number): HalfTrack[] | undefined {
+  return abstractSearch(
+    startTrack,
+    track => track.trackId,
+    track => track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack),
+    (_, track) => getDistance(track._begin, track._end),
+    track => track.track.station?.stationId === stationId
+  )[0];
+}
+
+// export function searchTrack(startTrack: HalfTrack, stationId: number): [HalfTrack[] | undefined, Map<number, NodeWithDistance<HalfTrack>>] {
+//   function reconstructPath<T>(nodeWithDistance: NodeWithDistance<T>): T[] {
+//     const prev = nodeWithDistance.previousNode;
+//     if (prev) {
+//       const path = reconstructPath(prev);
+//       path.push(nodeWithDistance.node);
+//       return path;
+//     } else {
+//       return [nodeWithDistance.node];
+//     }
+//   }
+
+//   // track._nextSwitchがノードであるべきだが、便宜上、trackをqueueに入れる
+//   // queue: 未確定かつ距離が1回以上計算されたノード
+//   const queue = new MinPriorityQueue((a: NodeWithDistance<HalfTrack>) => a.distance);
+//   queue.push({ node: startTrack, previousNode: undefined, distance: 0 });
+
+//   // 決定済みのノード
+//   const determined = new Map<number, NodeWithDistance<HalfTrack>>();
+
+//   while (!queue.isEmpty()) {
+//     const nodeWithDistance = queue.dequeue();
+//     const { node: track } = nodeWithDistance;
+//     if (determined.has(track.trackId)) continue;  // 既に最短経路で決定済み
+
+//     determined.set(track.trackId, nodeWithDistance);
+    
+//     if (track.track.station?.stationId === stationId) {
+//       // 目的のstation
+//       const path = reconstructPath(nodeWithDistance);
+//       return [path, determined];
+//     }
+
+//     for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
+//       if (!determined.has(toTrack.trackId)) {
+//         const newDistance = nodeWithDistance.distance + getDistance(toTrack._begin, toTrack._end);
+//         // 1つの頂点につき距離の更新ごとにqueueにpushされる。最短のエントリがpopされるので動くが、効率は？
+//         queue.push({ node: toTrack, previousNode: nodeWithDistance, distance: newDistance });
+//       }
+//     }
+//   }
+
+//   return [undefined, determined];
+// }
+
+// // 辺の数の最短を返すので、ダイクストラ法で求めたい。そんなに難しくない
+// function bfsTrack(startTrack: HalfTrack, stationId: number): [HalfTrack, number] | undefined {
+//   const queue = new Queue<HalfTrack>();
+//   const found = new Map<number, HalfTrack | undefined>();
+
+//   queue.enqueue(startTrack);
+//   found.set(startTrack.trackId, undefined);
+
+//   let i = 0;
+//   while (!queue.isEmpty()) {
+//     const track = queue.front();
+//     queue.dequeue();
+//     i ++;
+
+//     for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
+//       if (!found.has(toTrack.trackId)) {
+//         found.set(toTrack.trackId, track);
+
+//         if (toTrack.track.station?.stationId === stationId) {
+//           // 最初のパスを返す
+//           let prevTrack: HalfTrack = toTrack;
+//           let distance = 0;
+//           while (true) {
+//             i ++;
+//             const track = found.get(prevTrack.trackId)!;
+//             distance += getDistance(track._begin, track._end);
+//             if (track?.trackId === startTrack.trackId) {
+//               if (i > 20) console.log(i);
+//               return [prevTrack, distance];
+//             }
+//             prevTrack = track;
+//           }
+//         }
+
+//         queue.enqueue(toTrack);
+//       }
+//     }
+//   }
+// }

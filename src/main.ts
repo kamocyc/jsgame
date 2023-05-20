@@ -5,7 +5,7 @@ import { generateLines, prepare } from "./generateLine.js";
 import { Diagram, Train } from "./model.js";
 import { getEkiJikokus } from "./oudParser.js";
 import { svgLoaderMain } from "./svgLoader.js";
-import { drawTimetable } from "./timetableEditor.js";
+// import { drawTimetable } from "./timetableEditor.js";
 import { TrainMove } from "./trainMove.js";
 
 let intervalId: null | number = null;
@@ -50,38 +50,23 @@ function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove) {
 export async function initialize() {
   // drawDiagram_();
   // initialize();
-  // initialize2();
-  // loadTime();
 
-  // const button = document.getElementById('button-slow-speed') as HTMLInputElement;
-  // button.onclick = function () {
-  //   toJSON();
-  //   clearInterval(timeoutId);
-  //   if (button.value === 'slow') {
-  //     button.value = 'fast';
-  //     timeoutId = setInterval(main, 100);
-  //   } else {
-  //     button.value = 'slow';
-  //     timeoutId = setInterval(main, 1000);
-  //   }
-  // }
+  // fetch('./narasen_dia.oud2').then(x => x.text()).then(data => {
+  //   const r = getEkiJikokus(data);
+  //   drawTimetable(r);
+  // })
 
-  fetch('./narasen_dia.oud2').then(x => x.text()).then(data => {
-    const r = getEkiJikokus(data);
-    drawTimetable(r);
-  })
+  const trainMove = await svgLoaderMain();
 
-  // const trainMove = await svgLoaderMain();
+  const fileSelector = document.getElementById('file-selector')!;
+  fileSelector.addEventListener('change', async (event) => {
+    const diagram = await onFileSelectorChange(event);
+    if (diagram != null) {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
 
-  // const fileSelector = document.getElementById('file-selector')!;
-  // fileSelector.addEventListener('change', async (event) => {
-  //   const diagram = await onFileSelectorChange(event);
-  //   if (diagram != null) {
-  //     if (intervalId !== null) {
-  //       clearInterval(intervalId);
-  //     }
-
-  //     initializeTrainMove(diagram, trainMove);
-  //   }
-  // });
+      initializeTrainMove(diagram, trainMove);
+    }
+  });
 }

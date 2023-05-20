@@ -1,8 +1,9 @@
+<!DOCTYPE html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8">
     <script src="https://unpkg.com/xml-js@1.6.11/dist/xml-js.js"></script>
-    <!-- <script type="module" src="https://cdn.skypack.dev/datastructures-js/priority-queue"></script> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   </head>
   <body>
 
@@ -23,7 +24,7 @@
     <input type="file" id="file-selector" accept=".oud, .oud2, .json">
 
     <script type="module">
-      import { initialize } from './dist/main.js';
+      import { initialize } from '/src/main.ts';
       onload = function () {
         initialize();
       }

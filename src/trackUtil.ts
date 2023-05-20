@@ -250,7 +250,7 @@ export function searchTrack(startTrack: HalfTrack, stationId: number): HalfTrack
     track => track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack),
     (_, track) => getDistance(track._begin, track._end),
     track => track.track.station?.stationId === stationId
-  )[0];
+  )[0]?.slice(1);
 }
 
 // export function searchTrack(startTrack: HalfTrack, stationId: number): [HalfTrack[] | undefined, Map<number, NodeWithDistance<HalfTrack>>] {

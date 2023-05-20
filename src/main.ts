@@ -3,7 +3,6 @@ import { draw } from "./drawer.js";
 import { onFileSelectorChange } from "./file.js";
 import { generateLines, prepare } from "./generateLine.js";
 import { Diagram, Train } from "./model.js";
-import { getEkiJikokus } from "./oudParser.js";
 import { svgLoaderMain } from "./svgLoader.js";
 // import { drawTimetable } from "./timetableEditor.js";
 import { TrainMove } from "./trainMove.js";

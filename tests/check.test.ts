@@ -1,4 +1,5 @@
-import { abstractSearch } from "../trackUtil.js";
+import { test, expect } from 'vitest'
+import { abstractSearch } from "../src/trackUtil.js";
 
 class Graph<T> {
   nodes: T[] = [];

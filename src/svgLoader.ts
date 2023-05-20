@@ -314,6 +314,7 @@ function createTrainMove(data: SvgParsedData): TrainMove {
 
 export async function svgLoaderMain() {
   const svg = await (await fetch('./narasen.svg')).text();
+  // xml2jsonはviteだとstreamがpolyfillされなくて動かないのでscriptタグから入れた
   // @ts-ignore
   const obj = JSON.parse(xml2json(svg, {compact: true, spaces: 2}));
   console.log(obj['svg']);

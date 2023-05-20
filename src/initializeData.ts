@@ -13,26 +13,26 @@ export function initializeData(trainMove: TrainMove) {
     },
   ]);
   
-  trainMove.tracks.push(...[
-    ...createBothTrack(trainMove.switches, {
-      _begin: { x: 0, y: 0 },
-      _nextSwitch: undefined,
-      _end: { x: 100, y: 100 },
-      _prevSwitch: undefined,
-      track: {
-        station: null,
-      }
-    }),
-    ...createBothTrack(trainMove.switches, {
-      _begin: { x: 100, y: 100 },
-      _end: { x: 200, y: 100 },
-      _nextSwitch: undefined,
-      _prevSwitch: undefined,
-      track: {
-        station: trainMove.stations[0]
-      }
-    })
-  ]);
+  // trainMove.tracks.push(...[
+  //   ...createBothTrack(trainMove.switches, {
+  //     _begin: { x: 0, y: 0 },
+  //     _nextSwitch: undefined,
+  //     _end: { x: 100, y: 100 },
+  //     _prevSwitch: undefined,
+  //     track: {
+  //       station: null,
+  //     }
+  //   }),
+  //   ...createBothTrack(trainMove.switches, {
+  //     _begin: { x: 100, y: 100 },
+  //     _end: { x: 200, y: 100 },
+  //     _nextSwitch: undefined,
+  //     _prevSwitch: undefined,
+  //     track: {
+  //       station: trainMove.stations[0]
+  //     }
+  //   })
+  // ]);
   
   // switches.push(...[
   //   {

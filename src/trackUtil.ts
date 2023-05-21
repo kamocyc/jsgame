@@ -1,6 +1,7 @@
 import { MinPriorityQueue } from "@datastructures-js/priority-queue";
 import { assert } from "./common.js";
-import { HalfTrack, HalfTrackWip, Point, Station, Switch, generateId } from "./model.js";
+import { HalfTrack, HalfTrackWip, Point, Station, Switch, Train, generateId } from "./model.js";
+import { Queue } from "./queue.js";
 
 export function getMidPoint(point1: Point, point2: Point): Point {
   return {
@@ -22,6 +23,7 @@ export function getTrackDistance(point: Point, track: HalfTrack) {
   return Math.abs(a * point.x - point.y + b) / Math.sqrt(a * a + 1);
 }
 
+// x^2 + y^2 = 1 となるようなtrackの方向を表すベクトルを返す
 export function getTrackDirection(track: HalfTrack) {
   const trackLength = getDistance(track._begin, track._end);
   const trackDirection = {
@@ -188,13 +190,13 @@ export function changeSwitch(nearestTrackPoint: Point) {
   // }
 }
 
-// ダイクストラ法で探索
 interface NodeWithDistance<T> {
   node: T;
   previousNode: NodeWithDistance<T> | undefined;
   distance: number;
 }
 
+// ダイクストラ法で各点の最短距離を求める。ついでにgoalまでの最短経路を返す
 export function abstractSearch<T>(startNode: T, idGetter: (node: T) => number, nextNodeGetter: (node: T) => T[], distanceGetter: (node1: T, node2: T) => number, goalDeterminer: (node: T) => boolean): [T[] | undefined, Map<number, NodeWithDistance<T>>] {
   function reconstructPath<T>(nodeWithDistance: NodeWithDistance<T>): T[] {
     const prev = nodeWithDistance.previousNode;
@@ -224,12 +226,7 @@ export function abstractSearch<T>(startNode: T, idGetter: (node: T) => number, n
       const path = reconstructPath(nodeWithDistance);
       return [path, determined]
     }
-    // if (track.track.station?.stationId === stationId) {
-    //   // 目的のstation
-    //   const path = reconstructPath(nodeWithDistance);
-    //   return [path, determined];
-    // }
-
+    
     const nextNodes = nextNodeGetter(node);
     for (const nextNode of nextNodes) {
       if (!determined.has(idGetter(nextNode))) {
@@ -243,14 +240,60 @@ export function abstractSearch<T>(startNode: T, idGetter: (node: T) => number, n
   return [undefined, determined];
 }
 
-export function searchTrack(startTrack: HalfTrack, stationId: number): HalfTrack[] | undefined {
+export function getNextTracks(track: HalfTrack): HalfTrack[] {
+  return track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack);
+}
+
+export function searchTrack(startTrack: HalfTrack, stationId: number, bannedTrack?: HalfTrack): HalfTrack[] | undefined {
   return abstractSearch(
     startTrack,
     track => track.trackId,
-    track => track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack),
+    track => getNextTracks(track).filter(t => !bannedTrack || t.trackId !== bannedTrack.trackId),
     (_, track) => getDistance(track._begin, track._end),
     track => track.track.station?.stationId === stationId
   )[0]?.slice(1);
+}
+
+// 次の停車駅まで別の経路でも行けて（所要時間が大きく変わらないなら）別の経路で行くなど
+export function getOccupyingTracks(track: HalfTrack): HalfTrack[] {
+  function getOccupyingTracksSub(track: HalfTrack) {
+    // 推移的に分岐（あるいは信号モードのときは信号）にぶつかるまで隣接するtrackを含める。
+    // ただし、信号があって分岐があるときは、列車の進路が決まらないとわからない。
+
+    // 単にポイント基準だと側線があるとそこまでで閉塞が切れてしまうので、やはり信号機が必要か
+    const queue = new Queue<HalfTrack>();
+    queue.enqueue(track);
+    
+    let stationEncountered = false;
+    
+    const occupying = [];
+    while (!queue.isEmpty()) {
+      const track = queue.dequeue();
+      
+      // 駅を2回見たときは、その直前までにする
+      if (track.track.station) {
+        if (!stationEncountered) {
+          stationEncountered = true;
+        } else {
+          break;
+        }
+      }
+
+      occupying.push(track);
+
+      if (track._nextSwitch.switchPatterns.length === 2) {
+        const nextTracks = getNextTracks(track);
+        assert(nextTracks.length === 1);
+        queue.enqueue(nextTracks[0]);
+      }
+    }
+
+    return occupying;
+  }
+
+  const forwardTracks = getOccupyingTracksSub(track);
+  const backwardTracks = getOccupyingTracksSub(track.reverseTrack);
+  return forwardTracks.concat(backwardTracks);
 }
 
 // export function searchTrack(startTrack: HalfTrack, stationId: number): [HalfTrack[] | undefined, Map<number, NodeWithDistance<HalfTrack>>] {

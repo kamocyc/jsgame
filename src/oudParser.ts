@@ -168,7 +168,7 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
         const station = stations[stationIndex];
         const platform = ekiJikoku.bansen !== undefined ? station.platforms[ekiJikoku.bansen] : station.platforms[0]; /* TODO: これで大丈夫？ */
         let departureTime = ekiJikoku.hatsuJikoku;
-        const arrivalTime = ekiJikoku.chakuJikoku ?? departureTime;
+        let arrivalTime = ekiJikoku.chakuJikoku ?? departureTime;
         departureTime = departureTime ?? arrivalTime;
         // 通過や経由しないの時とかは時刻がない。。。 => 番線の扱いとか後で対応したい
         // if (departureTime === undefined && arrivalTime === undefined) throw new Error('departureTime and arrivalTime are undefined');
@@ -179,7 +179,9 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
         return {
           stationId: station.stationId,
           platformId: platform.platformId,
-          arrivalTime: timeToSeconds(arrivalTime as Time),
+          arrivalTime:
+            timeToSeconds(arrivalTime as Time) -
+            (arrivalTime === departureTime ? 20 : 0),// 0秒停車はまずい気がするので20秒くらい停車させる
           departureTime: timeToSeconds(departureTime as Time),
         };
       })

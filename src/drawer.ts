@@ -1,4 +1,6 @@
-import { Point, Train } from "./model.js";
+import { assert } from "./common.js";
+import { HalfTrack, Point, Train } from "./model.js";
+import { getOccupyingTracks } from "./trackUtil.js";
 import { TrainMove } from "./trainMove.js";
 
 let offsetX = 0;
@@ -48,6 +50,24 @@ export function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, point
 //   };
 // }
 
+function drawOccupying(ctx: CanvasRenderingContext2D, train: Train) {
+  const tracks = getOccupyingTracks(train);
+
+  for (const track of tracks) {
+    ctx.strokeStyle = 'red';
+    drawLine(ctx, track._begin, track._end);
+    ctx.strokeStyle = 'black';
+  }
+}
+
+function drawOccupyings(ctx: CanvasRenderingContext2D, occupyingTrain: Map<number, Train>) {
+  for (const [_trackId, train] of occupyingTrain) {
+    ctx.strokeStyle = 'red';
+    drawLine(ctx, train.track._begin, train.track._end);
+    ctx.strokeStyle = 'black';
+  }
+}
+
 function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
   if (train.diaTrain?.color) {
     ctx.strokeStyle = train.diaTrain?.color;
@@ -61,6 +81,8 @@ function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
   ctx.beginPath();
   ctx.arc(_x(train.position.x), _y(train.position.y), 5, 0, 2 * Math.PI);
   ctx.fill();
+
+  // drawOccupying(ctx, train);
 
   if (train.diaTrain?.color) {
     ctx.strokeStyle = 'black';
@@ -84,7 +106,12 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
 
       // stationの名前を描画
       ctx.font = fontSize + 'px sans-serif';
-      ctx.fillText(track.track.station.stationName + ':' + track.track.station.stationId, _x((track._begin.x + track._end.x) / 2 - 10), _y((track._begin.y + track._end.y) / 2 - 10));
+      // ctx.fillText(track.track.station.stationName + ':' + track.track.station.stationId, _x((track._begin.x + track._end.x) / 2 - 10), _y((track._begin.y + track._end.y) / 2 - 10));
+      if (track.track.station.stationName.indexOf('1') !== -1) {
+        const name = track.track.station.stationName.replace('1', '');
+        const metrics = ctx.measureText(name);
+        ctx.fillText(name, _x((track._begin.x + track._end.x) / 2 - metrics.width / 2), _y((track._begin.y + track._end.y) / 2 + 30));
+      }
 
       ctx.strokeStyle = 'black';
     }
@@ -119,6 +146,16 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
   for (const train of trainMove.trains) {
     drawTrain2(ctx, train);
   }
+
+  for (const [trainId, tracks] of trainMove.trainOccupy.occupyingTracks) {
+    // assert(tracks.filter(t => t.trackId === train))
+    for (const track of tracks) {
+      ctx.strokeStyle = 'red';
+      drawLine(ctx, track._begin, track._end);
+      ctx.strokeStyle = 'black';
+    }
+  }
+  // drawOccupyings(ctx, trainMove.occupyingTrain);
 
   document.getElementById('time')!.innerText = trainMove.globalTime.toString()  + ' / ' + trainMove.showGlobalTime();
 }

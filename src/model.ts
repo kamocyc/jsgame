@@ -42,6 +42,8 @@ export interface Track_ {
   station: Station | null;
 }
 
+export type StationStatus = 'NotArrived' | 'Arrived' | 'Departed';
+
 export interface Train {
   trainId: number;
   diaTrain?: DiaTrain;
@@ -50,7 +52,7 @@ export interface Train {
   track: HalfTrack;
   position: Point;
   stationWaitTime: number;
-  wasDeparted: boolean;
+  stationStatus: StationStatus;
 }
 
 export interface OperationTrain {

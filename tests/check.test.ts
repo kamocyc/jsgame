@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest'
 import { abstractSearch } from "../src/trackUtil.js";
+import { moduloRoundUp } from '../src/common.js';
 
 class Graph<T> {
   nodes: T[] = [];
@@ -26,7 +27,7 @@ class Graph<T> {
   }
 }
 
-test("check1", () => {
+test("abstractSearch", () => {
   let g = new Graph<string>();
   g.addNode("A");
   g.addNode("B");
@@ -64,58 +65,7 @@ test("check1", () => {
   .toBe('A: 0, B: 3, C: 7, D: 4, E: 12, F: 22, G: 12');
 });
 
-// function createSwitch(): Switch {
-//   return {
-//     switchId: generateId(),
-//     switchPatterns: []
-//   } as unknown as Switch;
-// }
-
-// function createTrack(distance: number, _nextSwitch: Switch): HalfTrack {
-//   return {
-//     trackId: generateId(),
-//     _begin: { x: 0, y: 0 },
-//     _end: { x: distance, y: 0 },
-//     _nextSwitch: _nextSwitch,
-//     track: { station: null },
-//   } as HalfTrack;
-// }
-
-// function sp(track1: HalfTrack, tracks: HalfTrack[]): [HalfTrack, HalfTrack][] {
-//   return tracks.map(track => [track1, track])
-// }
-
-// 辺の追加が面倒すぎてあきらめた
-// test("check", () => {
-//   const switches = [
-//     createSwitch(), // A: 0
-//     createSwitch(), // B: 1
-//     createSwitch(), // C: 2
-//     createSwitch(), // D: 3
-//     createSwitch(), // E: 4
-//     createSwitch(), // F: 5
-//     createSwitch(), // G: 6
-//   ];
-//   const tracks: HalfTrack[] = [
-//     createTrack(0, switches[0]),  // 0: to A
-//     createTrack(100, switches[2]),// 1
-//     createTrack(3, switches[1]),  // 2
-//     createTrack(4, switches[3]),  // 3
-//     createTrack(3, switches[2]),  // 4
-//     createTrack(8, switches[4]),  // 5
-//     createTrack(10, switches[5]), // 6
-//     createTrack(9, switches[6]),  // 7
-//     createTrack(50, switches[6]), // 8
-//   ];
-//   switches[0].switchPatterns = sp(tracks[0], [tracks[1], tracks[2], tracks[3]]);
-//   switches[1].switchPatterns = sp(tracks[2], [tracks[7]]);
-//   switches[2].switchPatterns = [];
-//   switches[3].switchPatterns = sp(tracks[3], [tracks[4], tracks[5]]);
-//   switches[4].switchPatterns = sp(tracks[5], [tracks[6], tracks[8]]);
-//   switches[5].switchPatterns = [];
-//   switches[6].switchPatterns = [];
-
-//   const r = searchTrack(tracks[0], -1);
-//   console.dir(r, { depth: 4 });
-//   console.log("OK");
-// });
+test('moduloRoundDown', () => {
+  expect(moduloRoundDown(15, 10)).toBe(10);
+  expect(moduloRoundDown(10, 10)).toBe(10);
+})

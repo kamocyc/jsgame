@@ -1,4 +1,4 @@
-import { getStationIdMapKey, min } from "./common.js";
+import { getStationIdMapKey, min, moduloRoundDown } from "./common.js";
 import { draw } from "./drawer.js";
 import { onFileSelectorChange } from "./file.js";
 import { generateLines, prepare } from "./generateLine.js";
@@ -16,7 +16,7 @@ function mainLoop(trainMove: TrainMove, diagram: Diagram) {
   draw(trainMove, null, null);
 }
 
-function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove): () => boolean {
+function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove) {
   const stationIdMap = prepare(diagram);
 
   if (!trainMove) {
@@ -41,17 +41,18 @@ function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove): () => boo
   }
 
   trainMove.mode = 'TimetableMode';
-  trainMove.globalTime = min(diagram.trains.map(t => t.trainTimetable.map(tt => tt.arrivalTime)).flat());
+  const original = min(diagram.trains.map(t => t.trainTimetable.map(tt => tt.arrivalTime)).flat());
+  trainMove.globalTime = moduloRoundDown(original, 10 /* this.globalTimeSpeed */);
 
   intervalId = setInterval(() => mainLoop(trainMove!, diagram), 100);
 
-  return () => {
+  return (newInterval: number | undefined) => {
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;
       return false;
     } else {
-      intervalId = setInterval(() => mainLoop(trainMove!, diagram), 100);
+      intervalId = setInterval(() => mainLoop(trainMove!, diagram), newInterval ?? 100);
       return true;
     }
   }
@@ -79,8 +80,20 @@ export async function initialize() {
       const interrupt = initializeTrainMove(diagram, trainMove);
 
       document.getElementById('button-slow-speed')!.onclick = (ev) => {
-        interrupt();
+        interrupt(undefined);
       };
+
+      document.getElementById('button-slow-speed-2')!.onclick = (ev) => {
+        if ((ev.target as HTMLButtonElement).value !== 'slow') {
+          interrupt(undefined);
+          interrupt(10);
+          (ev.target as HTMLButtonElement).value = 'slow';
+        } else {
+          interrupt(undefined);
+          interrupt(100);
+          (ev.target as HTMLButtonElement).value = 'fast';
+        }
+      }
     }
   });
 }

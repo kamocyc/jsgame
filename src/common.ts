@@ -30,3 +30,11 @@ export function deepEqual(x: any, y: any): boolean {
 export function getStationIdMapKey(stationId: number, platformId: number): string {
   return stationId + '__' + platformId;
 }
+
+export function moduloRoundDown(value: number, mod: number): number {
+  if (value % mod !== 0) {
+    return Math.floor(value / mod) * mod;
+  } else {
+    return value;
+  }
+}

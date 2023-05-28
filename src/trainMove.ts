@@ -78,21 +78,6 @@ class TrainOccupy {
 
     this.occupyingTracks.set(train.trainId, toOccupyTracks);
   }
-  
-  // updateOccupyingTrack(train: Train, nextTrack: HalfTrack) {
-  //   if (this.occupyingTrain.has(nextTrack.trackId) && this.occupyingTrain.get(nextTrack.trackId)?.trainId !== train.trainId) {
-  //     console.warn({
-  //       trackId: nextTrack.trackId,
-  //       occTrainId: this.occupyingTrain.get(nextTrack.trackId),
-  //       train: train
-  //     })
-  //   }
-
-  //   assert(this.occupyingTrain.has(train.track.trackId));
-  //   this.occupyingTrain.delete(train.track.trackId);
-
-  //   this.occupyingTrain.set(nextTrack.trackId, train);
-  // }
 }
 
 export class TrainMove {

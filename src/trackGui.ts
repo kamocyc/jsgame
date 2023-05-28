@@ -10,18 +10,6 @@ let mouseDownStartTracks: HalfTrack[] = [];
 export function initializeMouseEvents(canvas: HTMLCanvasElement, tracks: HalfTrack[], switches: Switch[]) {
   const thresholdTrackDistance = 10;
 
-  // const button = document.getElementById('button-slow-speed') as HTMLInputElement;
-  // button.onclick = function () {
-  //   toJSON();
-  //   clearInterval(timeoutId);
-  //   if (button.value === 'slow') {
-  //     button.value = 'fast';
-  //     timeoutId = setInterval(main, 100);
-  //   } else {
-  //     button.value = 'slow';
-  //     timeoutId = setInterval(main, 1000);
-  //   }
-  // }
   // const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   canvas.onmousedown = function (e) {
     if (e.button === 0) {

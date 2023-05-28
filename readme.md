@@ -10,5 +10,5 @@ pnpm install
 ## development
 
 ```powershell
-vite dev
+pnpm vite dev
 ```

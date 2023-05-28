@@ -50,21 +50,15 @@ export function drawLine(ctx: CanvasRenderingContext2D, pointBegin: Point, point
 //   };
 // }
 
-function drawOccupying(ctx: CanvasRenderingContext2D, train: Train) {
-  const tracks = getOccupyingTracks(train);
-
-  for (const track of tracks) {
-    ctx.strokeStyle = 'red';
-    drawLine(ctx, track._begin, track._end);
-    ctx.strokeStyle = 'black';
-  }
-}
-
-function drawOccupyings(ctx: CanvasRenderingContext2D, occupyingTrain: Map<number, Train>) {
-  for (const [_trackId, train] of occupyingTrain) {
-    ctx.strokeStyle = 'red';
-    drawLine(ctx, train.track._begin, train.track._end);
-    ctx.strokeStyle = 'black';
+function drawOccupyingTracks(ctx: CanvasRenderingContext2D, trainMove: TrainMove) {
+  // 占有線路を描画
+  for (const [_, tracks] of trainMove.trainOccupy.occupyingTracks) {
+    // assert(tracks.filter(t => t.trackId === train))
+    for (const track of tracks) {
+      ctx.strokeStyle = 'red';
+      drawLine(ctx, track._begin, track._end);
+      ctx.strokeStyle = 'black';
+    }
   }
 }
 
@@ -147,15 +141,7 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
     drawTrain2(ctx, train);
   }
 
-  for (const [trainId, tracks] of trainMove.trainOccupy.occupyingTracks) {
-    // assert(tracks.filter(t => t.trackId === train))
-    for (const track of tracks) {
-      ctx.strokeStyle = 'red';
-      drawLine(ctx, track._begin, track._end);
-      ctx.strokeStyle = 'black';
-    }
-  }
-  // drawOccupyings(ctx, trainMove.occupyingTrain);
+  drawOccupyingTracks(ctx, trainMove);
 
   document.getElementById('time')!.innerText = trainMove.globalTime.toString()  + ' / ' + trainMove.showGlobalTime();
 }

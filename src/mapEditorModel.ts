@@ -17,7 +17,7 @@ export type LineDirection = 'Horizontal' | 'Vertical' | 'BottomTop' | 'TopBottom
 export type LineAngle = 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315;
 export type CurveType = 'Bottom_TopLeft' | 'Bottom_TopRight' | 'Top_BottomLeft' | 'Top_BottomRight' | 'Left_TopRight' | 'Left_BottomRight' | 'Right_TopLeft' | 'Right_BottomLeft';
 export type BranchType = 'Horizontal_TopLeft' | 'Horizontal_TopRight' | 'Horizontal_BottomLeft' | 'Horizontal_BottomRight' | 'Vertical_TopLeft' | 'Vertical_TopRight' | 'Vertical_BottomLeft' | 'Vertical_BottomRight'
-  | 'DownUp_Top' | 'DownUp_Bottom' | 'DownUp_Left' | 'DownUp_Right' | 'UpDown_Top' | 'UpDown_Bottom' | 'UpDown_Left' | 'UpDown_Right';
+  | 'BottomTop_Top' | 'BottomTop_Bottom' | 'BottomTop_Left' | 'BottomTop_Right' | 'TopBottom_Top' | 'TopBottom_Bottom' | 'TopBottom_Left' | 'TopBottom_Right';
 
 export type LineTypeStraight = {
   lineClass: 'Straight';

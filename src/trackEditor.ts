@@ -9,7 +9,7 @@ import { TrainMove } from "./trainMove";
 function mouseToMapPosition(mousePoint: Point) {
   return {
     x: Math.floor(mousePoint.x / CellWidth),
-    y: Math.floor(mousePoint.y / CellHeight),
+    y: Math.floor((mapHeight * CellHeight - mousePoint.y) / CellHeight),
   };
 }
 
@@ -32,90 +32,151 @@ function getDirectionFromAngle(angle: LineAngle): LineDirection {
   }
 }
 
+// この関数の座標系は直したはず
 function getCurveTypeFromAngles(angle1: LineAngle, angle2: LineAngle): CurveType | undefined {
-  if (angle1 === 0 && angle2 === 45) {
-    return 'Left_TopRight';
-  } else if (angle1 === 0 && angle2 === 315) {
-    return 'Left_BottomRight';
-  } else if (angle1 === 90 && angle2 === 135) {
-    return 'Top_BottomLeft';
-  } else if (angle1 === 90 && angle2 === 45) {
-    return 'Top_BottomRight';
-  } else if (angle1 === 180 && angle2 === 135) {
-    return 'Right_BottomLeft';
-  } else if (angle1 === 180 && angle2 === 225) {
-    return 'Right_TopLeft';
-  } else if (angle1 === 270 && angle2 === 225) {
-    return 'Bottom_TopLeft';
-  } else if (angle1 === 270 && angle2 === 315) {
-    return 'Bottom_TopRight';
-  } else if (angle1 === 45 && angle2 === 90) {
-    return 'Bottom_TopLeft';
-  } else if (angle1 === 45 && angle2 === 0) {
-    return 'Right_TopLeft';
-  } else if (angle1 === 135 && angle2 === 180) {
-    return 'Left_TopRight';
-  } else if (angle1 === 135 && angle2 === 90) {
-    return 'Bottom_TopRight';
-  } else if (angle1 === 225 && angle2 === 180) {
-    return 'Left_BottomRight';
-  } else if (angle1 === 225 && angle2 === 270) {
-    return 'Top_BottomRight';
-  } else if (angle1 === 315 && angle2 === 270) {
-    return 'Top_BottomLeft';
-  } else if (angle1 === 315 && angle2 === 0) {
-    return 'Right_BottomLeft';
-  } else {
-    return undefined;
+  if (angle1 > angle2) {
+    return getCurveTypeFromAngles(angle2, angle1);
   }
+
+  if (angle1 === 0 && angle2 === 135) {
+    return 'Right_TopLeft';
+  } else if (angle1 === 0 && angle2 === 225) {
+    return 'Right_BottomLeft';
+  } else if (angle1 === 90 && angle2 === 225) {
+    return 'Top_BottomLeft';
+  } else if (angle1 === 90 && angle2 === 315) {
+    return 'Top_BottomRight';
+  } else if (angle1 === 45 && angle2 === 180) {
+    return 'Left_TopRight';
+  } else if (angle1 === 180 && angle2 === 315) {
+    return 'Left_BottomRight';
+  } else if (angle1 === 45 && angle2 === 270) {
+    return 'Bottom_TopRight';
+  } else if (angle1 === 135 && angle2 === 270) {
+    return 'Bottom_TopLeft';
+  }
+
+  return undefined;
 }
 
+// BranchTypeと、分岐元の線路(prevTrack)は左右のどちらかであるかを返す
 function getBranchTypeFromDirectionAndAngle(straightType: LineDirection, angle: LineAngle): [BranchType, 'Left' | 'Right'] | undefined {
   switch (straightType) {
     case 'Horizontal':
       if (angle === 45) {
-        return ['Horizontal_BottomRight', 'Left'];
-      } else if (angle === 135) {
-        return ['Horizontal_BottomLeft', 'Right'];
-      } else if (angle === 225) {
-        return ['Horizontal_TopLeft', 'Right'];
-      } else if (angle === 315) {
         return ['Horizontal_TopRight', 'Left'];
+      } else if (angle === 135) {
+        return ['Horizontal_TopLeft', 'Right'];
+      } else if (angle === 225) {
+        return ['Horizontal_BottomLeft', 'Right'];
+      } else if (angle === 315) {
+        return ['Horizontal_BottomRight', 'Left'];
       }
       break;
     case 'Vertical':
       if (angle === 45) {
-        return ['Vertical_BottomRight', 'Left'];
-      } else if (angle === 135) {
-        return ['Vertical_BottomLeft', 'Right'];
-      } else if (angle === 225) {
-        return ['Vertical_TopLeft', 'Right'];
-      } else if (angle === 315) {
         return ['Vertical_TopRight', 'Left'];
+      } else if (angle === 135) {
+        return ['Vertical_TopLeft', 'Left'];
+      } else if (angle === 225) {
+        return ['Vertical_BottomLeft', 'Right'];
+      } else if (angle === 315) {
+        return ['Vertical_BottomRight', 'Right'];
       }
       break;
     case 'TopBottom':
       if (angle === 0) {
-        return ['UpDown_Right', 'Left'];
+        return ['TopBottom_Right', 'Left'];
       } else if (angle === 90) {
-        return ['UpDown_Bottom', 'Left'];
+        return ['TopBottom_Top', 'Right'];
       } else if (angle === 180) {
-        return ['UpDown_Left', 'Right'];
+        return ['TopBottom_Left', 'Right'];
       } else if (angle === 270) {
-        return ['UpDown_Top', 'Right'];
+        return ['TopBottom_Bottom', 'Left'];
       }
       break;
     case 'BottomTop':
       if (angle === 0) {
-        return ['DownUp_Right', 'Left']
+        return ['BottomTop_Right', 'Left']
       } else if (angle === 90) {
-        return ['DownUp_Bottom', 'Right']
+        return ['BottomTop_Top', 'Left']
       } else if (angle === 180) {
-        return ['DownUp_Left', 'Right']
+        return ['BottomTop_Left', 'Right']
       } else if (angle === 270) {
-        return ['DownUp_Top', 'Left']
+        return ['BottomTop_Bottom', 'Right']
       }
       break;
+  }
+}
+
+function getBranchTypeFromCurveTypeAndAngle(curveType: CurveType, angle: LineAngle): [BranchType, 'Left' | 'Right'] | undefined {
+  switch (curveType) {
+    case 'Bottom_TopLeft':
+      if (angle === 90) {
+        return ['Vertical_TopLeft', 'Right'];
+      } else if (angle === 315) {
+        return ['TopBottom_Bottom', 'Left'];
+      } else {
+        return undefined;
+      }
+    case 'Bottom_TopRight':
+      if (angle === 90) {
+        return ['Vertical_TopRight', 'Left'];
+      } else if (angle === 225) {
+        return ['TopBottom_Bottom', 'Right'];
+      } else {
+        return undefined;
+      }
+    case 'Top_BottomLeft':
+      if (angle === 45) {
+        return ['BottomTop_Top', 'Left'];
+      } else if (angle === 270) {
+        return ['Vertical_BottomLeft', 'Right'];
+      } else {
+        return undefined;
+      }
+    case 'Top_BottomRight':
+      if (angle === 135) {
+        return ['TopBottom_Top', 'Right'];
+      } else if (angle === 270) {
+        return ['Vertical_BottomRight', 'Left'];
+      } else {
+        return undefined;
+      }
+    case 'Left_TopRight':
+      if (angle === 0) {
+        return ['Horizontal_TopRight', 'Left'];
+      } else if (angle === 225) {
+        return ['BottomTop_Left', 'Right'];
+      } else {
+        return undefined;
+      }
+    case 'Left_BottomRight':
+      if (angle === 0) {
+        return ['Horizontal_BottomRight', 'Left'];
+      } else if (angle === 135) {
+        return ['TopBottom_Left', 'Right'];
+      } else {
+        return undefined;
+      }
+    case 'Right_TopLeft':
+      if (angle === 180) {
+        return ['Horizontal_TopLeft', 'Right'];
+      } else if (angle === 315) {
+        return ['TopBottom_Right', 'Left'];
+      } else {
+        return undefined;
+      }
+    case 'Right_BottomLeft':
+      if (angle === 180) {
+        return ['Horizontal_BottomLeft', 'Right'];
+      } else if (angle === 45) {
+        return ['BottomTop_Right', 'Left'];
+      } else {
+        return undefined;
+      }
+    default:
+      return undefined;
   }
 }
 
@@ -132,9 +193,9 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTra
     };
     return [[], newCell1];
   } else if (cell1.lineType.lineClass === 'Terminal') {
-    if (cell1.lineType.angle === angle) {
+    if (cell1.lineType.angle === (angle + 180) % 360) {
       // 同じ方向の延長
-      assert(cell1.lineType.tracks.length === 2);
+      // assert(cell1.lineType.tracks.length === 2);
       const prevTracks = cell1.lineType.tracks;
       newCell1.lineType = {
         lineClass: 'Straight',
@@ -148,7 +209,7 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTra
       if (curveType === undefined) {
         return { error: 'カーブ元の線路との角度が不正' };
       }
-      assert(cell1.lineType.tracks.length === 2);
+      // assert(cell1.lineType.tracks.length === 2);
       const prevTracks = cell1.lineType.tracks;
       newCell1.lineType = {
         lineClass: 'Curve',
@@ -158,33 +219,61 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTra
       return [prevTracks, newCell1];
     }
   } else if (cell1.lineType.lineClass === 'Straight') {
-    assert(cell1.lineType.tracks.length === 2);
+    // assert(cell1.lineType.tracks.length === 2);
     const result = getBranchTypeFromDirectionAndAngle(cell1.lineType.straightType, angle);
     if (result === undefined) {
       return { error: '分岐元の線路との角度が不正' };
     }
     const [straightType, branchType] = result;
-    const prevTrack = ((tracks: HalfTrack[]) => {
-      if (branchType === 'Left') {
-        // tracks.tracksのうち、xが小さい方を選ぶ
-        if (tracks[0]._begin.x < tracks[1]._begin.x || tracks[0]._end.x < tracks[1]._end.x) {
-          return tracks[0];
-        }
-        return tracks[1];
-      } else {
-        if (tracks[0]._begin.x > tracks[1]._begin.x || tracks[0]._end.x > tracks[1]._end.x) {
-          return tracks[0];
-        }
-        return tracks[1];
-      }
-    })(cell1.lineType.tracks);
+    // const prevTrack = ((tracks: HalfTrack[]) => {
+    //   if (branchType === 'Left') {
+    //     // tracks.tracksのうち、xが小さい方を選ぶ
+    //     if (tracks[0]._begin.x < tracks[1]._begin.x || tracks[0]._end.x < tracks[1]._end.x) {
+    //       return tracks[0];
+    //     }
+    //     return tracks[1];
+    //   } else {
+    //     if (tracks[0]._begin.x > tracks[1]._begin.x || tracks[0]._end.x > tracks[1]._end.x) {
+    //       return tracks[0];
+    //     }
+    //     return tracks[1];
+    //   }
+    // })(cell1.lineType.tracks);
 
     newCell1.lineType = {
       lineClass: 'Branch',
       branchType: straightType,
-      tracks: [prevTrack],
+      tracks: [undefined],
     };
-    return [[prevTrack], newCell1];
+    return [[undefined], newCell1];
+  } else if (cell1.lineType.lineClass === 'Curve') {
+    // assert(cell1.lineType.tracks.length === 2);
+    const result = getBranchTypeFromCurveTypeAndAngle(cell1.lineType.curveType, angle);
+    if (result === undefined) {
+      return { error: '分岐元の線路との角度が不正（curve）' };
+    }
+    const [curveType, branchType] = result;
+    // const prevTrack = ((tracks: HalfTrack[]) => {
+    //   if (branchType === 'Left') {
+    //     // tracks.tracksのうち、xが小さい方を選ぶ
+    //     if (tracks[0]._begin.x < tracks[1]._begin.x || tracks[0]._end.x < tracks[1]._end.x) {
+    //       return tracks[0];
+    //     }
+    //     return tracks[1];
+    //   } else {
+    //     if (tracks[0]._begin.x > tracks[1]._begin.x || tracks[0]._end.x > tracks[1]._end.x) {
+    //       return tracks[0];
+    //     }
+    //     return tracks[1];
+    //   }
+    // })(cell1.lineType.tracks);
+
+    newCell1.lineType = {
+      lineClass: 'Branch',
+      branchType: curveType,
+      tracks: [undefined],
+    };
+    return [[undefined], newCell1];
   }
 
   return { error: '未対応の線路' };
@@ -257,15 +346,15 @@ function createLine(cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateL
   }
   const [nextTracks, newCell2] = result__;
 
-  const [newTrack1, newTrack2, newSwitches] = createNewTrack(_begin, _end, prevTracks, nextTracks, null);
+  // const [newTrack1, newTrack2, newSwitches] = createNewTrack(_begin, _end, prevTracks, nextTracks, null);
   
-  newCell1.lineType!.tracks.push(newTrack1, newTrack2);
-  newCell2.lineType!.tracks.push(newTrack1, newTrack2);
+  // newCell1.lineType!.tracks.push(newTrack1, newTrack2);
+  // newCell2.lineType!.tracks.push(newTrack1, newTrack2);
 
   cell1.lineType = newCell1.lineType;
   cell2.lineType = newCell2.lineType;
 
-  return [[newTrack1, newTrack2], newSwitches];
+  // return [[newTrack1, newTrack2], newSwitches];
 }
 
 let mouseStartCell: null | Cell = null;
@@ -324,15 +413,18 @@ function onmouseup(e: MouseEvent) {
   if (mapPosition.x >= 0 && mapPosition.x < mapWidth && mapPosition.y >= 0 && mapPosition.y < mapHeight) {
     const mouseEndCell = map[mapPosition.x][mapPosition.y];
     const result = createLine(mouseStartCell, mouseEndCell);
-    if ('error' in result) {
-      console.warn(result.error);
-    } else {
-      const [tracks, switches] = result;
-      trainMove.tracks.push(...tracks);
-      trainMove.switches.push(...switches);
-    }
+    console.warn(result?.error);
+    // if ('error' in result) {
+    //   console.warn(result.error);
+    // } else {
+    //   const [tracks, switches] = result;
+    //   trainMove.tracks.push(...tracks);
+    //   trainMove.switches.push(...switches);
+    // }
     drawEditor(map);
     // draw(trainMove, null, null);
   }
   drawEditor(map);
+
+  mouseStartCell = null;
 }

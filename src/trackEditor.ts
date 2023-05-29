@@ -1,4 +1,4 @@
-import { assert } from "./common";
+import { assert, deepEqual } from "./common";
 import { draw, drawLine } from "./drawer";
 import { CellHeight, CellWidth, LineType, LineTypeStraight, LineTypeTerminal, addVector, mapHeight, mapWidth, timesVector, Map, LineAngle, LineDirection, CurveType, BranchType, Cell } from "./mapEditorModel";
 import { HalfTrack, Point, Switch } from "./model";
@@ -60,7 +60,7 @@ function getCurveTypeFromAngles(angle1: LineAngle, angle2: LineAngle): CurveType
 }
 
 // BranchTypeと、分岐元の線路(prevTrack)は左右のどちらかであるかを返す
-function getBranchTypeFromDirectionAndAngle(straightType: LineDirection, angle: LineAngle): [BranchType, 'Left' | 'Right'] | undefined {
+function getBranchTypeFromDirectionAndAngle(straightType: LineDirection, angle: LineAngle): [BranchType, 'Left' | 'Right' | 'Top' | 'Bottom'] | undefined {
   switch (straightType) {
     case 'Horizontal':
       if (angle === 45) {
@@ -75,13 +75,13 @@ function getBranchTypeFromDirectionAndAngle(straightType: LineDirection, angle: 
       break;
     case 'Vertical':
       if (angle === 45) {
-        return ['Vertical_TopRight', 'Left'];
+        return ['Vertical_TopRight', 'Bottom'];
       } else if (angle === 135) {
-        return ['Vertical_TopLeft', 'Left'];
+        return ['Vertical_TopLeft', 'Bottom'];
       } else if (angle === 225) {
-        return ['Vertical_BottomLeft', 'Right'];
+        return ['Vertical_BottomLeft', 'Top'];
       } else if (angle === 315) {
-        return ['Vertical_BottomRight', 'Right'];
+        return ['Vertical_BottomRight', 'Top'];
       }
       break;
     case 'TopBottom':
@@ -109,11 +109,11 @@ function getBranchTypeFromDirectionAndAngle(straightType: LineDirection, angle: 
   }
 }
 
-function getBranchTypeFromCurveTypeAndAngle(curveType: CurveType, angle: LineAngle): [BranchType, 'Left' | 'Right'] | undefined {
+function getBranchTypeFromCurveTypeAndAngle(curveType: CurveType, angle: LineAngle): [BranchType, 'Left' | 'Right' | 'Top' | 'Bottom'] | undefined {
   switch (curveType) {
     case 'Bottom_TopLeft':
       if (angle === 90) {
-        return ['Vertical_TopLeft', 'Right'];
+        return ['Vertical_TopLeft', 'Bottom'];
       } else if (angle === 315) {
         return ['TopBottom_Bottom', 'Left'];
       } else {
@@ -121,9 +121,9 @@ function getBranchTypeFromCurveTypeAndAngle(curveType: CurveType, angle: LineAng
       }
     case 'Bottom_TopRight':
       if (angle === 90) {
-        return ['Vertical_TopRight', 'Left'];
+        return ['Vertical_TopRight', 'Bottom'];
       } else if (angle === 225) {
-        return ['TopBottom_Bottom', 'Right'];
+        return ['BottomTop_Bottom', 'Right'];
       } else {
         return undefined;
       }
@@ -131,7 +131,7 @@ function getBranchTypeFromCurveTypeAndAngle(curveType: CurveType, angle: LineAng
       if (angle === 45) {
         return ['BottomTop_Top', 'Left'];
       } else if (angle === 270) {
-        return ['Vertical_BottomLeft', 'Right'];
+        return ['Vertical_BottomLeft', 'Top'];
       } else {
         return undefined;
       }
@@ -139,7 +139,7 @@ function getBranchTypeFromCurveTypeAndAngle(curveType: CurveType, angle: LineAng
       if (angle === 135) {
         return ['TopBottom_Top', 'Right'];
       } else if (angle === 270) {
-        return ['Vertical_BottomRight', 'Left'];
+        return ['Vertical_BottomRight', 'Top'];
       } else {
         return undefined;
       }
@@ -181,6 +181,32 @@ function getBranchTypeFromCurveTypeAndAngle(curveType: CurveType, angle: LineAng
 }
 
 function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTrack[], Cell] | CreateLineError {
+  function getLeftOrRightTrack(branchType: 'Left' | 'Right' | 'Top' | 'Bottom', track1: HalfTrack, track2: HalfTrack) {
+    switch (branchType) {
+      case 'Left':
+        // tracks.tracksのうち、xが小さい方を選ぶ
+        if (track1._begin.x < track2._begin.x || track1._end.x < track2._end.x) {
+          return track1;
+        }
+        return track2;
+      case 'Right':
+        if (track1._begin.x > track2._begin.x || track1._end.x > track2._end.x) {
+          return track1;
+        }
+        return track2;
+      case 'Top':
+        if (track1._begin.y > track2._begin.y || track1._end.y > track2._end.y) {
+          return track1;
+        }
+        return track2;
+      case 'Bottom':
+        if (track1._begin.y < track2._begin.y || track1._end.y < track2._end.y) {
+          return track1;
+        }
+        return track2;
+    }
+  }
+
   const newCell1: Cell = {
     position: cell1.position,
     lineType: null,
@@ -195,98 +221,96 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTra
   } else if (cell1.lineType.lineClass === 'Terminal') {
     if (cell1.lineType.angle === (angle + 180) % 360) {
       // 同じ方向の延長
-      // assert(cell1.lineType.tracks.length === 2);
-      const prevTracks = cell1.lineType.tracks;
+      assert(cell1.lineType.tracks.length === 1);
+      const prevTrack = cell1.lineType.tracks[0];
       newCell1.lineType = {
         lineClass: 'Straight',
         straightType: getDirectionFromAngle(cell1.lineType.angle),
-        tracks: prevTracks,
+        tracks: [prevTrack],
       };
-      return [prevTracks, newCell1];
+      return [[prevTrack], newCell1];
     } else {
       // カーブ
       const curveType = getCurveTypeFromAngles(cell1.lineType.angle, angle);
       if (curveType === undefined) {
         return { error: 'カーブ元の線路との角度が不正' };
       }
-      // assert(cell1.lineType.tracks.length === 2);
-      const prevTracks = cell1.lineType.tracks;
+      assert(cell1.lineType.tracks.length === 1);
+      const prevTrack = cell1.lineType.tracks[0];
       newCell1.lineType = {
         lineClass: 'Curve',
         curveType: curveType,
-        tracks: prevTracks,
+        tracks: [prevTrack],
       };
-      return [prevTracks, newCell1];
+      return [[prevTrack], newCell1];
     }
   } else if (cell1.lineType.lineClass === 'Straight') {
-    // assert(cell1.lineType.tracks.length === 2);
+    assert(cell1.lineType.tracks.length === 2);
     const result = getBranchTypeFromDirectionAndAngle(cell1.lineType.straightType, angle);
     if (result === undefined) {
       return { error: '分岐元の線路との角度が不正' };
     }
     const [straightType, branchType] = result;
-    // const prevTrack = ((tracks: HalfTrack[]) => {
-    //   if (branchType === 'Left') {
-    //     // tracks.tracksのうち、xが小さい方を選ぶ
-    //     if (tracks[0]._begin.x < tracks[1]._begin.x || tracks[0]._end.x < tracks[1]._end.x) {
-    //       return tracks[0];
-    //     }
-    //     return tracks[1];
-    //   } else {
-    //     if (tracks[0]._begin.x > tracks[1]._begin.x || tracks[0]._end.x > tracks[1]._end.x) {
-    //       return tracks[0];
-    //     }
-    //     return tracks[1];
-    //   }
-    // })(cell1.lineType.tracks);
+    const prevTrack = getLeftOrRightTrack(branchType, cell1.lineType.tracks[0], cell1.lineType.tracks[1]);
 
     newCell1.lineType = {
       lineClass: 'Branch',
       branchType: straightType,
-      tracks: [undefined],
+      tracks: [prevTrack],
     };
-    return [[undefined], newCell1];
+    return [[prevTrack], newCell1];
   } else if (cell1.lineType.lineClass === 'Curve') {
-    // assert(cell1.lineType.tracks.length === 2);
+    assert(cell1.lineType.tracks.length === 2);
     const result = getBranchTypeFromCurveTypeAndAngle(cell1.lineType.curveType, angle);
     if (result === undefined) {
       return { error: '分岐元の線路との角度が不正（curve）' };
     }
     const [curveType, branchType] = result;
-    // const prevTrack = ((tracks: HalfTrack[]) => {
-    //   if (branchType === 'Left') {
-    //     // tracks.tracksのうち、xが小さい方を選ぶ
-    //     if (tracks[0]._begin.x < tracks[1]._begin.x || tracks[0]._end.x < tracks[1]._end.x) {
-    //       return tracks[0];
-    //     }
-    //     return tracks[1];
-    //   } else {
-    //     if (tracks[0]._begin.x > tracks[1]._begin.x || tracks[0]._end.x > tracks[1]._end.x) {
-    //       return tracks[0];
-    //     }
-    //     return tracks[1];
-    //   }
-    // })(cell1.lineType.tracks);
+    const prevTrack = getLeftOrRightTrack(branchType, cell1.lineType.tracks[0], cell1.lineType.tracks[1]);
 
     newCell1.lineType = {
       lineClass: 'Branch',
       branchType: curveType,
-      tracks: [undefined],
+      tracks: [prevTrack],
     };
-    return [[undefined], newCell1];
+    return [[prevTrack], newCell1];
   }
 
   return { error: '未対応の線路' };
 }
 
-// 間のセルも作る必要がある。
-function createLine(cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateLineError {
-  if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
-    return { error: '同じセル' };
+
+function createTrackOnAdjacentCells(cell1: Cell, cell2: Cell, angle: LineAngle): [[Cell, Cell], [HalfTrack, HalfTrack], Switch[]] | { error: string } {
+  const result_ = getAdjacentTrackAndNewCellBase(cell1, angle);
+  if ('error' in result_) {
+    return { error: '始点: ' + result_.error };
   }
+  const [prevTracks, newCell1] = result_;
+
+  const result__ = getAdjacentTrackAndNewCellBase(cell2, (angle + 180) % 360 as LineAngle);
+  if ('error' in result__) {
+    return { error: '終点: ' + result__.error };
+  }
+  const [nextTracks, newCell2] = result__;
 
   const _begin = addVector(timesVector(cell1.position, 50), { x: CellWidth / 2, y : CellHeight / 2 });
   const _end = addVector(timesVector(cell2.position, 50), {x: CellWidth / 2, y: CellHeight / 2 });
+
+  // そのセルで終端となるtrackをtracksに設定する
+  const [newTrack1, newTrack2, newSwitches] = createNewTrack(_begin, _end, prevTracks, nextTracks, null);
+  const beginTrack = deepEqual(newTrack1._end, _begin) ? newTrack1 : newTrack2;
+  const endTrack = deepEqual(newTrack1._end, _begin) ? newTrack2 : newTrack1;
+  
+  newCell1.lineType!.tracks.push(beginTrack);
+  newCell2.lineType!.tracks.push(endTrack);
+
+  return [[newCell1, newCell2], [newTrack1, newTrack2], newSwitches];
+}
+
+function createLine(map: Map, cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateLineError {
+  if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
+    return { error: '同じセル' };
+  }
 
   if (cell1.lineType?.lineClass === 'Branch') {
     return { error: '始点が分岐' };
@@ -333,28 +357,34 @@ function createLine(cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateL
     return { error: '始点と終点が直線上にない' };
   }
 
-  // TODO: prevTrack / nextTrackの扱いを修正
-  const result_ = getAdjacentTrackAndNewCellBase(cell1, angle);
-  if ('error' in result_) {
-    return { error: '始点: ' + result_.error };
+  let x = cell1.position.x;
+  let y = cell1.position.y;
+  let ix = cell2.position.x < cell1.position.x ? -1 : cell2.position.x === cell1.position.x ? 0 : 1;
+  let iy = cell2.position.y < cell1.position.y ? -1 : cell2.position.y === cell1.position.y ? 0 : 1;
+  const resultTracks: HalfTrack[] = [];
+  const resultSwitches: Switch[] = [];
+  const mapUpdateData: [number, number, Cell][] = [];
+  let prevCell = map[x][y];
+
+  while (true) {
+    const result = createTrackOnAdjacentCells(prevCell, map[x + ix][y + iy], angle);
+    if ('error' in result) {
+      return { error: result.error };
+    }
+    const [[newCell1, newCell2], tracks, switches] = result;
+    resultTracks.push(...tracks);
+    resultSwitches.push(...switches);
+    mapUpdateData.push([x, y, newCell1], [x + ix, y + iy, newCell2]);
+    prevCell = newCell2;
+    x += ix;
+    y += iy;
+    if (x === cell2.position.x && y === cell2.position.y) {
+      for (const [x, y, cell] of mapUpdateData) {
+        map[x][y] = cell;
+      };
+      return [resultTracks, resultSwitches];
+    }
   }
-  const [prevTracks, newCell1] = result_;
-
-  const result__ = getAdjacentTrackAndNewCellBase(cell2, (angle + 180) % 360 as LineAngle);
-  if ('error' in result__) {
-    return { error: '終点: ' + result__.error };
-  }
-  const [nextTracks, newCell2] = result__;
-
-  // const [newTrack1, newTrack2, newSwitches] = createNewTrack(_begin, _end, prevTracks, nextTracks, null);
-  
-  // newCell1.lineType!.tracks.push(newTrack1, newTrack2);
-  // newCell2.lineType!.tracks.push(newTrack1, newTrack2);
-
-  cell1.lineType = newCell1.lineType;
-  cell2.lineType = newCell2.lineType;
-
-  // return [[newTrack1, newTrack2], newSwitches];
 }
 
 let mouseStartCell: null | Cell = null;
@@ -369,12 +399,6 @@ function initializeMap(): Map {
         } as Cell)
       )
     );
-  
-  map[0][0].lineType = {
-    lineClass: 'Straight',
-    straightType: 'Horizontal',
-    tracks: [],
-  };
   return map;
 }
 
@@ -385,8 +409,21 @@ export function initializeTrackEditor() {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   canvas.onmousedown = onmousedown;
   canvas.onmouseup = onmouseup;
+  canvas.onmousemove = onmousemove;
 
   drawEditor(map);
+}
+
+function onmousemove(e: MouseEvent) {
+  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const mapPosition = mouseToMapPosition({x, y});
+  if (mapPosition.x >= 0 && mapPosition.x < mapWidth && mapPosition.y >= 0 && mapPosition.y < mapHeight) {
+    const mouseMoveCell = map[mapPosition.x][mapPosition.y];
+    drawEditor(map, mouseStartCell, mouseMoveCell);
+  }
 }
 
 function onmousedown(e: MouseEvent) {
@@ -399,7 +436,7 @@ function onmousedown(e: MouseEvent) {
     mouseStartCell = map[mapPosition.x][mapPosition.y];
   }
 
-  drawEditor(map);
+  drawEditor(map, mouseStartCell);
 }
 
 function onmouseup(e: MouseEvent) {
@@ -412,15 +449,15 @@ function onmouseup(e: MouseEvent) {
   const mapPosition = mouseToMapPosition({x, y});
   if (mapPosition.x >= 0 && mapPosition.x < mapWidth && mapPosition.y >= 0 && mapPosition.y < mapHeight) {
     const mouseEndCell = map[mapPosition.x][mapPosition.y];
-    const result = createLine(mouseStartCell, mouseEndCell);
-    console.warn(result?.error);
-    // if ('error' in result) {
-    //   console.warn(result.error);
-    // } else {
-    //   const [tracks, switches] = result;
-    //   trainMove.tracks.push(...tracks);
-    //   trainMove.switches.push(...switches);
-    // }
+    const result = createLine(map, mouseStartCell, mouseEndCell);
+    // console.warn(result?.error);
+    if ('error' in result) {
+      console.warn(result.error);
+    } else {
+      const [tracks, switches] = result;
+      trainMove.tracks.push(...tracks);
+      trainMove.switches.push(...switches);
+    }
     drawEditor(map);
     // draw(trainMove, null, null);
   }

@@ -1,10 +1,14 @@
 import { drawLine as drawLine_ } from "./drawer";
-import { CellHeight, CellWidth, LineType, LineTypeStraight, LineTypeTerminal, addVector, mapHeight, mapWidth, timesVector, Map, LineTypeCurve, BranchType, LineTypeBranch } from "./mapEditorModel";
+import { CellHeight, CellWidth, LineType, LineTypeStraight, LineTypeTerminal, addVector, mapHeight, mapWidth, timesVector, Map, LineTypeCurve, BranchType, LineTypeBranch, Cell } from "./mapEditorModel";
 import { Point } from "./model";
 
 function r_(position: Point) {
   return { x: position.x, y: mapHeight * CellHeight - position.y };
 }
+function fillRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number,) {
+  ctx.fillRect(x, mapHeight * CellHeight - y - height, width, height);
+}
+
 
 function drawLine(ctx: CanvasRenderingContext2D, begin: Point, end: Point) {
   drawLine_(ctx, r_(begin), r_(end));
@@ -112,7 +116,7 @@ function drawLineType(ctx: CanvasRenderingContext2D, position: Point, lineType: 
   }
 }
 
-export function drawEditor(map?: Map) {
+export function drawEditor(map?: Map, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
 
@@ -125,6 +129,15 @@ export function drawEditor(map?: Map) {
 
   for (let y = 0; y <= mapHeight; y ++) {
     drawLine(ctx, { x: 0, y: y * CellHeight }, { x: mapWidth * CellWidth, y: y * CellHeight });
+  }
+
+  if (mouseStartCell !== null) {
+    ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+    fillRect(ctx, mouseStartCell.position.x * CellWidth, mouseStartCell.position.y * CellHeight, CellWidth, CellHeight);
+  }
+  if (mouseEndCell !== null) {
+    ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+    fillRect(ctx, mouseEndCell.position.x * CellWidth, mouseEndCell.position.y * CellHeight, CellWidth, CellHeight);
   }
 
   if (!map) return;

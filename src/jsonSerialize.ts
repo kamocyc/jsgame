@@ -63,24 +63,34 @@ function restoreJson(obj: object, entry: object) {
 }
 
 export function toJSON(trainMove: TrainMove) {
+  // @ts-ignore
+  const json = JSON.stringify(JSON.decycle(trainMove));
+  return json;
+
+  // console.log(o);
+
   // const obj = {
-  //   trains: trains.map(train => ({ ...train, track: train.track.id })),
-  //   switches: switches.map(sw => ({ ...sw, fromTracks: sw.fromTracks.map(t => t.id), toTracks: sw.toTracks.map(t => t.id), _branchedTrackFrom: sw._branchedTrackFrom.id, _branchedTrackTo: sw._branchedTrackTo.id })),
-  //   tracks: tracks.map(t => t.),
-  //   stations: stations,
+  //   trains: trainMove.trains.map(extractId),
+  //   switches: trainMove.switches.map(extractId),
+  //   tracks: trainMove.tracks.map(extractId),
+  //   stations: trainMove.stations.map(extractId),
   // };
-  const obj = {
-    trains: trainMove.trains.map(extractId),
-    switches: trainMove.switches.map(extractId),
-    tracks: trainMove.tracks.map(extractId),
-    stations: trainMove.stations.map(extractId),
-  };
 
-  const json = JSON.stringify(obj); 
-  console.log(json);
+  // const json = JSON.stringify(obj); 
+  // console.log(json);
 
-  const obj_ = JSON.parse(json);
-  // ?
-  const s = restoreJson(obj_, obj_);
-  console.log(s);
+  // return json;
+}
+
+export function fromJSON(json: string) {
+  // @ts-ignore
+  const obj = JSON.retrocycle(JSON.parse(json));
+  return obj;
+
+  // const obj_ = JSON.parse(json);
+  // // ?
+  // const s = restoreJson(obj_, obj_);
+  // console.log(s);
+
+  // return s;
 }

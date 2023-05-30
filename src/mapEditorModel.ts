@@ -1,12 +1,12 @@
 import { HalfTrack, Point } from "./model";
 
-export const mapWidth = 5;
-export const mapHeight = 5;
+export const MapWidth = 20;
+export const MapHeight = 10;
 
 export type Map = Cell[][];
 
-export const CellWidth = 50;
-export const CellHeight = 50;
+export const CellWidth = 30;
+export const CellHeight = 30;
 
 export interface LineType {
   lineClass: 'Straight' | 'Curve' | 'Branch' | 'Terminal';

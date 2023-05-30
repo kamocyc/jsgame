@@ -1,12 +1,13 @@
 import { drawLine as drawLine_ } from "./drawer";
-import { CellHeight, CellWidth, LineType, LineTypeStraight, LineTypeTerminal, addVector, mapHeight, mapWidth, timesVector, Map, LineTypeCurve, BranchType, LineTypeBranch, Cell } from "./mapEditorModel";
-import { Point } from "./model";
+import { CellHeight, CellWidth, LineType, LineTypeStraight, LineTypeTerminal, addVector, MapHeight, MapWidth, timesVector, Map, LineTypeCurve, BranchType, LineTypeBranch, Cell } from "./mapEditorModel";
+import { HalfTrack, Point } from "./model";
+import { TrainMove } from "./trainMove";
 
 function r_(position: Point) {
-  return { x: position.x, y: mapHeight * CellHeight - position.y };
+  return { x: position.x, y: MapHeight * CellHeight - position.y };
 }
 function fillRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number,) {
-  ctx.fillRect(x, mapHeight * CellHeight - y - height, width, height);
+  ctx.fillRect(x, MapHeight * CellHeight - y - height, width, height);
 }
 
 
@@ -23,8 +24,8 @@ function drawStraight(ctx: CanvasRenderingContext2D, position: Point, lineType: 
   };
   const straightType = straightTypeToPositionMap[lineType.straightType];
 
-  const begin = addVector(addVector(timesVector(position, 50), { x: 25, y: 25 }), timesVector(straightType.begin, 25));
-  const end = addVector(addVector(timesVector(position, 50), { x: 25, y: 25 }), timesVector(straightType.end, 25));
+  const begin = addVector(addVector(timesVector(position, CellWidth), { x: CellWidth / 2, y: CellWidth / 2 }), timesVector(straightType.begin, CellWidth / 2));
+  const end = addVector(addVector(timesVector(position, CellWidth), { x: CellWidth / 2, y: CellWidth / 2 }), timesVector(straightType.end, CellWidth / 2));
 
   ctx.strokeStyle = 'green';
   drawLine(ctx, begin, end);
@@ -43,8 +44,8 @@ function drawTerminal(ctx: CanvasRenderingContext2D, position: Point, lineType: 
     315: { x: 1, y: -1 },
   };
 
-  const begin = addVector(timesVector(position, 50), { x: 25, y: 25 });
-  const end = addVector(addVector(timesVector(position, 50), { x: 25, y: 25 }), timesVector(angleToPositionMap[lineType.angle], 25));
+  const begin = addVector(timesVector(position, CellWidth), { x: CellWidth / 2, y: CellWidth / 2 });
+  const end = addVector(addVector(timesVector(position, CellWidth), { x: CellWidth / 2, y: CellWidth / 2 }), timesVector(angleToPositionMap[lineType.angle], CellWidth / 2));
   drawLine(ctx, begin, end);
 }
 
@@ -61,9 +62,9 @@ function drawCurve(ctx: CanvasRenderingContext2D, position: Point, lineType: Lin
   };
 
   const curveType = curveTypeToPositionMap[lineType.curveType];
-  const center = addVector(timesVector(position, 50), { x: 25, y: 25 });
-  const begin = addVector(center, timesVector(curveType.begin, 25));
-  const end = addVector(center, timesVector(curveType.end, 25));
+  const center = addVector(timesVector(position, CellWidth), { x: CellWidth / 2, y: CellWidth / 2 });
+  const begin = addVector(center, timesVector(curveType.begin, CellWidth / 2));
+  const end = addVector(center, timesVector(curveType.end, CellWidth / 2));
 
   // カーブはとりあえず色は赤にする
   ctx.strokeStyle = 'red';
@@ -93,10 +94,10 @@ function drawBranch(ctx: CanvasRenderingContext2D, position: Point, lineType: Li
   };
   
   const curveType = branchTypeToPositionMap[lineType.branchType];
-  const center = addVector(timesVector(position, 50), { x: 25, y: 25 });
-  const begin = addVector(center, timesVector(curveType.begin, 25));
-  const end1 = addVector(center, timesVector(curveType.end1, 25));
-  const end2 = addVector(center, timesVector(curveType.end2, 25));
+  const center = addVector(timesVector(position, CellWidth), { x: CellWidth / 2, y: CellWidth / 2 });
+  const begin = addVector(center, timesVector(curveType.begin, CellWidth / 2));
+  const end1 = addVector(center, timesVector(curveType.end1, CellWidth / 2));
+  const end2 = addVector(center, timesVector(curveType.end2, CellWidth / 2));
 
   ctx.strokeStyle = 'blue';
   drawLine(ctx, begin, end1);
@@ -116,20 +117,54 @@ function drawLineType(ctx: CanvasRenderingContext2D, position: Point, lineType: 
   }
 }
 
-export function drawEditor(map?: Map, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
+function _y(y: number) {
+  return y + 10;
+}
+function _x(x: number) {
+  return x + 10;
+}
+
+function drawTracks(ctx: CanvasRenderingContext2D, tracks: HalfTrack[]) {
+  const fontSize = 15;
+
+  for (const track of tracks) {
+    ctx.strokeStyle = 'gray';
+    drawLine(ctx, addVector(track._begin, {x: 10, y: 10}), addVector(track._end, {x: 10, y: 10}));
+    if (track.track.station) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'red';
+      ctx.arc((track._begin.x + track._end.x) / 2, MapHeight * CellHeight - (track._begin.y + track._end.y) / 2, 5, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // stationの名前を描画
+      ctx.font = fontSize + 'px sans-serif';
+      
+      const name = track.track.station.stationName;
+      const metrics = ctx.measureText(name);
+      ctx.fillText(name, _x((track._begin.x + track._end.x) / 2 - metrics.width / 2), MapHeight * CellHeight - _y((track._begin.y + track._end.y) / 2 + 30));
+
+      ctx.strokeStyle = 'gray';
+    }
+  }
+  ctx.strokeStyle = 'black';
+}
+
+export function drawEditor(trainMove: TrainMove, map?: Map, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
 
   // clear
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  for (let x = 0; x <= mapWidth; x ++) {
-    drawLine(ctx, { x: x * CellWidth, y: 0 }, { x: x * CellWidth, y: mapHeight * CellHeight });
+  // 罫線を描画
+  for (let x = 0; x <= MapWidth; x ++) {
+    drawLine(ctx, { x: x * CellWidth, y: 0 }, { x: x * CellWidth, y: MapHeight * CellHeight });
+  }
+  for (let y = 0; y <= MapHeight; y ++) {
+    drawLine(ctx, { x: 0, y: y * CellHeight }, { x: MapWidth * CellWidth, y: y * CellHeight });
   }
 
-  for (let y = 0; y <= mapHeight; y ++) {
-    drawLine(ctx, { x: 0, y: y * CellHeight }, { x: mapWidth * CellWidth, y: y * CellHeight });
-  }
+  drawTracks(ctx, trainMove.tracks);
 
   if (mouseStartCell !== null) {
     ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
@@ -142,8 +177,8 @@ export function drawEditor(map?: Map, mouseStartCell: Cell | null = null, mouseE
 
   if (!map) return;
 
-  for (let x = 0; x < mapWidth; x ++) {
-    for (let y = 0; y < mapHeight; y ++) {
+  for (let x = 0; x < MapWidth; x ++) {
+    for (let y = 0; y < MapHeight; y ++) {
       const cell = map[x][y];
       if (cell.lineType) {
         drawLineType(ctx, cell.position, cell.lineType);

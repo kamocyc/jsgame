@@ -1,7 +1,7 @@
-import { assert } from "./common.js";
-import { HalfTrack, Point, Train } from "./model.js";
-import { getOccupyingTracks } from "./trackUtil.js";
-import { TrainMove } from "./trainMove.js";
+import { assert } from './common.js';
+import { HalfTrack, Point, Train } from './model.js';
+import { getOccupyingTracks } from './trackUtil.js';
+import { TrainMove } from './trainMove.js';
 
 let offsetX = 0;
 let offsetY = 0;
@@ -87,7 +87,7 @@ function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
 export function draw(trainMove: TrainMove, currentMousePosition: null | Point, mouseDownStartPoint: null | Point) {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
-  
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   for (const track of trainMove.tracks) {
@@ -104,7 +104,11 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
       if (track.track.station.stationName.indexOf('1') !== -1) {
         const name = track.track.station.stationName.replace('1', '');
         const metrics = ctx.measureText(name);
-        ctx.fillText(name, _x((track._begin.x + track._end.x) / 2 - metrics.width / 2), _y((track._begin.y + track._end.y) / 2 + 30));
+        ctx.fillText(
+          name,
+          _x((track._begin.x + track._end.x) / 2 - metrics.width / 2),
+          _y((track._begin.y + track._end.y) / 2 + 30)
+        );
       }
 
       ctx.strokeStyle = 'black';
@@ -143,5 +147,5 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
 
   drawOccupyingTracks(ctx, trainMove);
 
-  document.getElementById('time')!.innerText = trainMove.globalTime.toString()  + ' / ' + trainMove.showGlobalTime();
+  document.getElementById('time')!.innerText = trainMove.globalTime.toString() + ' / ' + trainMove.showGlobalTime();
 }

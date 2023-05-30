@@ -1,4 +1,4 @@
-import { DiaStation, Diagram } from "./model.js";
+import { DiaStation, Diagram } from './model.js';
 
 export function getDiaFreaks(buf: string): Diagram {
   function getPlatforms(obj: any) {
@@ -28,15 +28,15 @@ export function getDiaFreaks(buf: string): Diagram {
       trainId: o.id,
       color: o.c,
       name: o.n,
-      trainTimetable: getTrainTimeTable(o.s)
+      trainTimetable: getTrainTimeTable(o.s),
     }));
   }
 
   const obj = JSON.parse(buf);
-  
+
   const stations: DiaStation[] = getStations(obj.stations);
   stations.sort((a, b) => a.distance - b.distance);
   const trains = getTrains(obj.trains);
-  
-  return {stations, trains};
+
+  return { stations, trains };
 }

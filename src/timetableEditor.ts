@@ -1,9 +1,9 @@
-import { DiaStation, DiaTrain, Diagram, Station, StationTrain } from "./model.js";
-import { DiagramExt } from "./oudParser.js";
+import { DiaStation, DiaTrain, Diagram, Station, StationTrain } from './model.js';
+import { DiagramExt } from './oudParser.js';
 
 function showGlobalTime(timeSeconds: number): string {
-  const m = Math.floor(timeSeconds / 60 % 60);
-  return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m)
+  const m = Math.floor((timeSeconds / 60) % 60);
+  return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);
 }
 
 const rowHeight = 24;
@@ -17,15 +17,15 @@ function parseInputTextAsTime(text: string): string | undefined {
     // 時が1桁
     const _hourText = text.substring(0, 1);
     const minuteText = text.substring(1);
-    
+
     if (Number(minuteText) < 60) {
       return text;
     }
-  } else if (text.length === 4){
+  } else if (text.length === 4) {
     // 時が2桁
     const hourText = text.substring(0, 2);
     const minuteText = text.substring(2);
-    
+
     if (Number(hourText) < 24 && Number(minuteText) < 60) {
       return text;
     }
@@ -35,11 +35,11 @@ function parseInputTextAsTime(text: string): string | undefined {
 }
 
 function parseTime(text: string): number | undefined {
-  if (text === "") {
+  if (text === '') {
     return undefined;
   }
   if (text.length === 3) {
-    text = "0" + text;
+    text = '0' + text;
   }
   const hour = parseInt(text.substring(0, 2));
   const minute = parseInt(text.substring(2));
@@ -64,7 +64,7 @@ export function drawTimetable_(diagram: DiagramExt) {
     const id = element.id;
 
     parent.removeChild(element);
-    
+
     const newElement = document.createElement('div');
     newElement.textContent = textContent;
     newElement.style.position = position;
@@ -79,8 +79,13 @@ export function drawTimetable_(diagram: DiagramExt) {
   }
 
   function getTtItemById(id: string) {
-    const [trainId, stationId] = id.replace('edit-item-', '').split('__').map(s => Number(s));
-    return diagram.trains.filter(train => train.trainId === trainId)[0].trainTimetable.filter(tt => tt.stationId === stationId)[0];
+    const [trainId, stationId] = id
+      .replace('edit-item-', '')
+      .split('__')
+      .map((s) => Number(s));
+    return diagram.trains
+      .filter((train) => train.trainId === trainId)[0]
+      .trainTimetable.filter((tt) => tt.stationId === stationId)[0];
   }
 
   function keydownHandler(e: KeyboardEvent) {
@@ -91,9 +96,9 @@ export function drawTimetable_(diagram: DiagramExt) {
         resetToDivElement(e);
       }
       inputElements.splice(0);
-      
+
       const ttItem = getTtItemById(elem.id);
-      tt
+      tt;
     }
   }
 
@@ -103,7 +108,7 @@ export function drawTimetable_(diagram: DiagramExt) {
     const id = element.id;
 
     parent.removeChild(element);
-    
+
     const newElement = document.createElement('input');
     (newElement as HTMLInputElement).value = textContent;
     newElement.style.position = position;
@@ -141,7 +146,7 @@ export function drawTimetable_(diagram: DiagramExt) {
       changeToInputElement(elem, elem.textContent!);
     }
   }
-  
+
   function putText(text: string, x: number, y: number, id?: string) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -180,7 +185,7 @@ export function drawTimetable_(diagram: DiagramExt) {
 
   let offsetX = 0;
   let offsetY = rowHeight;
-  
+
   const rowHeightMap = {
     trainCode: undefined as number | undefined,
     trainTypeName: undefined as number | undefined,
@@ -205,13 +210,13 @@ export function drawTimetable_(diagram: DiagramExt) {
   putText('終着駅', offsetX, offsetY);
   rowHeightMap.finalStation = offsetY;
   offsetY += rowHeight;
-  
+
   const stationYMap = new Map<number, number>();
-  const stations = diagram.stations;  // これは別のほうがいい？当然stationごとに表示するものが異なるので、station基準で。
-  for (let stationIndex = 0; stationIndex < stations.length; stationIndex ++) {
+  const stations = diagram.stations; // これは別のほうがいい？当然stationごとに表示するものが異なるので、station基準で。
+  for (let stationIndex = 0; stationIndex < stations.length; stationIndex++) {
     const station = stations[stationIndex];
     putText(station.name, offsetX, offsetY);
-    
+
     stationYMap.set(station.stationId, offsetY);
     offsetY += rowHeight;
   }
@@ -223,14 +228,22 @@ export function drawTimetable_(diagram: DiagramExt) {
 
     putText(diaTrain.trainCode ?? '', offsetX, rowHeightMap.trainCode);
     putVerticalText(diaTrain.trainTypeName ?? '', offsetX, rowHeightMap.trainTypeName, { color: diaTrain.color });
-    putText(diaTrain.trainMei ?? '', offsetX, rowHeightMap.trainMei);  // TODO:  高さなど調整
-    putText(diagram.stations.filter(s => s.stationId === timetable[0].stationId)[0].name, offsetX, rowHeightMap.initialStation);
-    putText(diagram.stations.filter(s => s.stationId === timetable[timetable.length - 1].stationId)[0].name, offsetX, rowHeightMap.finalStation);
+    putText(diaTrain.trainMei ?? '', offsetX, rowHeightMap.trainMei); // TODO:  高さなど調整
+    putText(
+      diagram.stations.filter((s) => s.stationId === timetable[0].stationId)[0].name,
+      offsetX,
+      rowHeightMap.initialStation
+    );
+    putText(
+      diagram.stations.filter((s) => s.stationId === timetable[timetable.length - 1].stationId)[0].name,
+      offsetX,
+      rowHeightMap.finalStation
+    );
 
     for (const station of stations) {
       const positionY = stationYMap.get(station.stationId)!;
-      
-      const ttItems = timetable.filter(tt => tt.stationId === station.stationId);
+
+      const ttItems = timetable.filter((tt) => tt.stationId === station.stationId);
       if (ttItems.length === 0) {
         // 通過など TODO: 通過と経由しないを区別
         putText('..', offsetX, positionY, getId(diaTrain, station));
@@ -266,12 +279,11 @@ export function drawTimetable_(diagram: DiagramExt) {
 //   });
 // }
 
-
 // export function drawTimetableOld(diagram: DiagramExt) {
 //   const ctx = (document.getElementById('canvas') as HTMLCanvasElement).getContext("2d")!;
 //   let offsetX = 0;
 //   let offsetY = rowHeight;
-  
+
 //   const rowHeightMap = {
 //     trainCode: undefined as number | undefined,
 //     trainTypeName: undefined as number | undefined,
@@ -296,13 +308,13 @@ export function drawTimetable_(diagram: DiagramExt) {
 //   ctx.fillText('終着駅', offsetX, offsetY);
 //   rowHeightMap.finalStation = offsetY;
 //   offsetY += rowHeight;
-  
+
 //   const stationYMap = new Map<number, number>();
 //   const stations = diagram.stations;  // これは別のほうがいい？当然stationごとに表示するものが異なるので、station基準で。
 //   for (let stationIndex = 0; stationIndex < stations.length; stationIndex ++) {
 //     const station = stations[stationIndex];
 //     ctx.fillText(station.name, offsetX, offsetY);
-    
+
 //     stationYMap.set(station.stationId, offsetY);
 //     offsetY += rowHeight;
 //   }

@@ -1,6 +1,6 @@
-import { assert, deepEqual } from "./common.js";
-import { HalfTrack, HalfTrackWip, Point, Station, Switch, generateId } from "./model.js";
-import { changeSwitch, createNewTrack, getDistance, getNearestTrackPoint } from "./trackUtil.js";
+import { assert, deepEqual } from './common.js';
+import { HalfTrack, HalfTrackWip, Point, Station, Switch, generateId } from './model.js';
+import { changeSwitch, createNewTrack, getDistance, getNearestTrackPoint } from './trackUtil.js';
 
 let currentMousePosition = { x: 0, y: 0 };
 
@@ -21,7 +21,7 @@ export function initializeMouseEvents(canvas: HTMLCanvasElement, tracks: HalfTra
       if (getDistance(nearestTrackPoint, { x, y }) < thresholdTrackDistance) {
         mouseDownStartPoint = nearestTrackPoint;
         // TODO: 複数の無関係な点が同じ距離だった場合に対応する
-        mouseDownStartTracks = tracks.filter(track => deepEqual(track._end, mouseDownStartPoint));
+        mouseDownStartTracks = tracks.filter((track) => deepEqual(track._end, mouseDownStartPoint));
       } else {
         // 近くのtrackが存在しない場合は独立した線路を作成する
         mouseDownStartPoint = { x, y };
@@ -37,11 +37,11 @@ export function initializeMouseEvents(canvas: HTMLCanvasElement, tracks: HalfTra
         changeSwitch(nearestTrackPoint);
       }
     }
-  }
+  };
 
   canvas.onmousemove = function (e) {
     currentMousePosition = { x: e.clientX, y: e.clientY };
-  }
+  };
 
   canvas.onmouseup = function (e) {
     if (mouseDownStartPoint === null) {
@@ -61,7 +61,7 @@ export function initializeMouseEvents(canvas: HTMLCanvasElement, tracks: HalfTra
 
     const begin = { x: mouseDownStartPoint.x, y: mouseDownStartPoint.y };
     const end = { x, y };
-    
+
     // 最も近いtrackの始点または終点に吸着する
     const nearestTrackPoint = getNearestTrackPoint(tracks, { x, y });
     if (getDistance(nearestTrackPoint, { x, y }) < thresholdTrackDistance) {
@@ -74,9 +74,9 @@ export function initializeMouseEvents(canvas: HTMLCanvasElement, tracks: HalfTra
 
       end.x = nearestTrackPoint.x;
       end.y = nearestTrackPoint.y;
-      
-      const nextTracks = tracks.filter(track => deepEqual(track._begin, nearestTrackPoint));
-      
+
+      const nextTracks = tracks.filter((track) => deepEqual(track._begin, nearestTrackPoint));
+
       const [track1, track2, switches_] = createNewTrack(begin, end, nextTracks, mouseDownStartTracks, null);
       tracks.push(track1, track2);
       switches.push(...switches_);
@@ -89,7 +89,9 @@ export function initializeMouseEvents(canvas: HTMLCanvasElement, tracks: HalfTra
 
     mouseDownStartPoint = null;
     mouseDownStartTracks = [];
-  }
+  };
 
-  canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); })
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
 }

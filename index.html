@@ -1,36 +1,36 @@
 <!DOCTYPE html>
 <html lang="ja">
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <script src="https://unpkg.com/xml-js@1.6.11/dist/xml-js.js"></script>
     <script src="./src/cycle.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   </head>
   <body>
-
     <canvas id="canvas" width="2000" height="500"></canvas>
 
     <div id="control-div"></div>
-    <button id="button-slow-speed">停止/再開</button><br>
-    <button id="button-slow-speed-2">早くする</button><br>
+    <button id="button-slow-speed">停止/再開</button><br />
+    <button id="button-slow-speed-2">早くする</button><br />
     <button id="button-speed-slow">＜＜</button>
     <button id="button-speed-fast">＞＞</button>
-    <div id="speed-text"></div><br>
+    <div id="speed-text"></div>
+    <br />
 
-    <div id="seek-bar" style="width: 1000px; height: 20px; background-color: aquamarine;">
-      <div id="seek-bar-item" style="width: 6px; height: 20px; background-color: black; position: relative;"></div>
+    <div id="seek-bar" style="width: 1000px; height: 20px; background-color: aquamarine">
+      <div id="seek-bar-item" style="width: 6px; height: 20px; background-color: black; position: relative"></div>
     </div>
     <div id="time"></div>
 
     <div id="timetable-root"></div>
 
-    <input type="file" id="file-selector" accept=".oud, .oud2, .json">
+    <input type="file" id="file-selector" accept=".oud, .oud2, .json" />
 
     <script type="module">
       import { initialize } from '/src/main.ts';
       onload = function () {
         initialize();
-      }
+      };
     </script>
   </body>
 </html>

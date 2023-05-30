@@ -1,9 +1,29 @@
-import { assert, min } from "./common.js";
-import { DiaTrain, Diagram, HalfTrack, OperationTrain, Point, SerializedTrain, Station, Switch, TimedPositionData, Train, generateId } from "./model.js";
-import { getDistance, getMidPoint, getOccupyingTracks, getRadian, getTrackDirection, isTrainOutTrack, searchTrack } from "./trackUtil.js";
+import { assert, min } from './common.js';
+import {
+  DiaTrain,
+  Diagram,
+  HalfTrack,
+  OperationTrain,
+  Point,
+  SerializedTrain,
+  Station,
+  Switch,
+  TimedPositionData,
+  Train,
+  generateId,
+} from './model.js';
+import {
+  getDistance,
+  getMidPoint,
+  getOccupyingTracks,
+  getRadian,
+  getTrackDirection,
+  isTrainOutTrack,
+  searchTrack,
+} from './trackUtil.js';
 
 interface DiaOperatingTrain extends DiaTrain {
-  operatingTrain: Train
+  operatingTrain: Train;
 }
 
 function getStopPosition(_train: Train, stationTrack: HalfTrack): Point | undefined {
@@ -14,8 +34,12 @@ function getStopPosition(_train: Train, stationTrack: HalfTrack): Point | undefi
 }
 
 function shouldStopTrain(train: Train): false | Point {
-  if (!train.track.track.station || train.stationStatus !== 'NotArrived' /*|| train.stationWaitTime >= this.maxStationWaitTime*/) return false;
-  
+  if (
+    !train.track.track.station ||
+    train.stationStatus !== 'NotArrived' /*|| train.stationWaitTime >= this.maxStationWaitTime*/
+  )
+    return false;
+
   const stationTrack = train.track;
   const stopPosition = getStopPosition(train, stationTrack);
   if (!stopPosition) return false;
@@ -40,7 +64,10 @@ function getPathDistance(train: Train, path: HalfTrack[]): number {
   if (!stopPosition) throw new Error('stopPostition');
   distance += getDistance(lastTrack._begin, stopPosition);
 
-  distance += path.slice(0, -1).map(track => getDistance(track._begin, track._end)).reduce((acc, v) => acc + v, 0);
+  distance += path
+    .slice(0, -1)
+    .map((track) => getDistance(track._begin, track._end))
+    .reduce((acc, v) => acc + v, 0);
 
   return distance;
 }
@@ -51,7 +78,7 @@ class TrainOccupy {
   readonly occupyingTracks: Map<number, HalfTrack[]> = new Map<number, HalfTrack[]>();
 
   addTrain(train: Train) {
-    this.occupyingTracks.set(train.trainId, [train.track])
+    this.occupyingTracks.set(train.trainId, [train.track]);
   }
 
   deleteTrain(train: Train) {
@@ -62,12 +89,12 @@ class TrainOccupy {
     const override = [];
     for (const [trainId, tracks] of this.occupyingTracks) {
       if (trainId !== train.trainId) {
-        override.push(...tracks.filter(t => toOccupyTracks.filter(t2 => t2.trackId === t.trackId).length > 0));
+        override.push(...tracks.filter((t) => toOccupyTracks.filter((t2) => t2.trackId === t.trackId).length > 0));
       }
     }
 
     if (override.length > 0) {
-      console.warn({train, override});
+      console.warn({ train, override });
     }
 
     return override.length > 0;
@@ -88,11 +115,11 @@ export class TrainMove {
   readonly operatingTrains: OperationTrain[] = [];
   readonly timetable: DiaOperatingTrain[] = [];
   readonly trainOccupy = new TrainOccupy();
-  
+
   globalTime = 0;
   mode: 'SwitchMode' | 'TimetableMode' = 'SwitchMode';
-  
-  readonly globalTimeSpeed = 10;  // 1サイクルで進む秒数
+
+  readonly globalTimeSpeed = 10; // 1サイクルで進む秒数
   readonly maxStationWaitTime = Number.MAX_VALUE;
 
   getNextTrack(track: HalfTrack, train: Train, bannedTrack: HalfTrack | undefined): [HalfTrack, number] {
@@ -101,10 +128,10 @@ export class TrainMove {
       //   if (track._nextSwitch.toTracks.length === 1) {
       //     return track._nextSwitch._branchedTrackTo;
       //   }
-    
+
       //   return track._nextSwitch._branchedTrackFrom.reverseTrack;
       // }
-  
+
       // return track._nextSwitch._branchedTrackTo;
       // TODO
       return [track, getDistance(track._begin, track._end)];
@@ -116,21 +143,35 @@ export class TrainMove {
       if (nextTracks.length === 1) {
         return [nextTracks[0], getDistance(nextTracks[0]._begin, nextTracks[0]._end)];
       }
-  
-      const timetableItems = this.timetable.filter(t => t.operatingTrain === train);
+
+      const timetableItems = this.timetable.filter((t) => t.operatingTrain === train);
       if (timetableItems.length !== 1) throw new Error('timetableItems.length');
       const timetableItem = timetableItems[0];
-      
+
       // 次の駅に向かう方向に進む（つまり現在よりも「先の」方向で、一番近い位置の駅）
       // まずはtoのtoのみ見る
-      let nextTrackPath = searchTrack(train.track, timetableItem.trainTimetable[train.currentTimetableIndex].stationId, bannedTrack);
+      let nextTrackPath = searchTrack(
+        train.track,
+        timetableItem.trainTimetable[train.currentTimetableIndex].stationId,
+        bannedTrack
+      );
       // console.log({nextTrack});
       if (!nextTrackPath) {
-        throw new Error('not reachable station ' + JSON.stringify({
-          stationId: timetableItem.trainTimetable[train.currentTimetableIndex].stationId,
-          stationName: this.tracks.filter(t => t.track.station?.stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId)[0]?.track.station?.stationName,
-          train: train.diaTrain?.name,
-        }, null, '  '));
+        throw new Error(
+          'not reachable station ' +
+            JSON.stringify(
+              {
+                stationId: timetableItem.trainTimetable[train.currentTimetableIndex].stationId,
+                stationName: this.tracks.filter(
+                  (t) =>
+                    t.track.station?.stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId
+                )[0]?.track.station?.stationName,
+                train: train.diaTrain?.name,
+              },
+              null,
+              '  '
+            )
+        );
       }
 
       const nextTrack = nextTrackPath[0];
@@ -140,11 +181,15 @@ export class TrainMove {
 
   moveTrain(train: Train): void {
     // 現在stationだったら出発条件を満たすまで停止する
-    if (train.track.track.station !== null && train.stationStatus === 'Arrived' && train.stationWaitTime < this.maxStationWaitTime) {
-      const timetableItems = this.timetable.filter(t => t.operatingTrain === train);
+    if (
+      train.track.track.station !== null &&
+      train.stationStatus === 'Arrived' &&
+      train.stationWaitTime < this.maxStationWaitTime
+    ) {
+      const timetableItems = this.timetable.filter((t) => t.operatingTrain === train);
       if (timetableItems.length !== 1) throw new Error('timetableItems.length');
       const timetableItem = timetableItems[0];
-  
+
       if (timetableItem.trainTimetable[train.currentTimetableIndex].stationId === train.track.track.station.stationId) {
         // 時刻表の駅に到着した
         const currentTimetable = timetableItem.trainTimetable[train.currentTimetableIndex];
@@ -160,11 +205,11 @@ export class TrainMove {
               currentTimetable,
               globalTime: this.globalTime,
               departureTime: currentTimetable.departureTime,
-              delay: this.globalTime - currentTimetable.departureTime
-            })
+              delay: this.globalTime - currentTimetable.departureTime,
+            });
           }
         }
-  
+
         // 出発する => 次のindexに進める
         if (timetableItem.trainTimetable.length - 1 === train.currentTimetableIndex) {
           // TODO: 運用が終わったとき: 時刻表の運用データを元になんとかする
@@ -173,52 +218,63 @@ export class TrainMove {
           this.trains.splice(this.trains.map((a, i) => [a, i] as const).filter(([t, i]) => t === train)[0][1], 1);
           return;
         }
-        train.currentTimetableIndex ++;
-  
+        train.currentTimetableIndex++;
+
         const nextStationTimetable = timetableItem.trainTimetable[train.currentTimetableIndex];
         // console.log('train:' + train.diaTrain?.name + ', stationId:' + nextStationTimetable.stationId);
         let result = searchTrack(train.track, nextStationTimetable.stationId);
         if (!result) {
           const reverseResult = searchTrack(train.track.reverseTrack, nextStationTimetable.stationId);
           if (!reverseResult) {
-            throw new Error('not reachable station ' + JSON.stringify({
-              stationId: nextStationTimetable.stationId,
-              stationName: this.tracks.filter(t => t.track.station?.stationId === nextStationTimetable.stationId)[0]?.track.station?.stationName,
-              train: train.diaTrain?.name,
-            }, null, '  '));
+            throw new Error(
+              'not reachable station ' +
+                JSON.stringify(
+                  {
+                    stationId: nextStationTimetable.stationId,
+                    stationName: this.tracks.filter(
+                      (t) => t.track.station?.stationId === nextStationTimetable.stationId
+                    )[0]?.track.station?.stationName,
+                    train: train.diaTrain?.name,
+                  },
+                  null,
+                  '  '
+                )
+            );
           }
           console.warn('reverse');
           train.track = train.track.reverseTrack;
           result = reverseResult;
         }
-        
+
         // timeは秒単位
 
         const distance = getPathDistance(train, result);
-        train.speed = distance / (nextStationTimetable.arrivalTime - this.globalTime - this.globalTimeSpeed) * this.globalTimeSpeed;
+        train.speed =
+          (distance / (nextStationTimetable.arrivalTime - this.globalTime - this.globalTimeSpeed)) *
+          this.globalTimeSpeed;
         if (train.speed < 0.01) train.speed = 0.01;
       }
-      
+
       // const stationCenter = getMidPoint(train.track._begin, train.track._end);
       if (!train.track.track.station!.shouldDepart(train, this.globalTime)) {
-        train.stationWaitTime ++;
+        train.stationWaitTime++;
         return;
       }
 
       // 発車
       train.stationStatus = 'Departed';
     }
-  
+
     const { x: directionX, y: directionY } = getTrackDirection(train.track);
     train.position.x += directionX * train.speed;
     train.position.y += directionY * train.speed;
-    
+
     while (true) {
       // trainがtrackの外に出たら、次の線路に移動する
       if (isTrainOutTrack(train.position, train.track)) {
         train.stationWaitTime = 0;
         train.stationStatus = 'NotArrived';
-    
+
         let [nextTrack, nextPathDistance] = this.getNextTrack(train.track, train, undefined);
 
         if (this.trainOccupy.isOccupiedTrack(train, getOccupyingTracks(nextTrack))) {
@@ -232,17 +288,17 @@ export class TrainMove {
                 nextTrack = altNextTrack;
               }
             }
-          }catch(e) {
-            console.warn('no alt path')
+          } catch (e) {
+            console.warn('no alt path');
           }
         }
         if (nextTrack) {
           // trackの終点から行き過ぎた距離を求める
           const distance = getDistance(train.track._end, train.position);
-    
+
           train.position.x = nextTrack._begin.x + distance * getTrackDirection(nextTrack).x;
           train.position.y = nextTrack._begin.y + distance * getTrackDirection(nextTrack).y;
-          
+
           this.trainOccupy.updateOccupyingTrack(train, getOccupyingTracks(train.track));
           train.track = nextTrack;
 
@@ -273,66 +329,69 @@ export class TrainMove {
   }
 
   showGlobalTime(): string {
-    const m = Math.floor(this.globalTime / 60 % 60);
-    return Math.floor(this.globalTime / 60 / 60) + ':' + (m < 10 ? '0' + m : '' + m)
+    const m = Math.floor((this.globalTime / 60) % 60);
+    return Math.floor(this.globalTime / 60 / 60) + ':' + (m < 10 ? '0' + m : '' + m);
   }
 
   getRecords(diagram: Diagram, minGlobalTime: number, maxGlobalTime: number): TimedPositionData {
     const records: SerializedTrain[][] = [];
-    for (this.globalTime = minGlobalTime; this.globalTime <= maxGlobalTime;) {
+    for (this.globalTime = minGlobalTime; this.globalTime <= maxGlobalTime; ) {
       this.addTrainFromDiagramAndTime(diagram);
       this.main();
-      records.push(
-        this.trains.map(train => toSerializable(train))
-      );
+      records.push(this.trains.map((train) => toSerializable(train)));
     }
-  
-    const tracks_ = this.tracks.map(track => ({
-      _begin: track._begin,
-      _end: track._end,
-      track: { station: track.track.station != null ? {stationName: track.track.station.stationName} : null}
-    } as HalfTrack))
-  
+
+    const tracks_ = this.tracks.map(
+      (track) =>
+        ({
+          _begin: track._begin,
+          _end: track._end,
+          track: { station: track.track.station != null ? { stationName: track.track.station.stationName } : null },
+        } as HalfTrack)
+    );
+
     return {
       minGlobalTime,
       maxGlobalTime,
       globalTimeSpeed: this.globalTimeSpeed,
       records,
-      tracks: tracks_
+      tracks: tracks_,
     };
   }
-  
-  addTrain(train: DiaTrain) {  
+
+  addTrain(train: DiaTrain) {
     const trainToAdd: Train = {
       trainId: generateId(),
       speed: 15,
       currentTimetableIndex: 0,
       track: this.tracks[0], // dummy
-      position: {...this.tracks[0]._end},  // dummy
+      position: { ...this.tracks[0]._end }, // dummy
       stationWaitTime: 0,
       stationStatus: 'NotArrived',
     };
-  
+
     {
       // 初期位置は駅に置く
       // 最初の駅の到着時間までは表示しない
-      let track = this.tracks.filter(track => track.track.station?.stationId === train.trainTimetable[0].stationId)[0];
+      let track = this.tracks.filter(
+        (track) => track.track.station?.stationId === train.trainTimetable[0].stationId
+      )[0];
       if (!searchTrack(track, train.trainTimetable[1].stationId)) {
         // 逆方向
         track = track.reverseTrack;
       }
       trainToAdd.track = track;
-      trainToAdd.position = {...getMidPoint(trainToAdd.track._begin, trainToAdd.track._end)};
+      trainToAdd.position = { ...getMidPoint(trainToAdd.track._begin, trainToAdd.track._end) };
     }
-  
+
     const train_ = {
       ...train,
       operatingTrain: trainToAdd,
-      trainTimetable: train.trainTimetable.map(t => t)
+      trainTimetable: train.trainTimetable.map((t) => t),
     };
     this.timetable.push(...[train_]);
     train_.operatingTrain.diaTrain = train_;
-  
+
     this.trains.push(trainToAdd);
 
     this.trainOccupy.addTrain(trainToAdd);
@@ -340,7 +399,7 @@ export class TrainMove {
 
   addTrainFromDiagramAndTime(diagram: Diagram) {
     for (const train of diagram.trains) {
-      if (min(train.trainTimetable.map(t => t.arrivalTime)) === this.globalTime) {
+      if (min(train.trainTimetable.map((t) => t.arrivalTime)) === this.globalTime) {
         this.addTrain(train);
       }
     }
@@ -359,8 +418,8 @@ function roundPoint(point: Point): Point {
   const roundFactor = 10;
   return {
     x: Math.round(point.x * roundFactor) / roundFactor,
-    y: Math.round(point.y * roundFactor) / roundFactor
-  }
+    y: Math.round(point.y * roundFactor) / roundFactor,
+  };
 }
 
 function toSerializable(train: Train): SerializedTrain {

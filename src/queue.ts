@@ -24,7 +24,7 @@ export class Queue<T> {
 
   dequeue(): T {
     if (this.isEmpty()) {
-      throw new Error("Queue is empty");
+      throw new Error('Queue is empty');
     }
     const removedElement = this.items[this.frontIndex];
     this.items[this.frontIndex] = undefined as T;
@@ -35,7 +35,7 @@ export class Queue<T> {
 
   front(): T {
     if (this.isEmpty()) {
-      throw new Error("Queue is empty");
+      throw new Error('Queue is empty');
     }
     return this.items[this.frontIndex];
   }

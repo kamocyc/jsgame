@@ -1,4 +1,3 @@
-
 export function max(arr: number[]): number {
   let cur = Number.MIN_SAFE_INTEGER;
   for (const n of arr) {
@@ -20,11 +19,12 @@ export function assert(b: boolean) {
 }
 
 export function deepEqual(x: any, y: any): boolean {
-  const ok = Object.keys, tx = typeof x, ty = typeof y;
-  return x && y && tx === 'object' && tx === ty ? (
-    ok(x).length === ok(y).length &&
-      ok(x).every(key => deepEqual(x[key], y[key]))
-  ) : (x === y);
+  const ok = Object.keys,
+    tx = typeof x,
+    ty = typeof y;
+  return x && y && tx === 'object' && tx === ty
+    ? ok(x).length === ok(y).length && ok(x).every((key) => deepEqual(x[key], y[key]))
+    : x === y;
 }
 
 export function getStationIdMapKey(stationId: number, platformId: number): string {

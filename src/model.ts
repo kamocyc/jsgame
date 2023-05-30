@@ -25,7 +25,7 @@ export interface HalfTrack {
   _nextSwitch: Switch;
   _prevSwitch: Switch;
   reverseTrack: HalfTrack;
-  track: Track_
+  track: Track_;
 }
 
 export interface HalfTrackWip {
@@ -35,7 +35,7 @@ export interface HalfTrackWip {
   _nextSwitch?: Switch;
   _prevSwitch?: Switch;
   reverseTrack?: HalfTrack;
-  track: Track_
+  track: Track_;
 }
 
 export interface Track_ {
@@ -62,32 +62,32 @@ export interface OperationTrain {
 export interface TimetableItem {
   station: Station;
   operatingTrain: OperationTrain;
-  departTime: number
+  departTime: number;
 }
 
 export interface Platform {
-  platformId: number; /* platformId */
-  name?: string; /* name */
+  platformId: number /* platformId */;
+  name?: string /* name */;
 }
 
 export interface DiaStation {
-  stationId: number; /* stationId */
-  name: string; /* name */
-  distance: number; /* distance */
-  platforms: Platform[]; /* platforms */
+  stationId: number /* stationId */;
+  name: string /* name */;
+  distance: number /* distance */;
+  platforms: Platform[] /* platforms */;
 }
 
 export interface StationTrain {
-  stationId: number; /* stationId */
-  platformId: number; /* platformId */
-  arrivalTime: number; /* arrivalTime */
-  departureTime: number; /* departureTime */
+  stationId: number /* stationId */;
+  platformId: number /* platformId */;
+  arrivalTime: number /* arrivalTime */;
+  departureTime: number /* departureTime */;
 }
 
 export interface DiaTrain {
-  trainId: number; /* trainId */
+  trainId: number /* trainId */;
   color?: string;
-  name: string; /* name */
+  name: string /* name */;
   trainTimetable: StationTrain[];
 }
 

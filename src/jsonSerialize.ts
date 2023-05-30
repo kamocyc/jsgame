@@ -1,8 +1,8 @@
-import { TrainMove } from "./trainMove.js";
+import { TrainMove } from './trainMove.js';
 
 function extractIdSub(ee: object) {
   const kk = Object.keys(ee);
-  const idKks = kk.filter(kkk => kkk.indexOf('Id') > 0);
+  const idKks = kk.filter((kkk) => kkk.indexOf('Id') > 0);
   if (idKks.length > 0) {
     const eeAfter = (ee as Record<string, unknown>)[idKks[0]];
     if (typeof eeAfter !== 'number') {
@@ -20,7 +20,7 @@ function extractId(entry: object) {
   for (const k of Object.keys(entry)) {
     let ee = (entry as Record<string, unknown>)[k] as unknown;
     if (Array.isArray(ee)) {
-      ee = ee.map(e => extractIdSub(e));
+      ee = ee.map((e) => extractIdSub(e));
     } else if (typeof ee === 'object' && ee !== null) {
       ee = extractIdSub(ee);
       ee = extractId(ee as object);
@@ -32,15 +32,15 @@ function extractId(entry: object) {
 
 function restoreJsonSub(obj: object, entry: object) {
   if (typeof entry === 'object' && entry !== null) {
-    const kks = Object.keys(entry).filter(k => k.indexOf('Id') > 0);
+    const kks = Object.keys(entry).filter((k) => k.indexOf('Id') > 0);
     if (kks.length === 1) {
       const kk = kks[0];
       const entityName = kk.substring(kk.indexOf('Id'));
       const entities = (obj as Record<string, unknown>)[entityName];
       if (!Array.isArray(entities)) throw new Error('Illegal JSON');
-      const founds = entities.filter(e => e[kk] === (entry as Record<string, unknown>)[kk]);
+      const founds = entities.filter((e) => e[kk] === (entry as Record<string, unknown>)[kk]);
       if (founds.length !== 1) throw new Error('Illegal JSON found ids');
-      return founds[0]
+      return founds[0];
     }
   }
 
@@ -52,7 +52,7 @@ function restoreJson(obj: object, entry: object) {
   for (const k of Object.keys(entry)) {
     let ee = (entry as Record<string, unknown>)[k] as unknown;
     if (Array.isArray(ee)) {
-      ee = ee.map(e => restoreJsonSub(obj, e));
+      ee = ee.map((e) => restoreJsonSub(obj, e));
     } else if (typeof ee === 'object' && ee !== null) {
       ee = restoreJsonSub(obj, ee);
       ee = restoreJson(obj, ee as object);
@@ -76,7 +76,7 @@ export function toJSON(trainMove: TrainMove) {
   //   stations: trainMove.stations.map(extractId),
   // };
 
-  // const json = JSON.stringify(obj); 
+  // const json = JSON.stringify(obj);
   // console.log(json);
 
   // return json;

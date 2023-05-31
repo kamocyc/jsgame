@@ -3,7 +3,7 @@ import { initializeTrainMove } from './initializeTrainMove.js';
 import { DiagramExt, getEkiJikokus } from './oudParser.js';
 import { svgLoaderMain } from './svgLoader.js';
 import { drawTimetable_ } from './timetableEditor.js';
-import { initializeTrackEditor } from './trackEditor.js';
+import { initializeTrackEditor } from './trackEditorUi.js';
 // import { drawTimetable } from "./timetableEditor.js";
 
 const RUN_MODE: 'TrainMove' | 'TimetableEdit' | 'TrackEdit' = 'TrackEdit';

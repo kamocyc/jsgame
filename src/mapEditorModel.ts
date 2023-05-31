@@ -1,4 +1,4 @@
-import { HalfTrack, Point } from './model';
+import { HalfTrack, Point, Switch } from './model';
 
 export const MapWidth = 20;
 export const MapHeight = 10;
@@ -46,24 +46,28 @@ export type LineTypeStraight = {
   lineClass: 'Straight';
   straightType: LineDirection;
   tracks: HalfTrack[];
+  switch: Switch;
 };
 
 export type LineTypeTerminal = {
   lineClass: 'Terminal';
   angle: LineAngle;
   tracks: HalfTrack[];
+  switch: Switch;
 };
 
 export type LineTypeCurve = {
   lineClass: 'Curve';
   curveType: CurveType;
   tracks: HalfTrack[];
+  switch: Switch;
 };
 
 export type LineTypeBranch = {
   lineClass: 'Branch';
   branchType: BranchType;
   tracks: HalfTrack[];
+  switch: Switch;
 };
 
 export interface Cell {

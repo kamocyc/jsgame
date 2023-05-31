@@ -1,5 +1,4 @@
-import { assert, deepEqual, jsonDecycle, jsonRetrocycle } from './common';
-import { fromJSON, toJSON } from './jsonSerialize';
+import { assert, deepEqual } from './common';
 import {
   BranchType,
   Cell,
@@ -9,22 +8,11 @@ import {
   LineAngle,
   LineDirection,
   Map,
-  MapHeight,
-  MapWidth,
   addVector,
   timesVector,
 } from './mapEditorModel';
-import { HalfTrack, Point, Switch, generateId } from './model';
-import { drawEditor } from './trackEditorDrawer';
+import { HalfTrack, Switch } from './model';
 import { createNewTrack } from './trackUtil';
-import { TrainMove } from './trainMove';
-
-function mouseToMapPosition(mousePoint: Point) {
-  return {
-    x: Math.floor(mousePoint.x / CellWidth),
-    y: Math.floor((MapHeight * CellHeight - mousePoint.y) / CellHeight),
-  };
-}
 
 type CreateLineError = { error: string };
 
@@ -199,7 +187,8 @@ function getBranchTypeFromCurveTypeAndAngle(
   }
 }
 
-function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTrack[], Cell] | CreateLineError {
+function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTrack[], Cell] | { error: string } {
+  //: [HalfTrack[], Cell] | CreateLineError {
   function getLeftOrRightTrack(branchType: 'Left' | 'Right' | 'Top' | 'Bottom', track1: HalfTrack, track2: HalfTrack) {
     switch (branchType) {
       case 'Left':
@@ -226,9 +215,10 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTra
     }
   }
 
-  const newCell1: Cell = {
+  // Cellっぽいが、まだlineTypeが決まっていない。
+  const newCell1 = {
     position: cell1.position,
-    lineType: null,
+    lineType: null as any,
   };
   if (cell1.lineType === null) {
     newCell1.lineType = {
@@ -329,13 +319,16 @@ function createTrackOnAdjacentCells(
   const beginTrack = deepEqual(newTrack1._end, _begin) ? newTrack1 : newTrack2;
   const endTrack = deepEqual(newTrack1._end, _begin) ? newTrack2 : newTrack1;
 
+  // セルのtracksは、そのセルに**入る**trackを設定する（次のtrackを設定しやすくするため。）。reverseTrackは設定しない。
   newCell1.lineType!.tracks.push(beginTrack);
+  newCell1.lineType!.switch = beginTrack._nextSwitch;
   newCell2.lineType!.tracks.push(endTrack);
+  newCell2.lineType!.switch = endTrack._nextSwitch;
 
   return [[newCell1, newCell2], [newTrack1, newTrack2], newSwitches];
 }
 
-function createLine(map: Map, cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateLineError {
+export function createLine(map: Map, cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateLineError {
   if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
     return { error: '同じセル' };
   }
@@ -417,147 +410,4 @@ function createLine(map: Map, cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]]
       return [resultTracks, resultSwitches];
     }
   }
-}
-
-let mouseStartCell: null | Cell = null;
-let mouseDragMode: 'Create' | 'Delete' | 'Station' | null = null;
-
-function initializeMap(): Map {
-  const map: Cell[][] = [];
-  for (let x = 0; x < MapWidth; x++) {
-    map.push([]);
-    for (let y = 0; y < MapHeight; y++) {
-      map[x].push({
-        position: { x, y },
-        lineType: null,
-      } as Cell);
-    }
-  }
-  return map;
-}
-
-export let map = initializeMap();
-export let trainMove = new TrainMove();
-
-export function initializeTrackEditor() {
-  const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-  canvas.onmousedown = onmousedown;
-  canvas.onmouseup = onmouseup;
-  canvas.onmousemove = onmousemove;
-
-  const controlDiv = document.getElementById('control-div') as HTMLDivElement;
-  const saveButton = document.createElement('button');
-  saveButton.innerText = '保存';
-  saveButton.onclick = () => {
-    const trainMoveJson = toJSON(trainMove);
-    localStorage.setItem('map', JSON.stringify(jsonDecycle(map)));
-    localStorage.setItem('trainMove', trainMoveJson);
-    console.log('保存しました');
-  };
-
-  const loadButton = document.createElement('button');
-  loadButton.innerText = '読み込み';
-  loadButton.onclick = () => {
-    const mapData = jsonRetrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
-    const trainMoveJson = localStorage.getItem('trainMove') ?? '{}';
-    const trainMove_ = fromJSON(trainMoveJson) as unknown as TrainMove;
-    if (mapData.length !== MapWidth || mapData[0].length !== MapHeight) {
-      alert('マップデータが不正です');
-      return;
-    }
-    map = mapData;
-    trainMove = trainMove_;
-
-    drawEditor(trainMove, map);
-  };
-
-  controlDiv.appendChild(saveButton);
-  controlDiv.appendChild(loadButton);
-
-  drawEditor(trainMove, map);
-}
-
-function onmousemove(e: MouseEvent) {
-  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const mapPosition = mouseToMapPosition({ x, y });
-  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
-    const mouseMoveCell = map[mapPosition.x][mapPosition.y];
-    drawEditor(trainMove, map, mouseStartCell, mouseMoveCell);
-  }
-}
-
-function setStation(cell: Cell) {
-  const tracks = cell.lineType?.tracks ?? [];
-  if (tracks.length > 0) {
-    const track = tracks[0];
-
-    const id = generateId();
-    track.track.station = {
-      stationId: id,
-      stationName: '駅' + id,
-      shouldDepart: () => false,
-    };
-    track.reverseTrack.track.station = track.track.station;
-  }
-}
-
-function onmousedown(e: MouseEvent) {
-  if (e.button === 0) {
-    mouseDragMode = 'Create';
-  } else if (e.button === 2) {
-    mouseDragMode = 'Station';
-  } else {
-    mouseDragMode = null;
-    return;
-  }
-
-  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const mapPosition = mouseToMapPosition({ x, y });
-  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
-    if (mouseDragMode === 'Station') {
-      setStation(map[mapPosition.x][mapPosition.y]);
-    } else {
-      mouseStartCell = map[mapPosition.x][mapPosition.y];
-    }
-  }
-
-  drawEditor(trainMove, map, mouseStartCell);
-}
-
-function onmouseup(e: MouseEvent) {
-  if (!mouseStartCell) return;
-
-  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const mapPosition = mouseToMapPosition({ x, y });
-  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
-    const mouseEndCell = map[mapPosition.x][mapPosition.y];
-
-    if (mouseDragMode === 'Create') {
-      const result = createLine(map, mouseStartCell, mouseEndCell);
-      // console.warn(result?.error);
-      if ('error' in result) {
-        console.warn(result.error);
-      } else {
-        const [tracks, switches] = result;
-        trainMove.tracks.push(...tracks);
-        trainMove.switches.push(...switches);
-      }
-    } else if (mouseDragMode === 'Delete') {
-      // deleteLine(map, mouseStartCell, mouseEndCell)
-    }
-    drawEditor(trainMove, map);
-    // draw(trainMove, null, null);
-  }
-  drawEditor(trainMove, map);
-
-  mouseStartCell = null;
 }

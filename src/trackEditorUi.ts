@@ -1,11 +1,10 @@
 import { jsonDecycle, jsonRetrocycle } from './common';
 import { fromJSON, toJSON } from './jsonSerialize';
 import { Cell, CellHeight, CellWidth, Map, MapHeight, MapWidth } from './mapEditorModel';
-import { Point, Switch, generateId } from './model';
+import { DiaTrain, Point, Switch, generateId } from './model';
 import { createLine } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove } from './trainMove';
-
 function mouseToMapPosition(mousePoint: Point) {
   return {
     x: Math.floor(mousePoint.x / CellWidth),
@@ -60,14 +59,58 @@ const createRadioButtonDiv = (name: string, ...radioButtons: HTMLLabelElement[])
 export let map = initializeMap();
 export let trainMove = new TrainMove();
 let editorMode = 'Create' as 'Create' | 'Delete' | 'Station' | 'Info';
+let trains: DiaTrain[] = [
+  {
+    trainId: 1,
+    name: 'A',
+    color: 'red',
+    trainTimetable: [],
+  },
+  {
+    trainId: 2,
+    name: 'B',
+    color: 'black',
+    trainTimetable: [],
+  },
+];
 
 interface SwitchEditorModel {
   switch: Switch;
   cell: Cell;
+  operatingTrainId: number;
   switchType: 'Straight' | 'Branch';
 }
 
-let switchEditorModel: SwitchEditorModel | null = null;
+function saveData() {
+  // map = map.map((row) =>
+  //   row.map((cell) => ({
+  //     ...cell,
+  //     lineType: cell.lineType === null ? null : { ...cell.lineType, switch: cell.lineType?.tracks[0]._nextSwitch },
+  //   }))
+  // );
+  const trainMoveJson = toJSON(trainMove);
+  localStorage.setItem('map', JSON.stringify(jsonDecycle(map)));
+  localStorage.setItem('trainMove', trainMoveJson);
+  localStorage.setItem('timetable', JSON.stringify(jsonDecycle(timetable)));
+  console.log('保存しました');
+}
+
+function loadData() {
+  const mapData = jsonRetrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
+  const trainMoveJson = localStorage.getItem('trainMove') ?? '{}';
+  const trainMove_ = fromJSON(trainMoveJson) as unknown as TrainMove;
+  if (mapData.length !== MapWidth || mapData[0].length !== MapHeight) {
+    alert('マップデータが不正です');
+    return;
+  }
+  map = mapData;
+  trainMove = trainMove_;
+  timetable = jsonRetrocycle(
+    JSON.parse(localStorage.getItem('timetable') ?? '{"switchBranches": [], "stationOperations": []}')
+  ) as Timetable;
+
+  drawEditor(trainMove, map);
+}
 
 export function initializeTrackEditor() {
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
@@ -79,30 +122,13 @@ export function initializeTrackEditor() {
   const saveButton = document.createElement('button');
   saveButton.innerText = '保存';
   saveButton.onclick = () => {
-    const trainMoveJson = toJSON(trainMove);
-    localStorage.setItem('map', JSON.stringify(jsonDecycle(map)));
-    localStorage.setItem('trainMove', trainMoveJson);
-    localStorage.setItem('timetable', JSON.stringify(jsonDecycle(timetable)));
-    console.log('保存しました');
+    saveData();
   };
 
   const loadButton = document.createElement('button');
   loadButton.innerText = '読み込み';
   loadButton.onclick = () => {
-    const mapData = jsonRetrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
-    const trainMoveJson = localStorage.getItem('trainMove') ?? '{}';
-    const trainMove_ = fromJSON(trainMoveJson) as unknown as TrainMove;
-    if (mapData.length !== MapWidth || mapData[0].length !== MapHeight) {
-      alert('マップデータが不正です');
-      return;
-    }
-    map = mapData;
-    trainMove = trainMove_;
-    timetable = jsonRetrocycle(
-      JSON.parse(localStorage.getItem('timetable') ?? '{"switchBranches": [], "stationOperations": []}')
-    ) as Timetable;
-
-    drawEditor(trainMove, map);
+    loadData();
   };
 
   controlDiv.appendChild(saveButton);
@@ -134,6 +160,8 @@ export function initializeTrackEditor() {
   controlDiv.appendChild(infoPanel);
 
   drawEditor(trainMove, map);
+
+  loadData();
 }
 
 function onmousemove(e: MouseEvent) {
@@ -184,20 +212,58 @@ function createSwitchEditorUi(
 
   // modelのswitchTypeに応じてラジオボタンを選択する
   if (switchEditorModel.switchType === 'Straight') {
-    (switchRadioButtons[0].firstChild as Element).setAttribute('checked', '');
+    (switchRadioButtons[1].firstChild as HTMLInputElement).checked = false;
+    (switchRadioButtons[0].firstChild as HTMLInputElement).checked = true;
   } else {
-    (switchRadioButtons[1].firstChild as Element).setAttribute('checked', '');
+    (switchRadioButtons[0].firstChild as HTMLInputElement).checked = false;
+    (switchRadioButtons[1].firstChild as HTMLInputElement).checked = true;
   }
 
   const switchRadioButtonDiv = createRadioButtonDiv('switch-radio-button-div', ...switchRadioButtons);
+
+  // 列車の選択
+  const trainSelect = document.createElement('select');
+  trainSelect.id = 'train-select';
+  for (const train of trains) {
+    const option = document.createElement('option');
+    option.value = train.trainId.toString();
+    option.innerText = train.name;
+    trainSelect.appendChild(option);
+  }
+  trainSelect.onchange = () => {
+    onSaveCallback(switchEditorModel);
+
+    const trainId = parseInt(trainSelect.value);
+    const train = trains.find((train) => train.trainId === trainId);
+    if (train === undefined) {
+      return;
+    }
+    switchEditorModel.operatingTrainId = trainId;
+
+    const sw = getTimetableSwitch(timetable, switchEditorModel.operatingTrainId, switchEditorModel.switch.switchId);
+    if (sw === undefined) {
+      return;
+    }
+    switchEditorModel.switchType = sw.branch;
+    if (switchEditorModel.switchType === 'Straight') {
+      (switchRadioButtons[1].firstChild as HTMLInputElement).checked = false;
+      (switchRadioButtons[0].firstChild as HTMLInputElement).checked = true;
+    } else {
+      (switchRadioButtons[0].firstChild as HTMLInputElement).checked = false;
+      (switchRadioButtons[1].firstChild as HTMLInputElement).checked = true;
+    }
+  };
+
+  infoPanel.appendChild(trainSelect);
   infoPanel.appendChild(switchRadioButtonDiv);
 }
 
 interface StationEditorModel {
+  operatingTrainId: number;
   cell: Cell;
   stationName: string;
   stationId: number;
-  operation: 'Stop' | 'Pass';
+  operation: 'Stop' | 'Pass' | 'NoOperation';
   startTime: number;
   intervalTime: number;
 }
@@ -219,6 +285,17 @@ function createStationEditorUi(
   };
   infoPanel.appendChild(stationNameInput);
 
+  // 列車の選択
+  const trainSelect = document.createElement('select');
+  trainSelect.id = 'train-select';
+  for (const train of trains) {
+    const option = document.createElement('option');
+    option.value = train.trainId.toString();
+    option.innerText = train.name;
+    trainSelect.appendChild(option);
+  }
+  infoPanel.appendChild(trainSelect);
+
   // operation
   const operationRadioButtons = [
     createRadioButton('operation', 'Stop', '停車', () => {
@@ -227,6 +304,10 @@ function createStationEditorUi(
     }),
     createRadioButton('operation', 'Pass', '通過', () => {
       stationEditorModel.operation = 'Pass';
+      onSaveCallback(stationEditorModel);
+    }),
+    createRadioButton('operation', 'NoOp', '運行無し', () => {
+      stationEditorModel.operation = 'NoOperation';
       onSaveCallback(stationEditorModel);
     }),
   ];
@@ -242,24 +323,40 @@ function createStationEditorUi(
   infoPanel.appendChild(operationRadioButtonDiv);
 
   // startTime
+  const startTimeGroup = document.createElement('div');
+  infoPanel.appendChild(startTimeGroup);
+
+  const startTimeLabel = document.createElement('label');
+  startTimeLabel.innerText = '開始時刻';
+  startTimeGroup.appendChild(startTimeLabel);
+
   const startTimeInput = document.createElement('input');
   startTimeInput.type = 'number';
+  startTimeInput.style.width = '50px';
   startTimeInput.value = stationEditorModel.startTime.toString();
   startTimeInput.onchange = () => {
     stationEditorModel.startTime = Number(startTimeInput.value);
     onSaveCallback(stationEditorModel);
   };
-  infoPanel.appendChild(startTimeInput);
+  startTimeGroup.appendChild(startTimeInput);
 
   // intervalTime
+  const intervalTimeGroup = document.createElement('div');
+  infoPanel.appendChild(intervalTimeGroup);
+
+  const intervalTimeLabel = document.createElement('label');
+  intervalTimeLabel.innerText = '発車間隔';
+  intervalTimeGroup.appendChild(intervalTimeLabel);
+
   const intervalTimeInput = document.createElement('input');
   intervalTimeInput.type = 'number';
+  intervalTimeInput.style.width = '50px';
   intervalTimeInput.value = stationEditorModel.intervalTime.toString();
   intervalTimeInput.onchange = () => {
     stationEditorModel.intervalTime = Number(intervalTimeInput.value);
     onSaveCallback(stationEditorModel);
   };
-  infoPanel.appendChild(intervalTimeInput);
+  intervalTimeGroup.appendChild(intervalTimeInput);
 }
 
 let timetable: Timetable = {
@@ -271,12 +368,14 @@ type BranchSetting = 'Straight' | 'Branch';
 
 interface SwitchBranch {
   switchId: number;
+  operatingTrainId: number;
   branch: BranchSetting;
 }
 
 interface StationOperation {
   stationId: number;
-  operation: 'Stop' | 'Pass';
+  operatingTrainId: number;
+  operation: 'Stop' | 'Pass' | 'NoOperation';
   startTime: number;
   intervalTime: number;
 }
@@ -286,44 +385,56 @@ interface Timetable {
   stationOperations: StationOperation[];
 }
 
-function getTimetableSwitch(timetable: Timetable, switchId: number): SwitchBranch {
-  const switchBranch = timetable.switchBranches.find((x) => x.switchId === switchId);
+function getTimetableSwitch(timetable: Timetable, trainId: number, switchId: number): SwitchBranch {
+  const switchBranch = timetable.switchBranches.find((x) => x.operatingTrainId === trainId && x.switchId === switchId);
   if (switchBranch) {
     return switchBranch;
   }
   return {
     switchId: switchId,
+    operatingTrainId: trainId,
     branch: 'Straight',
   };
 }
 
-function setTimetableSwitch(timetable: Timetable, switchId: number, branch: BranchSetting) {
-  const switchBranch = timetable.switchBranches.find((x) => x.switchId === switchId);
+function setTimetableSwitch(timetable: Timetable, trainId: number, switchId: number, branch: BranchSetting) {
+  const switchBranch = timetable.switchBranches.find((x) => x.operatingTrainId === trainId && x.switchId === switchId);
   if (switchBranch) {
     switchBranch.branch = branch;
   } else {
     timetable.switchBranches.push({
       switchId: switchId,
+      operatingTrainId: trainId,
       branch: branch,
     });
   }
 }
 
-function getTimetableStation(timetable: Timetable, stationId: number): StationOperation {
-  const stationOperation = timetable.stationOperations.find((x) => x.stationId === stationId);
+function getTimetableStation(timetable: Timetable, trainId: number, stationId: number): StationOperation {
+  const stationOperation = timetable.stationOperations.find(
+    (x) => x.operatingTrainId === trainId && x.stationId === stationId
+  );
   if (stationOperation) {
     return stationOperation;
   }
   return {
     stationId: stationId,
+    operatingTrainId: trainId,
     operation: 'Stop',
     startTime: 0,
     intervalTime: 0,
   };
 }
 
-function setTimetableStation(timetable: Timetable, stationId: number, operation: StationOperation) {
-  const stationOperation = timetable.stationOperations.find((x) => x.stationId === stationId);
+function setTimetableStation(
+  timetable: Timetable,
+  operatingTrainId: number,
+  stationId: number,
+  operation: StationOperation
+) {
+  const stationOperation = timetable.stationOperations.find(
+    (x) => x.operatingTrainId === operatingTrainId && x.stationId === stationId
+  );
   if (stationOperation) {
     stationOperation.operation = operation.operation;
     stationOperation.startTime = operation.startTime;
@@ -331,6 +442,7 @@ function setTimetableStation(timetable: Timetable, stationId: number, operation:
   } else {
     timetable.stationOperations.push({
       stationId: stationId,
+      operatingTrainId: operatingTrainId,
       operation: operation.operation,
       startTime: operation.startTime,
       intervalTime: operation.intervalTime,
@@ -340,25 +452,29 @@ function setTimetableStation(timetable: Timetable, stationId: number, operation:
 
 function showInfoPanel(cell: Cell, timetable: Timetable) {
   if (cell.lineType?.lineClass === 'Branch') {
-    const timetableSwitch = getTimetableSwitch(timetable, cell.lineType.switch.switchId);
+    const firstTrainId = trains[0].trainId;
+    const timetableSwitch = getTimetableSwitch(timetable, firstTrainId, cell.lineType.switch.switchId);
     const branch = timetableSwitch.branch;
     const switchEditorModel: SwitchEditorModel = {
+      operatingTrainId: firstTrainId,
       cell: cell,
       switch: cell.lineType.switch,
       switchType: branch,
     };
 
     createSwitchEditorUi(switchEditorModel, (model: SwitchEditorModel) => {
-      setTimetableSwitch(timetable, model.switch.switchId, model.switchType);
+      setTimetableSwitch(timetable, model.operatingTrainId, model.switch.switchId, model.switchType);
     });
   } else if (
     cell.lineType?.lineClass != null &&
     cell.lineType?.tracks.length > 0 &&
     cell.lineType?.tracks[0].track.station !== null
   ) {
+    const firstTrainId = trains[0].trainId;
     const station = cell.lineType.tracks[0].track.station;
-    const timetableStation = getTimetableStation(timetable, station.stationId);
+    const timetableStation = getTimetableStation(timetable, firstTrainId, station.stationId);
     const stationEditorModel: StationEditorModel = {
+      operatingTrainId: firstTrainId,
       cell: cell,
       stationId: station.stationId,
       stationName: station.stationName,
@@ -369,12 +485,7 @@ function showInfoPanel(cell: Cell, timetable: Timetable) {
 
     createStationEditorUi(stationEditorModel, (model: StationEditorModel) => {
       station.stationName = model.stationName;
-      setTimetableStation(timetable, model.stationId, {
-        stationId: model.stationId,
-        operation: model.operation,
-        startTime: model.startTime,
-        intervalTime: model.intervalTime,
-      });
+      setTimetableStation(timetable, model.operatingTrainId, model.stationId, model);
     });
   }
 }

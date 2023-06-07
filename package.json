@@ -16,10 +16,12 @@
     "prettier": "^2.8.8",
     "typescript": "^5.0.2",
     "vite": "^4.3.2",
-    "vitest": "^0.31.1"
+    "vitest": "^0.31.1",
+    "@preact/preset-vite": "^2.5.0"
   },
   "dependencies": {
     "@datastructures-js/priority-queue": "^6.2.0",
-    "xml-js": "^1.6.11"
+    "xml-js": "^1.6.11",
+    "preact": "^10.13.2"
   }
 }

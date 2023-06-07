@@ -1,4 +1,5 @@
 import { onFileSelectorChange } from './file.js';
+import { init1 } from './init1.js';
 import { initializeTrainMove } from './initializeTrainMove.js';
 import { DiagramExt, getEkiJikokus } from './oudParser.js';
 import { svgLoaderMain } from './svgLoader.js';
@@ -60,6 +61,7 @@ export async function initializeTimetableEdit() {
 }
 
 export async function initialize() {
+  init1();
   // drawDiagram_();
   // initialize();
 

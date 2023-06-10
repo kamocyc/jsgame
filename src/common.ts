@@ -38,13 +38,3 @@ export function moduloRoundDown(value: number, mod: number): number {
     return value;
   }
 }
-
-export function jsonDecycle(o: any): any {
-  // @ts-ignore
-  return JSON.decycle(o);
-}
-
-export function jsonRetrocycle(o: any): any {
-  // @ts-ignore
-  return JSON.retrocycle(o);
-}

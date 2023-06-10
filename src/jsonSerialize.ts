@@ -1,3 +1,4 @@
+import { JSON_retrocycle } from './cycle.js';
 import { TrainMove } from './trainMove.js';
 
 function extractIdSub(ee: object) {
@@ -83,8 +84,7 @@ export function toJSON(trainMove: TrainMove) {
 }
 
 export function fromJSON(json: string) {
-  // @ts-ignore
-  const obj = JSON.retrocycle(JSON.parse(json));
+  const obj = JSON_retrocycle(JSON.parse(json));
   return obj;
 
   // const obj_ = JSON.parse(json);

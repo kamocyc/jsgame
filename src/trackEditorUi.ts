@@ -1,5 +1,5 @@
-import { jsonDecycle, jsonRetrocycle } from './common';
 import { globalObject } from './components/app';
+import { JSON_decycle, JSON_retrocycle } from './cycle';
 import { fromJSON, toJSON } from './jsonSerialize';
 import { Cell, CellHeight, CellWidth, Map, MapHeight, MapWidth } from './mapEditorModel';
 import { DiaTrain, Point, generateId } from './model';
@@ -79,14 +79,14 @@ let trains: DiaTrain[] = [
 
 function saveData() {
   const trainMoveJson = toJSON(trainMove);
-  localStorage.setItem('map', JSON.stringify(jsonDecycle(map)));
+  localStorage.setItem('map', JSON.stringify(JSON_decycle(map)));
   localStorage.setItem('trainMove', trainMoveJson);
-  localStorage.setItem('timetable', JSON.stringify(jsonDecycle(timetable)));
+  localStorage.setItem('timetable', JSON.stringify(JSON_decycle(timetable)));
   console.log('保存しました');
 }
 
 function loadData() {
-  const mapData = jsonRetrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
+  const mapData = JSON_retrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
   const trainMoveJson = localStorage.getItem('trainMove') ?? '{}';
   const trainMove_ = fromJSON(trainMoveJson) as unknown as TrainMove;
   if (mapData.length !== MapWidth || mapData[0].length !== MapHeight) {
@@ -95,7 +95,7 @@ function loadData() {
   }
   map = mapData;
   trainMove = trainMove_;
-  timetable = jsonRetrocycle(
+  timetable = JSON_retrocycle(
     JSON.parse(localStorage.getItem('timetable') ?? '{"stationTTItems": [], "switchTTItems": []}')
   ) as Timetable;
 

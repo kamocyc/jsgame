@@ -1,6 +1,4 @@
-import { assert } from './common.js';
-import { HalfTrack, Point, Train } from './model.js';
-import { getOccupyingTracks } from './trackUtil.js';
+import { Point, Train } from './model.js';
 import { TrainMove } from './trainMove.js';
 
 let offsetX = 0;
@@ -68,8 +66,8 @@ function drawTrain2(ctx: CanvasRenderingContext2D, train: Train) {
     ctx.fillStyle = train.diaTrain?.color;
   }
 
-  if (train.diaTrain?.name) {
-    ctx.fillText(train.diaTrain?.name, _x(train.position.x), _y(train.position.y - 20));
+  if (train.diaTrain?.trainName) {
+    ctx.fillText(train.diaTrain?.trainName, _x(train.position.x), _y(train.position.y - 20));
   }
 
   ctx.beginPath();

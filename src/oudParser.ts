@@ -199,7 +199,7 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
       trainTypeName: trainTypeName,
       trainMei: ressya['Ressyamei'],
       trainGo: ressya['Gousuu'],
-      name: trainName,
+      trainName: trainName,
       trainTimetable: timetable,
     };
   });

@@ -1,4 +1,4 @@
-import { DiaStation, DiaTrain, Diagram, Station, StationTrain } from './model.js';
+import { DiaStation, DiaTrain } from './model.js';
 import { DiagramExt } from './oudParser.js';
 
 function showGlobalTime(timeSeconds: number): string {
@@ -98,7 +98,7 @@ export function drawTimetable_(diagram: DiagramExt) {
       inputElements.splice(0);
 
       const ttItem = getTtItemById(elem.id);
-      tt;
+      // tt;
     }
   }
 

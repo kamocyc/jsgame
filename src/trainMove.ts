@@ -1,4 +1,4 @@
-import { assert, min } from './common.js';
+import { min } from './common.js';
 import {
   DiaTrain,
   Diagram,
@@ -166,7 +166,7 @@ export class TrainMove {
                   (t) =>
                     t.track.station?.stationId === timetableItem.trainTimetable[train.currentTimetableIndex].stationId
                 )[0]?.track.station?.stationName,
-                train: train.diaTrain?.name,
+                train: train.diaTrain?.trainName,
               },
               null,
               '  '
@@ -234,7 +234,7 @@ export class TrainMove {
                     stationName: this.tracks.filter(
                       (t) => t.track.station?.stationId === nextStationTimetable.stationId
                     )[0]?.track.station?.stationName,
-                    train: train.diaTrain?.name,
+                    train: train.diaTrain?.trainName,
                   },
                   null,
                   '  '
@@ -425,7 +425,7 @@ function roundPoint(point: Point): Point {
 function toSerializable(train: Train): SerializedTrain {
   return {
     trainId: train.trainId,
-    name: train.diaTrain?.name,
+    name: train.diaTrain?.trainName,
     color: train.diaTrain?.color,
     position: roundPoint(train.position),
   };

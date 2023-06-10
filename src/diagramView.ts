@@ -1,6 +1,6 @@
 import { max } from './common.js';
-import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from './drawer.js';
 import { getDiaFreaks } from './diaFreaksParser.js';
+import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from './drawer.js';
 import { DiaStation, DiaTrain } from './model.js';
 import { interpolateTrainTimetable } from './normalizeDia.js';
 
@@ -126,13 +126,13 @@ function drawTrain(ctx: CanvasRenderingContext2D, stations: DiaStation[], train:
         isFirstLine = false;
 
         // 列車番号を表示する
-        if (train.name) {
+        if (train.trainName) {
           const r = Math.atan2(endPoint.y - beginPoint.y, endPoint.x - beginPoint.x);
 
           ctx.save();
           ctx.translate(beginPoint.x, beginPoint.y);
           ctx.rotate(r);
-          ctx.fillText(train.name, 0, -2);
+          ctx.fillText(train.trainName, 0, -2);
           ctx.restore();
         }
       }

@@ -78,7 +78,7 @@ export function loadTime() {
                 trainId: rawTrain.trainId,
                 diaTrain: {
                   color: rawTrain.color,
-                  name: rawTrain.name,
+                  trainName: rawTrain.name,
                 },
                 position: rawTrain.position,
               } as Train)

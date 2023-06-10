@@ -87,7 +87,7 @@ export interface StationTrain {
 export interface DiaTrain {
   trainId: number /* trainId */;
   color?: string;
-  name: string /* name */;
+  trainName: string /* name */;
   trainTimetable: StationTrain[];
 }
 

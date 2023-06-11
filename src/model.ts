@@ -96,7 +96,11 @@ export interface Diagram {
   trains: DiaTrain[];
 }
 
-let _currentId = 0;
+function getInitialId(): number {
+  return Math.floor((new Date().getTime() - 1600000000000) / 1000);
+}
+
+let _currentId = getInitialId();
 export function generateId(): number {
   return ++_currentId;
 }

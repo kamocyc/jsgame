@@ -1,7 +1,8 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../cycle';
-import { fromJSON, toJSON } from '../jsonSerialize';
+import { fromJSON } from '../jsonSerialize';
 import { Cell, GameMap, MapHeight, MapWidth } from '../mapEditorModel';
+import { DiaTrain, Switch } from '../model';
 import { drawEditor } from '../trackEditorDrawer';
 import { TrainMove } from '../trainMove';
 import { AppStates, EditMode, Timetable } from '../uiEditorModel';
@@ -51,17 +52,17 @@ function saveMapData(appStates: AppStates) {
   if (appStates.timetable == null) {
     return;
   }
-  const trainMoveJson = toJSON(appStates.trainMove);
+  const trainsJson = JSON.stringify(appStates.trains);
   localStorage.setItem('map', JSON.stringify(JSON_decycle(appStates.map)));
-  localStorage.setItem('trainMove', trainMoveJson);
+  localStorage.setItem('trains', trainsJson);
   localStorage.setItem('timetable', JSON.stringify(JSON_decycle(appStates.timetable)));
   console.log('保存しました');
 }
 
 function loadMapData(setAppStates: StateUpdater<AppStates>) {
   const mapData = JSON_retrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
-  const trainMoveJson = localStorage.getItem('trainMove') ?? '{}';
-  const trainMove = fromJSON(trainMoveJson) as unknown as TrainMove;
+  const trainsJson = localStorage.getItem('trains') ?? '[]';
+  const trains = fromJSON(trainsJson) as unknown as DiaTrain[];
   if (mapData.length !== MapWidth || mapData[0].length !== MapHeight) {
     alert('マップデータが不正です');
     return;
@@ -69,6 +70,23 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
   const timetable = JSON_retrocycle(
     JSON.parse(localStorage.getItem('timetable') ?? '{"stationTTItems": [], "switchTTItems": []}')
   ) as Timetable;
+
+  const trainMove = new TrainMove();
+  trainMove.switches = mapData.flatMap(
+    (row) =>
+      row
+        .map((cell) => (cell.lineType?.lineClass === 'Branch' ? cell.lineType.switch : null))
+        .filter((x) => x != null) as Switch[]
+  );
+  // trainMove.stations = mapData.flatMap(
+  //   (row) =>
+  //     row
+  //       .map((cell) => ((cell.lineType?.tracks ?? []).length > 0 ? cell.lineType?.tracks[0].track.station : null))
+  //       .filter((x) => x != null) as Station[]
+  // );
+  trainMove.tracks = mapData.flatMap((row) =>
+    row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
+  );
 
   setAppStates((appStates) => ({
     ...appStates,

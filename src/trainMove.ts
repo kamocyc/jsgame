@@ -108,10 +108,10 @@ class TrainOccupy {
 }
 
 export class TrainMove {
-  readonly switches: Switch[] = [];
-  readonly stations: Station[] = [];
-  readonly tracks: HalfTrack[] = [];
-  readonly trains: Train[] = [];
+  switches: Switch[] = [];
+  stations: Station[] = [];
+  tracks: HalfTrack[] = [];
+  trains: Train[] = [];
   readonly operatingTrains: OperationTrain[] = [];
   readonly timetable: DiaOperatingTrain[] = [];
   readonly trainOccupy = new TrainOccupy();

@@ -1,6 +1,6 @@
 import { MinPriorityQueue } from '@datastructures-js/priority-queue';
-import { assert } from './common.js';
-import { HalfTrack, HalfTrackWip, Point, Station, Switch, Train, generateId } from './model.js';
+import { assert, deepEqual } from './common.js';
+import { HalfTrack, HalfTrackWip, Point, Station, Switch, generateId } from './model.js';
 import { Queue } from './queue.js';
 
 export function getMidPoint(point1: Point, point2: Point): Point {
@@ -53,6 +53,7 @@ export function isTrainOutTrack(position: Point, track: HalfTrack) {
   return position.x < trackMinX || position.x > trackMaxX || position.y < trackMinY || position.y > trackMaxY;
 }
 
+// 返す値の範囲: [Math.PI, Math.PI)
 export function getRadian(track1: { _begin: Point; _end: Point }, track2: { _begin: Point; _end: Point }) {
   const r1 = Math.atan2(track1._end.y - track1._begin.y, track1._end.x - track1._begin.x);
   const r2 = Math.atan2(track2._end.y - track2._begin.y, track2._end.x - track2._begin.x);
@@ -88,6 +89,9 @@ export function createNewTrack(
   explicitNextSwitch?: Switch,
   explicitPrevSwitch?: Switch
 ): [HalfTrack, HalfTrack, Switch[]] {
+  assert(nextTracks.every((t) => deepEqual(_end, t._begin)));
+  assert(prevTracks.every((t) => deepEqual(_begin, t._end)));
+
   const _nextSwitch = explicitNextSwitch ?? (nextTracks.length === 0 ? undefined : nextTracks[0]._prevSwitch);
   const _prevSwitch = explicitPrevSwitch ?? (prevTracks.length === 0 ? undefined : prevTracks[0]._nextSwitch);
   const newTrack = createBothTrack({
@@ -157,6 +161,7 @@ export function createBothTrack(trackBase: HalfTrackWip): [HalfTrack, HalfTrack,
       beginTracks: [reverseTrack as HalfTrack],
       switchPatterns: [],
       switchPatternIndex: null,
+      straightPatternIndex: null,
     };
     reverseTrack._prevSwitch = trackBase._nextSwitch;
     newSwitches.push(trackBase._nextSwitch);
@@ -172,6 +177,7 @@ export function createBothTrack(trackBase: HalfTrackWip): [HalfTrack, HalfTrack,
       beginTracks: [trackBase as HalfTrack],
       switchPatterns: [],
       switchPatternIndex: null,
+      straightPatternIndex: null,
     };
     trackBase._prevSwitch = reverseTrack._nextSwitch;
     newSwitches.push(reverseTrack._nextSwitch);

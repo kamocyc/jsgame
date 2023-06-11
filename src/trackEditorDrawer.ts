@@ -15,7 +15,7 @@ import {
   timesVector,
 } from './mapEditorModel';
 import { HalfTrack, Point } from './model';
-import { TrainMove } from './trainMove';
+import { TrainMove2 } from './trainMove2';
 
 function r_(position: Point) {
   return { x: position.x, y: MapHeight * CellHeight - position.y };
@@ -232,8 +232,9 @@ function drawTracks(ctx: CanvasRenderingContext2D, tracks: HalfTrack[]) {
   const fontSize = 15;
 
   for (const track of tracks) {
-    ctx.strokeStyle = 'gray';
-    drawLine(ctx, addVector(track._begin, { x: 10, y: 10 }), addVector(track._end, { x: 10, y: 10 }));
+    // ctx.strokeStyle = 'gray';
+    // drawLine(ctx, addVector(track._begin, { x: 10, y: 10 }), addVector(track._end, { x: 10, y: 10 }));
+    // 駅はtrackに対応するが、それは2セルにまたがるので、調整が必要。。。
     if (track.track.station) {
       ctx.beginPath();
       ctx.strokeStyle = 'red';
@@ -264,7 +265,8 @@ function drawTracks(ctx: CanvasRenderingContext2D, tracks: HalfTrack[]) {
 }
 
 export function drawEditor(
-  trainMove: TrainMove,
+  trainMove: TrainMove2,
+  tracks: HalfTrack[],
   map?: GameMap,
   mouseStartCell: Cell | null = null,
   mouseEndCell: Cell | null = null
@@ -283,7 +285,7 @@ export function drawEditor(
     drawLine(ctx, { x: 0, y: y * CellHeight }, { x: MapWidth * CellWidth, y: y * CellHeight });
   }
 
-  drawTracks(ctx, trainMove.tracks);
+  drawTracks(ctx, tracks);
 
   if (mouseStartCell !== null) {
     ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
@@ -303,5 +305,20 @@ export function drawEditor(
         drawLineType(ctx, cell.position, cell.lineType);
       }
     }
+  }
+
+  for (const train of trainMove.trains) {
+    const position = train.position;
+
+    // 塗りつぶした円を描画
+    ctx.beginPath();
+    ctx.strokeStyle = 'red';
+    ctx.fillStyle = 'red';
+    ctx.arc(position.x, MapHeight * CellHeight - position.y, 10, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.fill();
+
+    ctx.strokeStyle = 'black';
+    ctx.fillStyle = 'black';
   }
 }

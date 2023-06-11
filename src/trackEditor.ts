@@ -12,7 +12,7 @@ import {
   timesVector,
 } from './mapEditorModel';
 import { HalfTrack, Switch } from './model';
-import { createNewTrack } from './trackUtil';
+import { createNewTrack, getRadian } from './trackUtil';
 
 type CreateLineError = { error: string };
 
@@ -288,6 +288,18 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTra
   return { error: '未対応の線路' };
 }
 
+// 定位のパターンのインデックスを返す
+function getStraightPatternIndex(Switch: Switch): [number, number] {
+  // 一直線に近いもの2つを定位とする
+  const sortedPatterns = Switch.switchPatterns
+    .map(([track1, track2], i) => [Math.abs(Math.PI - Math.abs(getRadian(track1, track2))), i] as const)
+    .sort((a, b) => a[0] - b[0]);
+
+  console.log({ sortedPatterns, switchPatterns: Switch.switchPatterns });
+
+  return [sortedPatterns[0][1], sortedPatterns[1][1]];
+}
+
 // 破壊的変更はしない
 function createTrackOnAdjacentCells(
   cell1: Cell,
@@ -316,9 +328,22 @@ function createTrackOnAdjacentCells(
   });
 
   // そのセルで終端となるtrackをtracksに設定する
-  const [newTrack1, newTrack2, newSwitches] = createNewTrack(_begin, _end, prevTracks, nextTracks, null);
+  const [newTrack1, newTrack2, newSwitches] = createNewTrack(
+    _begin,
+    _end,
+    nextTracks.map((t) => t.reverseTrack),
+    prevTracks,
+    null
+  );
   const beginTrack = deepEqual(newTrack1._end, _begin) ? newTrack1 : newTrack2;
   const endTrack = deepEqual(newTrack1._end, _begin) ? newTrack2 : newTrack1;
+
+  if (beginTrack._nextSwitch.switchPatterns.length >= 2) {
+    beginTrack._nextSwitch.straightPatternIndex = getStraightPatternIndex(beginTrack._nextSwitch);
+  }
+  if (endTrack._nextSwitch.switchPatterns.length >= 2) {
+    endTrack._nextSwitch.straightPatternIndex = getStraightPatternIndex(endTrack._nextSwitch);
+  }
 
   // セルのtracksは、そのセルに**入る**trackを設定する（次のtrackを設定しやすくするため。）。reverseTrackは設定しない。
   newCell1.lineType!.tracks.push(beginTrack);
@@ -393,6 +418,7 @@ export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [HalfTrack[]
   const mapUpdateData: [number, number, Cell][] = [];
   let prevCell = map[x][y];
 
+  // 始点から終点まで線路を作る
   while (true) {
     const result = createTrackOnAdjacentCells(prevCell, map[x + ix][y + iy], angle);
     if ('error' in result) {
@@ -406,6 +432,7 @@ export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [HalfTrack[]
     x += ix;
     y += iy;
     if (x === cell2.position.x && y === cell2.position.y) {
+      // 終点にエラー無く到達したら、mapを更新して終了
       for (const [x, y, cell] of mapUpdateData) {
         map[x][y] = cell;
       }

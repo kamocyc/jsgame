@@ -9,7 +9,8 @@ export interface Switch {
   endTracks: HalfTrack[];
   beginTracks: HalfTrack[]; // switchがbeginのtrackのみ入れる
   switchPatterns: [HalfTrack, HalfTrack][]; // 切り替わるswitchの組み合わせ
-  switchPatternIndex: [number, number] | null;
+  switchPatternIndex: [number, number] | null; // 現在切り替えられているswitchPatternのindex。reverseTrackの分があるので要素が2つ
+  straightPatternIndex: [number, number] | null; // 定位のpatternのIndex
 }
 
 export interface Station {

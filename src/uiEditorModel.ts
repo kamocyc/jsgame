@@ -1,6 +1,6 @@
 import { GameMap } from './mapEditorModel';
-import { DiaTrain, Switch } from './model';
-import { TrainMove } from './trainMove';
+import { DiaTrain, HalfTrack, Switch } from './model';
+import { TrainMove2 } from './trainMove2';
 
 export type BranchDirection = 'Straight' | 'Branch';
 
@@ -36,12 +36,14 @@ export interface Timetable {
 
 export type EditorDialogMode = 'StationEditor' | 'SwitchEditor';
 
-export type EditMode = 'Create' | 'Delete' | 'Station' | 'Info';
+export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'Station' | 'Info';
 
 export interface AppStates {
   editMode: EditMode;
-  timetable: Timetable | null;
-  trains: DiaTrain[] | null;
+  timetable: Timetable;
+  trains: DiaTrain[];
+  switches: Switch[];
+  tracks: HalfTrack[];
   map: GameMap;
-  trainMove: TrainMove;
+  trainMove: TrainMove2;
 }

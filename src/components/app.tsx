@@ -4,7 +4,7 @@ import { fromJSON } from '../jsonSerialize';
 import { Cell, GameMap, MapHeight, MapWidth } from '../mapEditorModel';
 import { DiaTrain, Switch } from '../model';
 import { drawEditor } from '../trackEditorDrawer';
-import { TrainMove } from '../trainMove';
+import { TrainMove2 } from '../trainMove2';
 import { AppStates, EditMode, Timetable } from '../uiEditorModel';
 import { CanvasComponent } from './CanvasComponent';
 
@@ -71,38 +71,36 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     JSON.parse(localStorage.getItem('timetable') ?? '{"stationTTItems": [], "switchTTItems": []}')
   ) as Timetable;
 
-  const trainMove = new TrainMove();
-  trainMove.switches = mapData.flatMap(
+  const trainMove = new TrainMove2(timetable);
+  const switches = mapData.flatMap(
     (row) =>
       row
         .map((cell) => (cell.lineType?.lineClass === 'Branch' ? cell.lineType.switch : null))
         .filter((x) => x != null) as Switch[]
   );
-  // trainMove.stations = mapData.flatMap(
-  //   (row) =>
-  //     row
-  //       .map((cell) => ((cell.lineType?.tracks ?? []).length > 0 ? cell.lineType?.tracks[0].track.station : null))
-  //       .filter((x) => x != null) as Station[]
-  // );
-  trainMove.tracks = mapData.flatMap((row) =>
+  const tracks = mapData.flatMap((row) =>
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
   );
 
   setAppStates((appStates) => ({
     ...appStates,
     map: mapData,
+    switches: switches,
+    tracks: tracks,
     trainMove: trainMove,
     timetable: timetable,
   }));
 }
 
+const timetable: Timetable = {
+  stationTTItems: [],
+  switchTTItems: [],
+};
+
 export function App() {
   const [appStates, setAppStates] = useState<AppStates>(() => ({
     editMode: 'Create',
-    timetable: {
-      stationTTItems: [],
-      switchTTItems: [],
-    },
+    timetable: timetable,
     trains: [
       {
         trainId: 1,
@@ -118,20 +116,34 @@ export function App() {
       },
     ],
     map: initializeMap(),
-    trainMove: new TrainMove(),
+    trainMove: new TrainMove2(timetable),
+    switches: [],
+    tracks: [],
   }));
+  const [runningIntervalId, setRunningIntervalId] = useState<number | null>(null);
 
   const setEditMode = (mode: EditMode) => {
     setAppStates((appStates) => ({ ...appStates, editMode: mode }));
   };
 
-  useEffect(() => {
-    loadMapData(setAppStates);
-  }, []);
+  // useEffect(() => {
+  //   loadMapData(setAppStates);
+  // }, []);
 
   useEffect(() => {
-    drawEditor(appStates.trainMove, appStates.map);
+    drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
   }, [appStates]);
+
+  function startTop() {
+    if (runningIntervalId != null) {
+      clearInterval(runningIntervalId);
+    }
+    const intervalId = setInterval(() => {
+      appStates.trainMove.tick();
+      drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
+    }, 1000);
+    setRunningIntervalId(intervalId);
+  }
 
   return (
     <>
@@ -146,31 +158,39 @@ export function App() {
         <div style={{ borderStyle: 'solid', borderWidth: '1px' }}>
           <ModeOptionRadioComponent
             mode='Create'
-            text='作成'
+            text='線路を作成'
             checked={appStates.editMode === 'Create'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='Delete'
-            text='削除'
+            text='線路を削除'
             checked={appStates.editMode === 'Delete'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
+            mode='PlaceTrain'
+            text='列車を配置'
+            checked={appStates.editMode === 'PlaceTrain'}
+            setEditorMode={setEditMode}
+          />
+          <ModeOptionRadioComponent
             mode='Station'
-            text='駅'
+            text='駅を作成'
             checked={appStates.editMode === 'Station'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='Info'
-            text='情報'
+            text='情報を表示'
             checked={appStates.editMode === 'Info'}
             setEditorMode={setEditMode}
           />
         </div>
       </div>
-      <button id='button-slow-speed'>停止/再開</button>
+      <button id='button-slow-speed' onClick={() => startTop()}>
+        停止/再開
+      </button>
       <br />
       <button id='button-slow-speed-2'>早くする</button>
       <br />

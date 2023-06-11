@@ -3,14 +3,21 @@ import { Cell, CellHeight, CellWidth, MapHeight, MapWidth } from '../mapEditorMo
 import { Point, Switch, generateId } from '../model';
 import { createLine } from '../trackEditor';
 import { drawEditor } from '../trackEditorDrawer';
+import { getMidPoint } from '../trackUtil';
+import { TrainMove2 } from '../trainMove2';
 import { AppStates, EditorDialogMode, Station, Timetable, Train } from '../uiEditorModel';
-import { StationEditor, SwitchEditor } from './stationEditor';
+import { StationEditor, SwitchEditor, TrainSelector } from './stationEditor';
 
-function mouseToMapPosition(mousePoint: Point) {
-  return {
+function mouseToMapPosition(mousePoint: Point): null | Point {
+  const mapPosition = {
     x: Math.floor(mousePoint.x / CellWidth),
     y: Math.floor((MapHeight * CellHeight - mousePoint.y) / CellHeight),
   };
+  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
+    return mapPosition;
+  } else {
+    return null;
+  }
 }
 
 function onmousemove(e: MouseEvent, appStates: AppStates, mouseStartCell: null | Cell) {
@@ -19,9 +26,9 @@ function onmousemove(e: MouseEvent, appStates: AppStates, mouseStartCell: null |
   const y = e.clientY - rect.top;
 
   const mapPosition = mouseToMapPosition({ x, y });
-  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
+  if (mapPosition != null) {
     const mouseMoveCell = appStates.map[mapPosition.x][mapPosition.y];
-    drawEditor(appStates.trainMove, appStates.map, mouseStartCell, mouseMoveCell);
+    drawEditor(appStates.trainMove, appStates.tracks, appStates.map, mouseStartCell, mouseMoveCell);
   }
 }
 
@@ -63,9 +70,37 @@ function showInfoPanel(
   }
 }
 
+function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
+  if (!cell.lineType?.tracks[0]) {
+    return false;
+  }
+
+  const track = cell.lineType?.tracks[0];
+  const position = getMidPoint(track._begin, track._end);
+
+  const moveTrain = trainMove.trains.find((train) => train.diaTrain.trainId === selectedTrain.trainId);
+  if (moveTrain === undefined) {
+    trainMove.trains.push({
+      trainId: selectedTrain.trainId,
+      diaTrain: selectedTrain,
+      speed: 10,
+      stationWaitTime: 0,
+      stationStatus: 'NotArrived',
+      track: cell.lineType?.tracks[0],
+      position: position,
+    });
+  } else {
+    moveTrain.track = cell.lineType?.tracks[0];
+    moveTrain.position = position;
+  }
+
+  return true;
+}
+
 function onmousedown(
   e: MouseEvent,
   appStates: AppStates,
+  selectedTrain: Train,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
   setStation: (station: Station | null) => void,
   setSwitch: (station: Switch | null) => void,
@@ -77,9 +112,12 @@ function onmousedown(
   const y = e.clientY - rect.top;
 
   const mapPosition = mouseToMapPosition({ x, y });
-  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
+  if (mapPosition != null) {
     if (appStates.editMode === 'Info') {
       showInfoPanel(appStates.map[mapPosition.x][mapPosition.y], setEditorDialogMode, setStation, setSwitch);
+      return;
+    } else if (appStates.editMode === 'PlaceTrain') {
+      placeTrain(appStates.map[mapPosition.x][mapPosition.y], appStates.trainMove, selectedTrain);
       return;
     } else if (appStates.editMode === 'Station') {
       setMouseDragMode('Station');
@@ -107,7 +145,7 @@ function onmouseup(
   const y = e.clientY - rect.top;
 
   const mapPosition = mouseToMapPosition({ x, y });
-  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
+  if (mapPosition != null) {
     const mouseEndCell = appStates.map[mapPosition.x][mapPosition.y];
 
     if (mouseDragMode === 'Create') {
@@ -117,16 +155,16 @@ function onmouseup(
         console.warn(result.error);
       } else {
         const [tracks, switches] = result;
-        appStates.trainMove.tracks.push(...tracks);
-        appStates.trainMove.switches.push(...switches);
+        appStates.tracks.push(...tracks);
+        appStates.switches.push(...switches);
       }
     } else if (mouseDragMode === 'Delete') {
       // deleteLine(map, mouseStartCell, mouseEndCell)
     }
-    drawEditor(appStates.trainMove, appStates.map);
+    drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
     // draw(trainMove, null, null);
   }
-  drawEditor(appStates.trainMove, appStates.map);
+  drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
 
   setAppStates(appStates);
 
@@ -178,6 +216,7 @@ export function CanvasComponent({
   const [Switch, setSwitch] = useState<Switch | null>(null);
   const [mouseStartCell, setMouseStartCell] = useState<Cell | null>(null);
   const [mouseDragMode, setMouseDragMode] = useState<'Create' | 'Delete' | 'Station' | null>(null);
+  const [selectedTrain, setSelectedTrain] = useState<Train>(appStates.trains[0]);
 
   return (
     <>
@@ -186,7 +225,16 @@ export function CanvasComponent({
         width='2000'
         height='500'
         onMouseDown={(e) =>
-          onmousedown(e, appStates, setEditorDialogMode, setStation, setSwitch, setMouseStartCell, setMouseDragMode)
+          onmousedown(
+            e,
+            appStates,
+            selectedTrain,
+            setEditorDialogMode,
+            setStation,
+            setSwitch,
+            setMouseStartCell,
+            setMouseDragMode
+          )
         }
         onMouseUp={(e) =>
           onmouseup(
@@ -210,6 +258,14 @@ export function CanvasComponent({
         station={station}
         trains={appStates.trains}
       />
+
+      <div>
+        {appStates.editMode === 'PlaceTrain' ? (
+          <TrainSelector trains={appStates.trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
+        ) : (
+          <> </>
+        )}
+      </div>
     </>
   );
 }

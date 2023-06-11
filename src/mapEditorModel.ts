@@ -3,7 +3,7 @@ import { HalfTrack, Point, Switch } from './model';
 export const MapWidth = 20;
 export const MapHeight = 10;
 
-export type Map = Cell[][];
+export type GameMap = Cell[][];
 
 export const CellWidth = 30;
 export const CellHeight = 30;

@@ -5,9 +5,9 @@ import {
   CellHeight,
   CellWidth,
   CurveType,
+  GameMap,
   LineAngle,
   LineDirection,
-  Map,
   addVector,
   timesVector,
 } from './mapEditorModel';
@@ -288,6 +288,7 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTra
   return { error: '未対応の線路' };
 }
 
+// 破壊的変更はしない
 function createTrackOnAdjacentCells(
   cell1: Cell,
   cell2: Cell,
@@ -328,7 +329,8 @@ function createTrackOnAdjacentCells(
   return [[newCell1, newCell2], [newTrack1, newTrack2], newSwitches];
 }
 
-export function createLine(map: Map, cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateLineError {
+// mapに対して破壊的変更をする
+export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateLineError {
   if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
     return { error: '同じセル' };
   }

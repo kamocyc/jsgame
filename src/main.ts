@@ -1,11 +1,8 @@
 import { onFileSelectorChange } from './file.js';
-import { init1 } from './init1.js';
 import { initializeTrainMove } from './initializeTrainMove.js';
 import { DiagramExt, getEkiJikokus } from './oudParser.js';
 import { svgLoaderMain } from './svgLoader.js';
 import { drawTimetable_ } from './timetableEditor.js';
-import { initializeTrackEditor } from './trackEditorUi.js';
-// import { drawTimetable } from "./timetableEditor.js";
 
 const RUN_MODE: 'TrainMove' | 'TimetableEdit' | 'TrackEdit' = 'TrackEdit';
 
@@ -61,7 +58,6 @@ export async function initializeTimetableEdit() {
 }
 
 export async function initialize() {
-  init1();
   // drawDiagram_();
   // initialize();
 
@@ -75,6 +71,6 @@ export async function initialize() {
   } else if (RUN_MODE === 'TimetableEdit') {
     await initializeTimetableEdit();
   } else if (RUN_MODE === 'TrackEdit') {
-    await initializeTrackEditor();
+    // await initializeTrackEditor();
   }
 }

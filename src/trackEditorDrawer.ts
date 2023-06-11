@@ -3,12 +3,12 @@ import {
   Cell,
   CellHeight,
   CellWidth,
+  GameMap,
   LineType,
   LineTypeBranch,
   LineTypeCurve,
   LineTypeStraight,
   LineTypeTerminal,
-  Map,
   MapHeight,
   MapWidth,
   addVector,
@@ -265,7 +265,7 @@ function drawTracks(ctx: CanvasRenderingContext2D, tracks: HalfTrack[]) {
 
 export function drawEditor(
   trainMove: TrainMove,
-  map?: Map,
+  map?: GameMap,
   mouseStartCell: Cell | null = null,
   mouseEndCell: Cell | null = null
 ) {

@@ -2,10 +2,10 @@ import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../cycle';
 import { fromJSON } from '../jsonSerialize';
 import { Cell, GameMap, MapHeight, MapWidth } from '../mapEditorModel';
-import { DiaTrain, Switch } from '../model';
+import { DiaTrain, Point, Switch } from '../model';
 import { drawEditor } from '../trackEditorDrawer';
 import { TrainMove2 } from '../trainMove2';
-import { AppStates, EditMode, Timetable } from '../uiEditorModel';
+import { AppStates, EditMode, Timetable, Train } from '../uiEditorModel';
 import { CanvasComponent } from './CanvasComponent';
 
 export function ModeOptionRadioComponent({
@@ -48,6 +48,16 @@ function initializeMap(): GameMap {
   return map;
 }
 
+interface SerializedPlacedTrain {
+  trainId: number;
+  diaTrain: Train;
+  speed: number;
+  trackId: number;
+  position: Point;
+  stationWaitTime: number;
+  stationStatus: 'Arrived' | 'Departed' | 'NotArrived';
+}
+
 function saveMapData(appStates: AppStates) {
   if (appStates.timetable == null) {
     return;
@@ -56,17 +66,31 @@ function saveMapData(appStates: AppStates) {
   localStorage.setItem('map', JSON.stringify(JSON_decycle(appStates.map)));
   localStorage.setItem('trains', trainsJson);
   localStorage.setItem('timetable', JSON.stringify(JSON_decycle(appStates.timetable)));
+  localStorage.setItem(
+    'placedTrains',
+    JSON.stringify(
+      appStates.trainMove.trains.map((t) => ({
+        trainId: t.trainId,
+        diaTrain: t.diaTrain,
+        speed: t.speed,
+        trackId: t.track.trackId,
+        position: t.position,
+        stationWaitTime: t.stationWaitTime,
+        stationStatus: t.stationStatus,
+      }))
+    )
+  );
   console.log('保存しました');
 }
 
 function loadMapData(setAppStates: StateUpdater<AppStates>) {
   const mapData = JSON_retrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
-  const trainsJson = localStorage.getItem('trains') ?? '[]';
-  const trains = fromJSON(trainsJson) as unknown as DiaTrain[];
   if (mapData.length !== MapWidth || mapData[0].length !== MapHeight) {
     alert('マップデータが不正です');
     return;
   }
+  const trainsJson = localStorage.getItem('trains') ?? '[]';
+  const trains = fromJSON(trainsJson) as unknown as DiaTrain[];
   const timetable = JSON_retrocycle(
     JSON.parse(localStorage.getItem('timetable') ?? '{"stationTTItems": [], "switchTTItems": []}')
   ) as Timetable;
@@ -81,6 +105,19 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
   const tracks = mapData.flatMap((row) =>
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
   );
+
+  const placedTrains = (JSON.parse(localStorage.getItem('placedTrains') ?? '[]') as SerializedPlacedTrain[]).map(
+    (t) => ({
+      trainId: t.trainId,
+      diaTrain: t.diaTrain,
+      speed: t.speed,
+      track: tracks.find((track) => track.trackId === t.trackId)!,
+      position: t.position,
+      stationWaitTime: t.stationWaitTime,
+      stationStatus: t.stationStatus,
+    })
+  );
+  trainMove.trains = placedTrains;
 
   setAppStates((appStates) => ({
     ...appStates,
@@ -134,14 +171,18 @@ export function App() {
     drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
   }, [appStates]);
 
-  function startTop() {
+  function stopInterval() {
     if (runningIntervalId != null) {
       clearInterval(runningIntervalId);
+      setRunningIntervalId(null);
     }
+  }
+
+  function startTop(interval: number) {
     const intervalId = setInterval(() => {
       appStates.trainMove.tick();
       drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
-    }, 1000);
+    }, interval);
     setRunningIntervalId(intervalId);
   }
 
@@ -188,11 +229,34 @@ export function App() {
           />
         </div>
       </div>
-      <button id='button-slow-speed' onClick={() => startTop()}>
-        停止/再開
+      <button
+        id='button-slow-speed'
+        onClick={() => {
+          stopInterval();
+          startTop(1000);
+        }}
+      >
+        {runningIntervalId == null ? '再生' : '停止'}
+      </button>
+      <button
+        onClick={() => {
+          stopInterval();
+          appStates.trainMove.resetGlobalTime();
+          startTop(1000);
+        }}
+      >
+        リスタート
       </button>
       <br />
-      <button id='button-slow-speed-2'>早くする</button>
+      <button
+        id='button-slow-speed-2'
+        onClick={() => {
+          stopInterval();
+          startTop(100);
+        }}
+      >
+        早くする
+      </button>
       <br />
       <button id='button-speed-slow'>＜＜</button>
       <button id='button-speed-fast'>＞＞</button>
@@ -202,7 +266,7 @@ export function App() {
       <div id='seek-bar' style='width: 1000px; height: 20px; background-color: aquamarine'>
         <div id='seek-bar-item' style='width: 6px; height: 20px; background-color: black; position: relative'></div>
       </div>
-      <div id='time'></div>
+      <div id='time'>{appStates.trainMove.toStringGlobalTime()}</div>
 
       <div id='timetable-root'></div>
 

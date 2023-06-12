@@ -115,6 +115,8 @@ interface PlacedTrain {
   stationStatus: StationStatus;
 }
 
+const TimeActionMode: 'Just' | 'After' = 'After';
+
 export class TrainMove2 {
   trains: PlacedTrain[] = [];
   timetable: Timetable;
@@ -126,6 +128,12 @@ export class TrainMove2 {
 
   constructor(timetable: Timetable) {
     this.timetable = timetable;
+    this.resetGlobalTime();
+  }
+
+  resetGlobalTime() {
+    const minTimetableTime = Math.min(...this.timetable.stationTTItems.map((t) => t.departureTime - 60));
+    this.globalTime = minTimetableTime === Infinity ? 0 : minTimetableTime;
   }
 
   getNextTrack(track: HalfTrack): HalfTrack {
@@ -179,16 +187,20 @@ export class TrainMove2 {
         // 時刻が設定されていないときは即座に発車
         console.warn('timetableItems.length === 0');
       } else {
-        // 発車時間になったら出発する
-        const departureItems = timetableItems.filter(
-          (tt) => tt.departureTime > this.globalTime - this.globalTimeSpeed && tt.departureTime <= this.globalTime
-        );
-        if (departureItems.length === 0) {
-          // 発車時間ではない
-          return;
-        }
+        if (TimeActionMode === 'Just') {
+          // ちょうど発車時間になったら出発する
+          const departureItems = timetableItems.filter(
+            (tt) => tt.departureTime > this.globalTime - this.globalTimeSpeed && tt.departureTime <= this.globalTime
+          );
+          if (departureItems.length === 0) {
+            // 発車時間ではない
+            return;
+          }
 
-        console.log('departureItems.length >= 1', departureItems);
+          console.log('departureItems.length >= 1', departureItems);
+        } else {
+          // TODO
+        }
       }
       // 発車
       train.stationStatus = 'Departed';

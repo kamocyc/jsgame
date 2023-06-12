@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { Switch } from '../model';
+import { parseTime, showGlobalTime } from '../timetableEditor';
 import { Station, Timetable, Train } from '../uiEditorModel';
 
 export function TrainSelector({
@@ -145,11 +146,14 @@ export function StationEditor({
             </span>
             出発時間：
             <input
-              value={item.departureTime}
+              value={showGlobalTime(item.departureTime)}
               onChange={(e) => {
-                const newTime = Number((e.target as HTMLInputElement).value);
-                item.departureTime = newTime;
-                setUpdate([]);
+                const stringValue = (e.target as HTMLInputElement).value;
+                const newTime = parseTime(stringValue);
+                if (newTime) {
+                  item.departureTime = newTime;
+                  setUpdate([]);
+                }
               }}
             />
           </div>

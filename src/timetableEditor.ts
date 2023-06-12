@@ -1,7 +1,7 @@
 import { DiaStation, DiaTrain } from './model.js';
 import { DiagramExt } from './oudParser.js';
 
-function showGlobalTime(timeSeconds: number): string {
+export function showGlobalTime(timeSeconds: number): string {
   const m = Math.floor((timeSeconds / 60) % 60);
   return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);
 }
@@ -34,7 +34,7 @@ function parseInputTextAsTime(text: string): string | undefined {
   }
 }
 
-function parseTime(text: string): number | undefined {
+export function parseTime(text: string): number | undefined {
   if (text === '') {
     return undefined;
   }

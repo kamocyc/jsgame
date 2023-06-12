@@ -321,4 +321,8 @@ export function drawEditor(
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'black';
   }
+
+  if (document.getElementById('time')) {
+    document.getElementById('time')!.innerHTML = trainMove.toStringGlobalTime();
+  }
 }

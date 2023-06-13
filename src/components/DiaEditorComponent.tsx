@@ -1,35 +1,12 @@
-import { max } from './common.js';
-import { getDiaFreaks } from './diaFreaksParser.js';
-import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from './drawer.js';
-import { DiaStation, DiaTrain } from './model.js';
-import { interpolateTrainTimetable } from './normalizeDia.js';
+import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from '../drawer';
+import { DiaTrain } from '../model';
+import { Station } from '../uiEditorModel';
 
-// 元のjsonフォーマット
-// interface RawPlatform {
-//   id: number; /* platformId */
-//   n?: string; /* name */
-// }
-
-// interface RawDiaStation {
-//   id: number; /* stationId */
-//   n: string; /* name */
-//   m: number; /* distance */
-//   t: Platform[]; /* platforms */
-// }
-
-// interface RawStationTrain {
-//   s: number; /* stationId */
-//   t: number; /* platformId */
-//   a: number; /* arrivalTime */
-//   d: number; /* departureTime */
-// }
-
-// interface RawDiaTrain {
-//   id: number; /* trainId */
-//   c?: string; /* color */
-//   n: string; /* name */
-//   s: StationTrain[];
-// }
+interface DiaStation {
+  diaStationId: string;
+  station: Station;
+  distance: number;
+}
 
 const timeOffset = 10000;
 const timeWidth = 20000;
@@ -40,9 +17,9 @@ function timeToX(time: number) {
   return ((time - timeOffset) / timeWidth) * canvasWidth * zoomX;
 }
 
-function drawStation(ctx: CanvasRenderingContext2D, station: DiaStation, distance: number) {
+function drawStation(ctx: CanvasRenderingContext2D, diaStation: DiaStation, distance: number) {
   ctx.font = fontSize + 'px sans-serif';
-  ctx.fillText(station.name, _x(0), _y(distance));
+  ctx.fillText(diaStation.station.stationName, _x(0), _y(distance));
 
   ctx.beginPath();
   ctx.moveTo(_x(0), _y(distance));
@@ -93,23 +70,24 @@ function drawTimeLine(ctx: CanvasRenderingContext2D) {
   }
 }
 
-function drawStations(ctx: CanvasRenderingContext2D, stations: DiaStation[]) {
+// ダイヤの駅情報は、路線とはまた別の情報がある。
+function drawStations(ctx: CanvasRenderingContext2D, diaStations: DiaStation[]) {
   // let stationDistance = 30;
 
-  for (const station of stations) {
-    drawStation(ctx, station, station.distance * zoomY + fontSize);
+  for (const diaStation of diaStations) {
+    drawStation(ctx, diaStation, diaStation.distance * zoomY + fontSize);
   }
 }
 
-function drawTrain(ctx: CanvasRenderingContext2D, stations: DiaStation[], train: DiaTrain) {
+function drawTrain(ctx: CanvasRenderingContext2D, diaStations: DiaStation[], train: DiaTrain) {
   let previousTime = null;
   let previousDistance = null;
   let isFirstLine = true;
 
   for (const trainStation of train.trainTimetable) {
-    const stations_ = stations.filter((station) => station.stationId === trainStation.stationId);
-    if (stations_.length !== 1) throw new Error('illegal station id');
-    const station = stations_[0];
+    const diaStations_ = diaStations.filter((s) => s.station.stationId === trainStation.stationId);
+    if (diaStations_.length !== 1) throw new Error('illegal station id');
+    const diaStation = diaStations_[0];
 
     if (previousTime != null && previousDistance != null) {
       const beginPoint = {
@@ -118,7 +96,7 @@ function drawTrain(ctx: CanvasRenderingContext2D, stations: DiaStation[], train:
       };
       const endPoint = {
         x: _x(timeToX(trainStation.departureTime)),
-        y: _y(station.distance * zoomY + fontSize),
+        y: _y(diaStation.distance * zoomY + fontSize),
       };
       drawLine(ctx, beginPoint, endPoint);
 
@@ -139,42 +117,17 @@ function drawTrain(ctx: CanvasRenderingContext2D, stations: DiaStation[], train:
     }
 
     previousTime = trainStation.departureTime;
-    previousDistance = station.distance;
+    previousDistance = diaStation.distance;
   }
 }
 
-function drawDiagram(ctx: CanvasRenderingContext2D, stations: DiaStation[], trains: DiaTrain[]) {
+export function drawDiagram(ctx: CanvasRenderingContext2D, stations: DiaStation[], trains: DiaTrain[]) {
   drawTimeLine(ctx);
 
-  const maxDistance = max(stations.map((s) => s.distance));
+  const maxDistance = Math.max(...stations.map((s) => s.distance));
   zoomY = (canvasHeight - fontSize - 10) / maxDistance;
   drawStations(ctx, stations);
   for (const train of trains) {
     drawTrain(ctx, stations, train);
   }
-}
-
-export function drawDiagram_() {
-  fetch('./sample-diagram.json')
-    .then((data) => data.text())
-    .then((diaRawData) => {
-      const diagram = getDiaFreaks(diaRawData);
-      diagram.trains.forEach((t) =>
-        t.trainTimetable.forEach((tt) => {
-          tt.arrivalTime = tt.arrivalTime - 10000;
-          tt.departureTime = tt.departureTime - 10000;
-        })
-      );
-
-      diagram.trains = diagram.trains.map((train) => ({
-        ...train,
-        trainTimetable: interpolateTrainTimetable(train.trainTimetable, diagram.stations),
-      }));
-
-      drawDiagram(
-        (document.getElementById('canvas') as HTMLCanvasElement).getContext('2d')!,
-        diagram.stations,
-        diagram.trains
-      );
-    });
 }

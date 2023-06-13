@@ -6,7 +6,7 @@ import { drawEditor } from '../trackEditorDrawer';
 import { getMidPoint } from '../trackUtil';
 import { TrainMove2 } from '../trainMove2';
 import { AppStates, EditorDialogMode, Station, Timetable, Train } from '../uiEditorModel';
-import { StationEditor, SwitchEditor, TrainSelector } from './stationEditor';
+import { StationEditor, SwitchEditor, TrainSelector } from './StationEditorComponent';
 
 function mouseToMapPosition(mousePoint: Point): null | Point {
   const mapPosition = {

@@ -1,5 +1,6 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../cycle';
+import { drawDiagram_ } from '../diagramView';
 import { fromJSON } from '../jsonSerialize';
 import { Cell, GameMap, MapHeight, MapWidth } from '../mapEditorModel';
 import { DiaTrain, Point, Switch } from '../model';
@@ -7,6 +8,7 @@ import { drawEditor } from '../trackEditorDrawer';
 import { TrainMove2 } from '../trainMove2';
 import { AppStates, EditMode, Timetable, Train } from '../uiEditorModel';
 import { CanvasComponent } from './CanvasComponent';
+import { SeekBarComponent } from './SeekBarComponent';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -134,7 +136,7 @@ const timetable: Timetable = {
   switchTTItems: [],
 };
 
-export function App() {
+export function TrackEditorComponent() {
   const [appStates, setAppStates] = useState<AppStates>(() => ({
     editMode: 'Create',
     timetable: timetable,
@@ -158,14 +160,17 @@ export function App() {
     tracks: [],
   }));
   const [runningIntervalId, setRunningIntervalId] = useState<number | null>(null);
+  const [positionPercentage, setPositionPercentage] = useState<number>(0);
+  const [_, setUpdate] = useState<never[]>([]);
 
   const setEditMode = (mode: EditMode) => {
     setAppStates((appStates) => ({ ...appStates, editMode: mode }));
   };
 
-  // useEffect(() => {
-  //   loadMapData(setAppStates);
-  // }, []);
+  useEffect(() => {
+    // loadMapData(setAppStates);
+    drawDiagram_();
+  }, []);
 
   useEffect(() => {
     drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
@@ -181,6 +186,7 @@ export function App() {
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
       appStates.trainMove.tick();
+      setPositionPercentage(appStates.trainMove.globalTime / (24 * 60 * 60));
       drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
     }, interval);
     setRunningIntervalId(intervalId);
@@ -233,10 +239,9 @@ export function App() {
         id='button-slow-speed'
         onClick={() => {
           stopInterval();
-          startTop(1000);
         }}
       >
-        {runningIntervalId == null ? '再生' : '停止'}
+        停止
       </button>
       <button
         onClick={() => {
@@ -245,7 +250,7 @@ export function App() {
           startTop(1000);
         }}
       >
-        リスタート
+        最初から開始
       </button>
       <br />
       <button
@@ -263,10 +268,15 @@ export function App() {
       <div id='speed-text'></div>
       <br />
 
-      <div id='seek-bar' style='width: 1000px; height: 20px; background-color: aquamarine'>
-        <div id='seek-bar-item' style='width: 6px; height: 20px; background-color: black; position: relative'></div>
-      </div>
+      <SeekBarComponent
+        positionPercentage={positionPercentage}
+        setPositionPercentage={(p) => {
+          appStates.trainMove.globalTime = 24 * 60 * 60 * p;
+          setPositionPercentage(p);
+        }}
+      />
       <div id='time'>{appStates.trainMove.toStringGlobalTime()}</div>
+      <div>{positionPercentage}</div>
 
       <div id='timetable-root'></div>
 

@@ -257,5 +257,8 @@ export class TrainMove2 {
     }
 
     this.globalTime += this.globalTimeSpeed;
+    if (this.globalTime >= 24 * 60 * 60) {
+      this.globalTime = 24 * 60 * 60 - 1;
+    }
   }
 }

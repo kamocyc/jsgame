@@ -322,7 +322,7 @@ export function drawEditor(
     ctx.fillStyle = 'black';
   }
 
-  if (document.getElementById('time')) {
-    document.getElementById('time')!.innerHTML = trainMove.toStringGlobalTime();
-  }
+  // if (document.getElementById('time')) {
+  //   document.getElementById('time')!.innerHTML = trainMove.toStringGlobalTime();
+  // }
 }

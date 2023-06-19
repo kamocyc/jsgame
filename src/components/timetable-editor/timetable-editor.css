@@ -1,0 +1,36 @@
+.input-common {
+  text-align: right;
+  display: block;
+  width: 50px;
+  height: 22px;
+  border-width: 1px;
+  padding: 0;
+  font-size: 16px;
+  padding-left: 2px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.text-common {
+  text-align: right;
+  display: block;
+  width: 50px;
+  height: 22px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #ccc;
+  padding: 0;
+  padding-left: 2px;
+  font-size: 16px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.context-menu {
+  position: absolute;
+  background-color: white;
+  border-style: solid;
+  border-color: gray;
+  border-width: 1px;
+  width: 150px;
+  box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, 0.2);
+  cursor: default;
+}

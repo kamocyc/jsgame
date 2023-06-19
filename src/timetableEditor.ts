@@ -44,6 +44,11 @@ export function parseTime(text: string): number | undefined {
   const hour = parseInt(text.substring(0, 2));
   const minute = parseInt(text.substring(2));
 
+  // 1日の範囲害ならundefinedを返す
+  if (hour >= 24 || minute >= 60 || hour < 0 || minute < 0) {
+    return undefined;
+  }
+
   return hour * 60 * 60 + minute * 60;
 }
 

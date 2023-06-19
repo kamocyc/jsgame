@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
-import { TimetableEditorComponent } from './TimetableEditorComponent';
 import { TrackEditorComponent } from './TrackEditorComponent';
+import { TimetableEditorComponent } from './timetable-editor/TimetableEditorComponent';
 
 export function App() {
   const [appMode, setAppMode] = useState<'TrackEditor' | 'TimetableEditor'>('TimetableEditor');

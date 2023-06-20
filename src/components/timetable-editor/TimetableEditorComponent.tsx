@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { SettingColumnComponent, reverseArray } from './common-components';
+import { DiagramPageComponent } from './timetable-diagram';
 import './timetable-editor.css';
 import { DiaStation, DiaTrain, SettingData, TimetableData, TimetableDirection, TrainType } from './timetable-model';
 import { StationDetailComponent, StationListComponent } from './timetable-station';
@@ -225,6 +226,17 @@ export function TimetableEditorComponent() {
               tabText: '駅時刻表',
               component: () => (
                 <StationTimetablePageComponent
+                  diaStations={timetableData.timetable.diaStations}
+                  inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
+                  outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
+                />
+              ),
+            },
+            {
+              tabId: 5,
+              tabText: 'ダイヤグラム',
+              component: () => (
+                <DiagramPageComponent
                   diaStations={timetableData.timetable.diaStations}
                   inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
                   outboundDiaTrains={timetableData.timetable.outboundDiaTrains}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { SettingColumnComponent, reverseArray } from './common-components';
-import { DiagramPageComponent } from './timetable-diagram';
+import { DiagramPageComponent } from './timetable-diagram-component';
 import './timetable-editor.css';
 import { DiaStation, DiaTrain, SettingData, TimetableData, TimetableDirection, TrainType } from './timetable-model';
 import { StationDetailComponent, StationListComponent } from './timetable-station';

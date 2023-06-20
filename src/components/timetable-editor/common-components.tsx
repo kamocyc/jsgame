@@ -1,3 +1,4 @@
+import { ComponentChild } from 'preact';
 import { Ref, useEffect, useRef, useState } from 'preact/hooks';
 import { parseTime, showGlobalTime } from '../../timetableEditor';
 import './timetable-editor.css';
@@ -150,4 +151,37 @@ export function ContextMenuComponent({
       ))}
     </div>
   );
+}
+
+export function SettingColumnComponent({
+  children,
+  setSettingData,
+}: {
+  children: ComponentChild;
+  setSettingData: (settingData: null) => void;
+}) {
+  return (
+    <div style={{ width: '250px', borderLeft: '2px solid #000', padding: '5px' }}>
+      <div>
+        {/* 右上に閉じるボタンを設置 */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => {
+                setSettingData(null);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <div>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export function reverseArray<T>(array: T[]) {
+  return [...array].reverse();
 }

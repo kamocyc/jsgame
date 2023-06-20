@@ -1,9 +1,11 @@
-import { ComponentChild } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { SettingColumnComponent, reverseArray } from './common-components';
 import './timetable-editor.css';
 import { DiaStation, DiaTrain, SettingData, TimetableData, TimetableDirection, TrainType } from './timetable-model';
 import { StationDetailComponent, StationListComponent } from './timetable-station';
+import { StationTimetablePageComponent } from './timetable-timetable';
 import { TrainListComponent } from './timetable-train';
+import { TrainTypeSettingComponent } from './timetable-traintype';
 import { getInitialTimetable } from './timetable-util';
 
 export function TrainListRowHeaderComponent({ diaStations }: { diaStations: DiaStation[] }) {
@@ -110,41 +112,13 @@ export function TabComponent({ tabs, onTabChange }: { tabs: Tab[]; onTabChange: 
           </div>
         ))}
       </div>
-      <div style={{ border: '2px', borderStyle: 'solid', borderColor: '#ccc' }}>
+      <div style={{ border: '2px', borderStyle: 'solid', borderColor: '#ccc', padding: '5px' }}>
         {tabs.find((tab) => tab.tabId === selectedTabId)?.component()}
       </div>
     </div>
   );
 }
 
-function SettingColumnComponent({
-  children,
-  setSettingData,
-}: {
-  children: ComponentChild;
-  setSettingData: (settingData: SettingData | null) => void;
-}) {
-  return (
-    <div>
-      {/* 右上に閉じるボタンを設置 */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          onClick={() => {
-            setSettingData(null);
-          }}
-        >
-          ×
-        </button>
-      </div>
-
-      <div>{children}</div>
-    </div>
-  );
-}
-
-function reverseArray<T>(array: T[]) {
-  return [...array].reverse();
-}
 export function TimetableEditorComponent() {
   const [timetableData, setTimetableData] = useState<TimetableData>(getInitialTimetable());
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
@@ -241,30 +215,44 @@ export function TimetableEditorComponent() {
                 />
               ),
             },
+            {
+              tabId: 3,
+              tabText: '種別の設定',
+              component: () => <TrainTypeSettingComponent trainTypes={trainTypes} setTrainTypes={setTrainTypes} />,
+            },
+            {
+              tabId: 4,
+              tabText: '駅時刻表',
+              component: () => (
+                <StationTimetablePageComponent
+                  diaStations={timetableData.timetable.diaStations}
+                  inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
+                  outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
+                />
+              ),
+            },
           ]}
         />
       </div>
       {settingData == null ? (
         <></>
       ) : (
-        <div style={{ width: '250px', borderLeft: '2px solid #000' }}>
-          <SettingColumnComponent setSettingData={setSettingData}>
-            {settingData.settingType === 'StationSetting' ? (
-              <StationDetailComponent
-                diaStation={settingData.diaStation}
-                setDiaStation={(diaStation) => {
-                  setDiaStations(
-                    timetableData.timetable.diaStations.map((diaStation_) =>
-                      diaStation_.diaStationId === diaStation.diaStationId ? diaStation : diaStation_
-                    )
-                  );
-                }}
-              />
-            ) : (
-              <></>
-            )}
-          </SettingColumnComponent>
-        </div>
+        <SettingColumnComponent setSettingData={setSettingData}>
+          {settingData.settingType === 'StationSetting' ? (
+            <StationDetailComponent
+              diaStation={settingData.diaStation}
+              setDiaStation={(diaStation) => {
+                setDiaStations(
+                  timetableData.timetable.diaStations.map((diaStation_) =>
+                    diaStation_.diaStationId === diaStation.diaStationId ? diaStation : diaStation_
+                  )
+                );
+              }}
+            />
+          ) : (
+            <></>
+          )}
+        </SettingColumnComponent>
       )}
     </div>
   );

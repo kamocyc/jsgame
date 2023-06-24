@@ -27,7 +27,7 @@ export function deepEqual(x: any, y: any): boolean {
     : x === y;
 }
 
-export function getStationIdMapKey(stationId: number, platformId: number): string {
+export function getStationIdMapKey(stationId: string, platformId: string): string {
   return stationId + '__' + platformId;
 }
 

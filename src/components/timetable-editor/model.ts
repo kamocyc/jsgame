@@ -1,18 +1,18 @@
 export interface DiaPlatform {
-  diaPlatformId: number;
+  diaPlatformId: string;
   diaPlatformName: string;
 }
 
 export interface DiaStation {
-  diaStationId: number;
+  diaStationId: string;
   diaStationName: string;
   diaPlatforms: DiaPlatform[];
-  defaultOutboundDiaPlatformId: number;
-  defaultInboundDiaPlatformId: number;
+  defaultOutboundDiaPlatformId: string;
+  defaultInboundDiaPlatformId: string;
 }
 
 export interface DiaTime {
-  diaTimeId: number;
+  diaTimeId: string;
   arrivalTime: number | null;
   departureTime: number | null;
   isPassing: boolean;
@@ -21,13 +21,13 @@ export interface DiaTime {
 }
 
 export interface TrainType {
-  trainTypeId: number;
+  trainTypeId: string;
   trainTypeName: string;
   trainTypeColor: string;
 }
 
 export interface DiaTrain {
-  diaTrainId: number;
+  diaTrainId: string;
   trainName?: string;
   trainType?: TrainType;
   diaTimes: DiaTime[];

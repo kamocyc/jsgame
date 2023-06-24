@@ -1,5 +1,5 @@
-import { assert, deepEqual } from './common.js';
-import { HalfTrack, HalfTrackWip, Point, Station, Switch, generateId } from './model.js';
+import { deepEqual } from './common.js';
+import { HalfTrack, Point, Switch } from './model.js';
 import { changeSwitch, createNewTrack, getDistance, getNearestTrackPoint } from './trackUtil.js';
 
 let currentMousePosition = { x: 0, y: 0 };

@@ -1,7 +1,7 @@
 import { getStationIdMapKey, min, moduloRoundDown } from './common.js';
 import { draw } from './drawer.js';
 import { generateLines, prepare } from './generateLine.js';
-import { Diagram, Train } from './model.js';
+import { Diagram } from './model.js';
 // import { drawTimetable } from "./timetableEditor.js";
 import { TrainMove } from './trainMove.js';
 
@@ -21,19 +21,19 @@ export function initializeTrainMove(diagram: Diagram, trainMove?: TrainMove) {
   } else {
     // 名称で駅を一致させる
     trainMove.tracks.forEach((track) => {
-      const station = track.track.station;
+      const station = track.track.platform;
       if (station) {
-        const [baseName, platformNo_] = station.stationName.split(' ');
+        const [baseName, platformNo_] = station.platformName.split(' ');
         const platformIndex = Number(platformNo_) - 1;
 
         const matchingStations_ = diagram.stations.filter((s) => s.name === baseName);
         if (matchingStations_.length !== 1) throw new Error('matchingStation.length');
         const matchingStation = matchingStations_[0];
 
-        station.stationId = stationIdMap.get(
+        station.platformId = stationIdMap.get(
           getStationIdMapKey(matchingStation.stationId, matchingStation.platforms[platformIndex].platformId)
         )!;
-        if (!station.stationId) throw new Error('!station.stationId');
+        if (!station.platformId) throw new Error('!station.stationId');
       }
     });
   }

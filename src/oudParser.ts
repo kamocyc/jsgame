@@ -146,7 +146,8 @@ function convertEkis(ekis: any[]): DiaStation[] {
     distance: i * 10 /* TODO */,
     platforms: (eki['EkiTrack2Cont'][0]['EkiTrack2'] as any[]).map((track) => ({
       platformId: generateId(),
-      name: track['TrackName'] as string,
+      platformName: track['TrackName'] as string,
+      shouldDepart: (t) => true,
     })),
   }));
 }

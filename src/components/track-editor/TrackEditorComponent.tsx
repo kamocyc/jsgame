@@ -1,12 +1,11 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
-import { JSON_decycle, JSON_retrocycle } from '../cycle';
-import { drawDiagram_ } from '../diagramView';
-import { fromJSON } from '../jsonSerialize';
-import { Cell, GameMap, MapHeight, MapWidth } from '../mapEditorModel';
-import { DiaTrain, Point, Switch } from '../model';
-import { drawEditor } from '../trackEditorDrawer';
-import { TrainMove2 } from '../trainMove2';
-import { AppStates, EditMode, Timetable, Train } from '../uiEditorModel';
+import { JSON_decycle, JSON_retrocycle } from '../../cycle';
+import { fromJSON } from '../../jsonSerialize';
+import { Cell, GameMap, MapHeight, MapWidth } from '../../mapEditorModel';
+import { DiaTrain, Point, Switch } from '../../model';
+import { drawEditor } from '../../trackEditorDrawer';
+import { TrainMove2 } from '../../trainMove2';
+import { AppStates, EditMode, Timetable, Train } from '../../uiEditorModel';
 import { CanvasComponent } from './CanvasComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 
@@ -51,10 +50,10 @@ function initializeMap(): GameMap {
 }
 
 interface SerializedPlacedTrain {
-  trainId: number;
+  trainId: string;
   diaTrain: Train;
   speed: number;
-  trackId: number;
+  trackId: string;
   position: Point;
   stationWaitTime: number;
   stationStatus: 'Arrived' | 'Departed' | 'NotArrived';
@@ -142,13 +141,13 @@ export function TrackEditorComponent() {
     timetable: timetable,
     trains: [
       {
-        trainId: 1,
+        trainId: '1',
         trainName: 'A',
         color: 'red',
         trainTimetable: [],
       },
       {
-        trainId: 2,
+        trainId: '2',
         trainName: 'B',
         color: 'black',
         trainTimetable: [],
@@ -169,7 +168,6 @@ export function TrackEditorComponent() {
 
   useEffect(() => {
     // loadMapData(setAppStates);
-    drawDiagram_();
   }, []);
 
   useEffect(() => {
@@ -209,9 +207,9 @@ export function TrackEditorComponent() {
             checked={appStates.editMode === 'Create'}
             setEditorMode={setEditMode}
           />
-          <ModeOptionRadioComponent
+          {/* <ModeOptionRadioComponent
             mode='Delete'
-            text='線路を削除'
+            text='線路を削除(未実装)'
             checked={appStates.editMode === 'Delete'}
             setEditorMode={setEditMode}
           />
@@ -223,8 +221,14 @@ export function TrackEditorComponent() {
           />
           <ModeOptionRadioComponent
             mode='Station'
-            text='駅を作成'
+            text='駅を作成(旧)'
             checked={appStates.editMode === 'Station'}
+            setEditorMode={setEditMode}
+          /> */}
+          <ModeOptionRadioComponent
+            mode='Station2'
+            text='駅を作成'
+            checked={appStates.editMode === 'Station2'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
@@ -270,6 +274,7 @@ export function TrackEditorComponent() {
 
       <SeekBarComponent
         positionPercentage={positionPercentage}
+        width={600}
         setPositionPercentage={(p) => {
           appStates.trainMove.globalTime = 24 * 60 * 60 * p;
           setPositionPercentage(p);

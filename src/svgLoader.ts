@@ -1,8 +1,8 @@
-import { HalfTrack, Point, generateId } from './model.js';
-import { createNewTrack, getRadian } from './trackUtil.js';
-import { TrainMove } from './trainMove.js';
 import { assert, deepEqual, max } from './common.js';
 import { draw } from './drawer.js';
+import { Point, generateId } from './model.js';
+import { createNewTrack, getRadian } from './trackUtil.js';
+import { TrainMove } from './trainMove.js';
 
 interface SvgTrack {
   _begin: Point;
@@ -322,9 +322,9 @@ function createTrainMove(data: SvgParsedData): TrainMove {
       );
       if (tracks_.length !== 1) throw new Error('tracks_.length');
       const track = tracks_[0];
-      track.track.station = {
-        stationId: generateId(),
-        stationName: stationName + ' ' + (trackIndex + 1),
+      track.track.platform = {
+        platformId: generateId(),
+        platformName: stationName + ' ' + (trackIndex + 1),
         shouldDepart: () => true,
       };
     });

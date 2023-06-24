@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
-import { SettingColumnComponent, reverseArray } from './common-components';
-import { DiagramPageComponent } from './timetable-diagram-component';
+import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
+import { DiagramPageComponent } from './diagram-component';
+import { DiaStation, DiaTrain, SettingData, TimetableData, TimetableDirection, TrainType } from './model';
+import { StationDetailComponent, StationListComponent } from './station-component';
+import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
-import { DiaStation, DiaTrain, SettingData, TimetableData, TimetableDirection, TrainType } from './timetable-model';
-import { StationDetailComponent, StationListComponent } from './timetable-station';
-import { StationTimetablePageComponent } from './timetable-timetable';
-import { TrainListComponent } from './timetable-train';
-import { TrainTypeSettingComponent } from './timetable-traintype';
 import { getInitialTimetable } from './timetable-util';
+import { TrainListComponent } from './train-component';
+import { TrainTypeSettingComponent } from './traintype-component';
 
 export function TrainListRowHeaderComponent({ diaStations }: { diaStations: DiaStation[] }) {
   return (
@@ -36,6 +36,7 @@ export function TimetableEditorTableComponent({
   diaStations,
   setDiaStations,
   diaTrains,
+  otherDirectionDiaTrains,
   setDiaTrains,
   timetableDirection,
   trainTypes,
@@ -44,6 +45,7 @@ export function TimetableEditorTableComponent({
   diaStations: DiaStation[];
   setDiaStations: (diaStations: DiaStation[]) => void;
   diaTrains: DiaTrain[];
+  otherDirectionDiaTrains: DiaTrain[];
   setDiaTrains: (diaTrains: DiaTrain[]) => void;
   timetableDirection: 'Inbound' | 'Outbound';
   trainTypes: TrainType[];
@@ -54,7 +56,9 @@ export function TimetableEditorTableComponent({
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div>列車番号</div>
         <div>列車種別</div>
-        <StationListComponent {...{ diaStations, diaTrains, setDiaStations, timetableDirection, setSettingData }} />
+        <StationListComponent
+          {...{ diaStations, diaTrains, otherDirectionDiaTrains, setDiaStations, timetableDirection, setSettingData }}
+        />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ height: '24px' }}></div>
@@ -76,61 +80,17 @@ export function TimetableEditorTableComponent({
   );
 }
 
-interface Tab {
-  tabId: number;
-  tabText: string;
-  component: () => any /* JSX.Element */;
-}
-
-export function TabComponent({ tabs, onTabChange }: { tabs: Tab[]; onTabChange: (tabId: number) => void }) {
-  const [selectedTabId, setSelectedTabId] = useState<number>(tabs[0].tabId);
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', flexDirection: 'row' }}>
-        {tabs.map((tab) => (
-          <div
-            style={{
-              borderStyle: 'solid',
-              borderWidth: '1px',
-              backgroundColor: tab.tabId === selectedTabId ? 'white' : 'lightgray',
-              borderBottom: 'none',
-              height: '28px',
-            }}
-            onClick={() => {
-              setSelectedTabId(tab.tabId);
-              onTabChange(tab.tabId);
-            }}
-          >
-            <div
-              style={
-                tab.tabId === selectedTabId
-                  ? { padding: '4px', height: '22px', backgroundColor: '#fff', zIndex: '1', position: 'relative' }
-                  : { padding: '4px' }
-              }
-            >
-              {tab.tabText}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div style={{ border: '2px', borderStyle: 'solid', borderColor: '#ccc', padding: '5px' }}>
-        {tabs.find((tab) => tab.tabId === selectedTabId)?.component()}
-      </div>
-    </div>
-  );
-}
-
 export function TimetableEditorComponent() {
   const [timetableData, setTimetableData] = useState<TimetableData>(getInitialTimetable());
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
   const [trainTypes, setTrainTypes] = useState<TrainType[]>([
     {
-      trainTypeId: 1,
+      trainTypeId: '1',
       trainTypeName: '普通',
       trainTypeColor: '#000000',
     },
     {
-      trainTypeId: 2,
+      trainTypeId: '2',
       trainTypeName: '急行',
       trainTypeColor: '#ff0000',
     },
@@ -191,6 +151,7 @@ export function TimetableEditorComponent() {
                     diaStations: timetableData.timetable.diaStations,
                     setDiaStations: setDiaStations,
                     diaTrains: timetableData.timetable.inboundDiaTrains,
+                    otherDirectionDiaTrains: timetableData.timetable.outboundDiaTrains,
                     setDiaTrains: setDiaTrains,
                     timetableDirection,
                     trainTypes,
@@ -208,6 +169,7 @@ export function TimetableEditorComponent() {
                     diaStations: reverseArray(timetableData.timetable.diaStations),
                     setDiaStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
                     diaTrains: timetableData.timetable.outboundDiaTrains,
+                    otherDirectionDiaTrains: timetableData.timetable.inboundDiaTrains,
                     setDiaTrains: setDiaTrains,
                     timetableDirection,
                     trainTypes,
@@ -240,6 +202,9 @@ export function TimetableEditorComponent() {
                   diaStations={timetableData.timetable.diaStations}
                   inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
                   outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
+                  setUpdate={() => {
+                    setTimetableData({ ...timetableData });
+                  }}
                 />
               ),
             },

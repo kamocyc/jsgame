@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { generateId } from '../../model';
-import { SettingColumnComponent } from './common-components';
-import { TrainType } from './timetable-model';
+import { SettingColumnComponent } from './common-component';
+import { TrainType } from './model';
 
 interface TrainTypeSettingData {
   settingType: 'TrainTypeSetting';

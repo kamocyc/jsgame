@@ -1,6 +1,6 @@
 import { generateId } from '../../model';
+import { DiaPlatform, DiaStation, Timetable, TimetableData, TimetableDirection } from './model';
 import './timetable-editor.css';
-import { DiaPlatform, DiaStation, Timetable, TimetableData, TimetableDirection } from './timetable-model';
 
 export function getDefaultPlatform(diaStation: DiaStation, direction: TimetableDirection): DiaPlatform {
   const result =
@@ -50,14 +50,14 @@ export function getInitialTimetable(): TimetableData {
           {
             diaTimeId: generateId(),
             arrivalTime: null,
-            departureTime: 10 * 60 * 60,
+            departureTime: 7 * 60 * 60,
             isPassing: false,
             diaStation: diaStations[0],
             diaPlatform: getDefaultPlatform(diaStations[0], 'Inbound'),
           },
           {
             diaTimeId: generateId(),
-            arrivalTime: 11 * 60 * 60,
+            arrivalTime: 8 * 60 * 60,
             departureTime: null,
             isPassing: false,
             diaStation: diaStations[1],
@@ -73,14 +73,14 @@ export function getInitialTimetable(): TimetableData {
           {
             diaTimeId: generateId(),
             arrivalTime: null,
-            departureTime: 10 * 60 * 60 + 30 * 60,
+            departureTime: 7 * 60 * 60 + 30 * 60,
             isPassing: false,
             diaStation: diaStations[1],
             diaPlatform: getDefaultPlatform(diaStations[1], 'Outbound'),
           },
           {
             diaTimeId: generateId(),
-            arrivalTime: 11 * 60 * 60 + 30 * 60,
+            arrivalTime: 8 * 60 * 60 + 30 * 60,
             departureTime: null,
             isPassing: false,
             diaStation: diaStations[0],

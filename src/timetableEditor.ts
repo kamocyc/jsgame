@@ -87,7 +87,7 @@ export function drawTimetable_(diagram: DiagramExt) {
     const [trainId, stationId] = id
       .replace('edit-item-', '')
       .split('__')
-      .map((s) => Number(s));
+      .map((s) => s);
     return diagram.trains
       .filter((train) => train.trainId === trainId)[0]
       .trainTimetable.filter((tt) => tt.stationId === stationId)[0];
@@ -216,7 +216,7 @@ export function drawTimetable_(diagram: DiagramExt) {
   rowHeightMap.finalStation = offsetY;
   offsetY += rowHeight;
 
-  const stationYMap = new Map<number, number>();
+  const stationYMap = new Map<string, number>();
   const stations = diagram.stations; // これは別のほうがいい？当然stationごとに表示するものが異なるので、station基準で。
   for (let stationIndex = 0; stationIndex < stations.length; stationIndex++) {
     const station = stations[stationIndex];

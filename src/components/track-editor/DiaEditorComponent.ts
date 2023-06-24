@@ -1,10 +1,10 @@
-import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from '../drawer';
-import { DiaTrain } from '../model';
-import { Station } from '../uiEditorModel';
+import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from '../../drawer';
+import { DiaTrain } from '../../model';
+import { Platform } from '../../uiEditorModel';
 
 interface DiaStation {
   diaStationId: string;
-  station: Station;
+  station: Platform;
   distance: number;
 }
 
@@ -19,7 +19,7 @@ function timeToX(time: number) {
 
 function drawStation(ctx: CanvasRenderingContext2D, diaStation: DiaStation, distance: number) {
   ctx.font = fontSize + 'px sans-serif';
-  ctx.fillText(diaStation.station.stationName, _x(0), _y(distance));
+  ctx.fillText(diaStation.station.platformName, _x(0), _y(distance));
 
   ctx.beginPath();
   ctx.moveTo(_x(0), _y(distance));
@@ -85,7 +85,7 @@ function drawTrain(ctx: CanvasRenderingContext2D, diaStations: DiaStation[], tra
   let isFirstLine = true;
 
   for (const trainStation of train.trainTimetable) {
-    const diaStations_ = diaStations.filter((s) => s.station.stationId === trainStation.stationId);
+    const diaStations_ = diaStations.filter((s) => s.station.platformId === trainStation.stationId);
     if (diaStations_.length !== 1) throw new Error('illegal station id');
     const diaStation = diaStations_[0];
 

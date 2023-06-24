@@ -1,15 +1,16 @@
 import Konva from 'konva';
+import { Stage } from 'konva/lib/Stage';
 import { generateId } from '../../model';
-import { DiaStation, DiaTime, DiaTrain } from './timetable-model';
+import { DiaStation, DiaTime, DiaTrain } from './model';
+import { getDefaultPlatform } from './timetable-util';
 
 export interface DiagramProps {
   diaStations: DiaStation[];
+  setUpdate: () => void;
   inboundDiaTrains: DiaTrain[];
   outboundDiaTrains: DiaTrain[];
 }
 
-const canvasHeight = 600;
-const virtualCanvasWidth = 2000;
 const hitStrokeWidth = 10;
 
 let editMode: 'Edit' | 'Create' = 'Edit';
@@ -62,10 +63,56 @@ function positionToTime(position: number, secondWidth: number) {
   return Math.round(position / secondWidth);
 }
 
+function commitDrawingLine(props: DiagramProps) {
+  if (drawingLine === null) {
+    return;
+  }
+
+  drawingLine?.stroke('black');
+  drawingLine = null;
+
+  if (drawingLineTimes.length >= 2) {
+    // 1番目のstationのindexと2番目のstationのindexを比較し、inbound / outboundを判定する
+    const firstStationIndex = props.diaStations.findIndex(
+      (diaStation) => diaStation.diaStationId === drawingLineTimes[0].diaStation.diaStationId
+    );
+    const secondStationIndex = props.diaStations.findIndex(
+      (diaStation) => diaStation.diaStationId === drawingLineTimes[1].diaStation.diaStationId
+    );
+    const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
+    const diaTrain = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
+
+    diaTrain.push({
+      diaTrainId: generateId(),
+      trainName: '',
+      trainType: undefined,
+      diaTimes: drawingLineTimes.map(
+        (drawingLineTime) =>
+          ({
+            diaStation: drawingLineTime.diaStation,
+            departureTime: drawingLineTime.time,
+            arrivalTime: null,
+            diaTimeId: generateId(),
+            isPassing: false,
+            diaPlatform: getDefaultPlatform(drawingLineTime.diaStation, direction),
+          } as DiaTime)
+      ),
+    });
+    props.setUpdate();
+  }
+  drawingLineTimes = [];
+}
+
+function getPointerPosition(stage: Stage) {
+  const vec = stage.getPointerPosition()!;
+  return { x: (vec.x - stage.x()) / stage.scaleX(), y: (vec.y - stage.y()) / stage.scaleY() };
+}
+
 function drawStations(
   layer: Konva.Layer,
   stationPositions: (DiaStation & { diagramPosition: number })[],
-  secondWidth: number
+  secondWidth: number,
+  props: DiagramProps
 ) {
   const stations = new Konva.Group();
   layer.add(stations);
@@ -95,30 +142,13 @@ function drawStations(
     stationLine.on('click', function (e) {
       if (e.evt.button === 2) {
         // 右クリック
-        drawingLine?.stroke('black');
-        drawingLine = null;
-
-        if (drawingLineTimes.length >= 2) {
-          diaTrain.diaTimes.push(
-            drawingLineTimes.map(
-              (drawingLineTime) =>
-                ({
-                  diaStation: drawingLineTime.diaStation,
-                  departureTime: drawingLineTime.time,
-                  arrivalTime: null,
-                  diaTimeId: generateId(),
-
-                  isPassing: false,
-                } as DiaTime)
-            )
-          );
-        }
-        drawingLineTimes = [];
+        commitDrawingLine(props);
         return;
       }
       if (drawingLine === null) {
         // クリックしたマウスカーソルを基にした位置を返す
-        const mousePosition = e.target.getStage()!.getPointerPosition()!;
+        const mousePosition = getPointerPosition(e.target.getStage()!);
+
         drawingLine = new Konva.Line({
           points: [mousePosition.x, stationPosition.diagramPosition],
           stroke: 'red',
@@ -134,7 +164,7 @@ function drawStations(
       } else {
         // 線に駅を追加する
 
-        const mousePosition = e.target.getStage()!.getPointerPosition()!;
+        const mousePosition = getPointerPosition(e.target.getStage()!);
         const points = drawingLine.points();
 
         // 整合性チェック
@@ -144,6 +174,8 @@ function drawStations(
           )
         ) {
           // 既に同じ駅が追加されている。 => 分けないとデータ構造上。。
+          // TODO: 直前と同じなら、停車時間、発車時間
+          commitDrawingLine(props);
           return;
         }
 
@@ -183,7 +215,7 @@ function drawStations(
 // TODO: 変更を反映する
 function drawTrain(
   layer: Konva.Layer,
-  stationPositions: { diaStationId: number; diagramPosition: number }[],
+  stationPositions: { diaStationId: string; diagramPosition: number }[],
   secondWidth: number,
   diaTrain: DiaTrain
 ) {
@@ -250,11 +282,15 @@ function drawTrain(
   });
 }
 
+let canvasHeight = 600;
+let canvasWidth = 600; // dummy width
+let virtualCanvasHeight = 2000;
+let virtualCanvasWidth = 2000;
+
 export function initializeKonva(container: HTMLDivElement, props: DiagramProps) {
   const stage = new Konva.Stage({
     container: container,
-    // dummy width
-    width: 100,
+    width: canvasWidth,
     height: canvasHeight,
     draggable: true,
   });
@@ -270,7 +306,7 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
   const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
 
   drawTimeGrid(layer, canvasHeight, secondWidth);
-  drawStations(layer, stationPositions);
+  drawStations(layer, stationPositions, secondWidth, props);
 
   for (const diaTrain of props.inboundDiaTrains) {
     drawTrain(layer, stationPositions, secondWidth, diaTrain);
@@ -280,61 +316,74 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
   }
 
   function fitStageIntoParentContainer() {
-    // TODO: サイズを縮小したときに動作しないので直す
-    const containerWidth = (container.parentNode! as HTMLDivElement).offsetWidth;
-
-    stage.width(containerWidth);
-    stage.draw();
+    const clientWidth = document.documentElement.clientWidth - 30; /* この値はなんとかして設定する */
+    container.style.width = clientWidth + 'px';
+    stage.width(clientWidth);
   }
 
   fitStageIntoParentContainer();
 
-  // zooming on scroll
-  stage.on('wheel', function (e) {
-    e.evt.preventDefault();
+  stage.scaleX(0.8);
+  stage.scaleY(0.8);
 
-    const scaleBy = 1.05;
-    const stage = e.target.getStage();
-    if (stage == null || stage.getPointerPosition() == null) return;
+  // TODO:邪魔なのでいったんコメントアウト
+  // // zooming on scroll
+  // stage.on('wheel', function (e) {
+  //   e.evt.preventDefault();
 
-    const oldScale = stage.scaleX();
-    const mousePointTo = {
-      x: stage.getPointerPosition()!.x / oldScale - stage.x() / oldScale,
-      y: stage.getPointerPosition()!.y / oldScale - stage.y() / oldScale,
-    };
+  //   const scaleBy = 1.05;
+  //   const stage = e.target.getStage();
+  //   if (stage == null || stage.getPointerPosition() == null) return;
 
-    const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+  //   const oldScale = stage.scaleX();
+  //   const mousePointTo = {
+  //     x: stage.getPointerPosition()!.x / oldScale - stage.x() / oldScale,
+  //     y: stage.getPointerPosition()!.y / oldScale - stage.y() / oldScale,
+  //   };
 
-    stage.scale({ x: newScale, y: newScale });
-    stage.x(-(mousePointTo.x - stage.getPointerPosition()!.x / newScale) * newScale);
-    stage.y(-(mousePointTo.y - stage.getPointerPosition()!.y / newScale) * newScale);
-  });
+  //   const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+  //   stage.scale({ x: newScale, y: newScale });
+  //   stage.x(-(mousePointTo.x - stage.getPointerPosition()!.x / newScale) * newScale);
+  //   stage.y(-(mousePointTo.y - stage.getPointerPosition()!.y / newScale) * newScale);
+
+  //   adjustStagePosition(stage as Stage);
+  // });
+
+  // ウィンドウリサイズ時にサイズを合わせる
+  window.addEventListener('resize', fitStageIntoParentContainer);
 
   // TODO: zoomが考慮できていないので直す
-  // // stageのドラッグ範囲をcanvas内に制限する
-  // stage.on('dragmove', function (e) {
-  //   const stage = e.target;
-  //   const container = (stage as Stage).container();
-  //   const containerWidth = container.clientWidth;
-  //   const stageWidth = stage.width();
-  //   const stageX = stage.x();
-  //   const stageRight = stageX + stageWidth;
+  // stageのドラッグ範囲をcanvas内に制限する
+  stage.on('dragmove', function (e) {
+    const stage = e.target;
+    adjustStagePosition(stage as Stage);
+  });
+}
 
-  //   if (stageX > 0) {
-  //     stage.x(0);
-  //   }
-  //   if (stageRight < containerWidth) {
-  //     stage.x(containerWidth - stageWidth);
-  //   }
+function adjustStagePosition(stage: Stage) {
+  const container = stage.container();
 
-  //   const stageHeight = stage.height();
-  //   const stageY = stage.y();
-  //   const stageBottom = stageY + stageHeight;
-  //   if (stageY > 0) {
-  //     stage.y(0);
-  //   }
-  //   if (stageBottom < canvasHeight) {
-  //     stage.y(canvasHeight - stageHeight);
-  //   }
-  // });
+  const containerWidth = container.clientWidth;
+  const scale = stage.scaleX();
+  const stageX = stage.x();
+  const stageRight = stageX + virtualCanvasWidth * scale;
+
+  if (stageX > 0) {
+    stage.x(0);
+  }
+  if (stageRight < containerWidth) {
+    stage.x(containerWidth - virtualCanvasWidth * scale);
+  }
+
+  const containerHeight = container.clientHeight;
+  const stageY = stage.y();
+  const stageBottom = stageY + virtualCanvasHeight * scale;
+
+  if (stageY > 0) {
+    stage.y(0);
+  }
+  if (stageBottom < containerHeight) {
+    stage.y(containerHeight - virtualCanvasHeight * scale);
+  }
 }

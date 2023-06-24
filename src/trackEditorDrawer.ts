@@ -235,7 +235,7 @@ function drawTracks(ctx: CanvasRenderingContext2D, tracks: HalfTrack[]) {
     // ctx.strokeStyle = 'gray';
     // drawLine(ctx, addVector(track._begin, { x: 10, y: 10 }), addVector(track._end, { x: 10, y: 10 }));
     // 駅はtrackに対応するが、それは2セルにまたがるので、調整が必要。。。
-    if (track.track.station) {
+    if (track.track.platform) {
       ctx.beginPath();
       ctx.strokeStyle = 'red';
       ctx.arc(
@@ -250,7 +250,7 @@ function drawTracks(ctx: CanvasRenderingContext2D, tracks: HalfTrack[]) {
       // stationの名前を描画
       ctx.font = fontSize.toString() + 'px sans-serif';
 
-      const name = track.track.station.stationName;
+      const name = track.track.platform.platformName;
       const metrics = ctx.measureText(name);
       ctx.fillText(
         name,

@@ -90,7 +90,7 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
 
   for (const track of trainMove.tracks) {
     drawLine(ctx, track._begin, track._end);
-    if (track.track.station) {
+    if (track.track.platform) {
       ctx.beginPath();
       ctx.strokeStyle = 'red';
       ctx.arc(_x((track._begin.x + track._end.x) / 2), _y((track._begin.y + track._end.y) / 2), 5, 0, 2 * Math.PI);
@@ -99,8 +99,8 @@ export function draw(trainMove: TrainMove, currentMousePosition: null | Point, m
       // stationの名前を描画
       ctx.font = fontSize + 'px sans-serif';
       // ctx.fillText(track.track.station.stationName + ':' + track.track.station.stationId, _x((track._begin.x + track._end.x) / 2 - 10), _y((track._begin.y + track._end.y) / 2 - 10));
-      if (track.track.station.stationName.indexOf('1') !== -1) {
-        const name = track.track.station.stationName.replace('1', '');
+      if (track.track.platform.platformName.indexOf('1') !== -1) {
+        const name = track.track.platform.platformName.replace('1', '');
         const metrics = ctx.measureText(name);
         ctx.fillText(
           name,

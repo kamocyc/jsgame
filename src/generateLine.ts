@@ -1,21 +1,6 @@
-import { getStationIdMapKey, max, min } from './common.js';
-import { getDiaFreaks } from './diaFreaksParser.js';
-import { draw } from './drawer.js';
-import {
-  DiaStation,
-  DiaTrain,
-  Diagram,
-  HalfTrack,
-  Point,
-  Station,
-  StationTrain,
-  Switch,
-  Train,
-  generateId,
-} from './model.js';
-import { normalizeDia } from './normalizeDia.js';
-import { saveTime } from './recordTime.js';
-import { createNewTrack, getDistance } from './trackUtil.js';
+import { getStationIdMapKey } from './common.js';
+import { DiaStation, Diagram, HalfTrack, Point, StationTrain, Switch, generateId } from './model.js';
+import { createNewTrack } from './trackUtil.js';
 import { TrainMove } from './trainMove.js';
 
 export function addPoint(point1: Point, point2: Point) {
@@ -27,7 +12,7 @@ export function addPoint(point1: Point, point2: Point) {
 
 // 最初に何か線路を引いたほうがとりあえず楽そう？
 // 順にしたにずらす感じでいいかと。platformはとりあえず別駅の扱いで
-export function generateLines(trainMove: TrainMove, stations: DiaStation[], stationIdMap: Map<string, number>) {
+export function generateLines(trainMove: TrainMove, stations: DiaStation[], stationIdMap: Map<string, string>) {
   function add_(x: [HalfTrack, HalfTrack, Switch[]]) {
     trainMove.tracks.push(x[0], x[1]);
     trainMove.switches.push(...x[2]);
@@ -58,10 +43,10 @@ export function generateLines(trainMove: TrainMove, stations: DiaStation[], stat
       const [stationTrack] = add_(
         createNewTrack(branchTrack._end, addPoint(branchTrack._end, { x: 50, y: 0 }), [], [branchTrack], {
           shouldDepart: () => true,
-          stationId: stationIdMap.get(
+          platformId: stationIdMap.get(
             getStationIdMapKey(station.stationId, station.platforms[platformIndex].platformId)
           )!,
-          stationName: station.name + (station.platforms[platformIndex].name ?? ''),
+          platformName: station.name + (station.platforms[platformIndex].platformName ?? ''),
         })
       );
       const [afterBranchTrack] = add_(
@@ -85,7 +70,7 @@ export function generateLines(trainMove: TrainMove, stations: DiaStation[], stat
   }
 }
 
-function convertTimetableItem(obj: StationTrain, stationIdMap: Map<string, number>): StationTrain {
+function convertTimetableItem(obj: StationTrain, stationIdMap: Map<string, string>): StationTrain {
   return {
     stationId: stationIdMap.get(getStationIdMapKey(obj.stationId, obj.platformId))!,
     platformId: obj.platformId,
@@ -94,8 +79,8 @@ function convertTimetableItem(obj: StationTrain, stationIdMap: Map<string, numbe
   };
 }
 
-function getStationIdMap(stations: DiaStation[]): Map<string, number> {
-  const stationIdMap = new Map<string, number>();
+function getStationIdMap(stations: DiaStation[]): Map<string, string> {
+  const stationIdMap = new Map<string, string>();
 
   for (let stationIndex = 0; stationIndex < stations.length; stationIndex++) {
     const station = stations[stationIndex];

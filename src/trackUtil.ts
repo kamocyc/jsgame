@@ -1,6 +1,6 @@
 import { MinPriorityQueue } from '@datastructures-js/priority-queue';
 import { assert, deepEqual } from './common.js';
-import { HalfTrack, HalfTrackWip, Point, Station, Switch, generateId } from './model.js';
+import { HalfTrack, HalfTrackWip, Platform, Point, Switch, generateId } from './model.js';
 import { Queue } from './queue.js';
 
 export function getMidPoint(point1: Point, point2: Point): Point {
@@ -85,7 +85,7 @@ export function createNewTrack(
   _end: Point,
   nextTracks: HalfTrack[],
   prevTracks: HalfTrack[],
-  station: Station | null,
+  station: Platform | null,
   explicitNextSwitch?: Switch,
   explicitPrevSwitch?: Switch
 ): [HalfTrack, HalfTrack, Switch[]] {
@@ -100,7 +100,7 @@ export function createNewTrack(
     _nextSwitch: _nextSwitch,
     _prevSwitch: _prevSwitch,
     track: {
-      station: station,
+      platform: station,
     },
   });
 
@@ -216,11 +216,11 @@ interface NodeWithDistance<T> {
 // ダイクストラ法で各点の最短距離を求める。ついでにgoalまでの最短経路を返す
 export function abstractSearch<T>(
   startNode: T,
-  idGetter: (node: T) => number,
+  idGetter: (node: T) => string,
   nextNodeGetter: (node: T) => T[],
   distanceGetter: (node1: T, node2: T) => number,
   goalDeterminer: (node: T) => boolean
-): [T[] | undefined, Map<number, NodeWithDistance<T>>] {
+): [T[] | undefined, Map<string, NodeWithDistance<T>>] {
   function reconstructPath<T>(nodeWithDistance: NodeWithDistance<T>): T[] {
     const prev = nodeWithDistance.previousNode;
     if (prev) {
@@ -236,7 +236,7 @@ export function abstractSearch<T>(
   queue.push({ node: startNode, previousNode: undefined, distance: 0 });
 
   // 決定済みのノード
-  const determined = new Map<number, NodeWithDistance<T>>();
+  const determined = new Map<string, NodeWithDistance<T>>();
 
   while (!queue.isEmpty()) {
     const nodeWithDistance = queue.dequeue();
@@ -269,7 +269,7 @@ export function getNextTracks(track: HalfTrack): HalfTrack[] {
 
 export function searchTrack(
   startTrack: HalfTrack,
-  stationId: number,
+  stationId: string,
   bannedTrack?: HalfTrack
 ): HalfTrack[] | undefined {
   return abstractSearch(
@@ -277,7 +277,7 @@ export function searchTrack(
     (track) => track.trackId,
     (track) => getNextTracks(track).filter((t) => !bannedTrack || t.trackId !== bannedTrack.trackId),
     (_, track) => getDistance(track._begin, track._end),
-    (track) => track.track.station?.stationId === stationId
+    (track) => track.track.platform?.platformId === stationId
   )[0]?.slice(1);
 }
 
@@ -298,7 +298,7 @@ export function getOccupyingTracks(track: HalfTrack): HalfTrack[] {
       const track = queue.dequeue();
 
       // 駅を2回見たときは、その直前までにする
-      if (track.track.station) {
+      if (track.track.platform) {
         if (!stationEncountered) {
           stationEncountered = true;
         } else {

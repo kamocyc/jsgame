@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
-import { Switch } from '../model';
-import { parseTime, showGlobalTime } from '../timetableEditor';
-import { Station, Timetable, Train } from '../uiEditorModel';
+import { Switch } from '../../model';
+import { parseTime, showGlobalTime } from '../../timetableEditor';
+import { Platform, Timetable, Train } from '../../uiEditorModel';
 
 export function TrainSelector({
   trains,
@@ -17,7 +17,7 @@ export function TrainSelector({
       列車:
       <select
         onChange={(e) => {
-          const trainId = Number((e.target as HTMLSelectElement).value);
+          const trainId = (e.target as HTMLSelectElement).value;
           const train = trains.find((train) => train.trainId === trainId);
           if (train) {
             setSelectedTrain(train);
@@ -101,18 +101,18 @@ export function StationEditor({
 }: {
   timetable: Timetable;
   trains: Train[];
-  station: Station;
+  station: Platform;
 }) {
   const [selectedTrain, setSelectedTrain] = useState<Train>(trains[0]);
   const [_, setUpdate] = useState([]);
   const ttItems = timetable.stationTTItems.filter(
-    (item) => item.station.stationId === station.stationId && item.train.trainId === selectedTrain.trainId
+    (item) => item.station.platformId === station.platformId && item.train.trainId === selectedTrain.trainId
   );
 
   return (
     <div>
       <div>
-        <input value={station.stationName} />
+        <input value={station.platformName} />
         <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
       </div>
 

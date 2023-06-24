@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'preact/hooks';
-import { DiagramProps, initializeKonva } from './timetable-diagram';
+import { DiagramProps, initializeKonva } from './diagram-core';
 
 export function KonvaCanvas(props: DiagramProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -14,9 +14,5 @@ export function KonvaCanvas(props: DiagramProps) {
 }
 
 export function DiagramPageComponent(props: DiagramProps) {
-  return (
-    <div>
-      <KonvaCanvas {...props} />
-    </div>
-  );
+  return <KonvaCanvas {...props} />;
 }

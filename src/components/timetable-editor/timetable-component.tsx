@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { DiaStation, DiaTime, DiaTrain, TimetableDirection } from './timetable-model';
+import { DiaStation, DiaTime, DiaTrain, TimetableDirection } from './model';
 
 function getStationTimetable(diaTrains: DiaTrain[], diaStation: DiaStation) {
   const stationTimetable = diaTrains
@@ -77,7 +77,7 @@ export function StationTimetablePageComponent({
         <select
           value={selectedDiaStation.diaStationId}
           onChange={(e) => {
-            const diaStationId = Number(e.currentTarget.value);
+            const diaStationId = e.currentTarget.value;
             const diaStation = diaStations.find((diaStation) => diaStation.diaStationId === diaStationId);
             if (diaStation == null) {
               return;

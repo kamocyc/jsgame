@@ -5,7 +5,7 @@ export interface Point {
 
 // 同じ点では同じオブジェクトを共有する
 export interface Switch {
-  switchId: number;
+  switchId: string;
   endTracks: HalfTrack[];
   beginTracks: HalfTrack[]; // switchがbeginのtrackのみ入れる
   switchPatterns: [HalfTrack, HalfTrack][]; // 切り替わるswitchの組み合わせ
@@ -13,14 +13,14 @@ export interface Switch {
   straightPatternIndex: [number, number] | null; // 定位のpatternのIndex
 }
 
-export interface Station {
-  stationId: number;
-  stationName: string;
+export interface Platform {
+  platformId: string;
+  platformName: string;
   shouldDepart: (train: Train, globalTime: number) => boolean;
 }
 
 export interface HalfTrack {
-  trackId: number;
+  trackId: string;
   _begin: Point;
   _end: Point;
   _nextSwitch: Switch;
@@ -30,7 +30,7 @@ export interface HalfTrack {
 }
 
 export interface HalfTrackWip {
-  trackId?: number;
+  trackId?: string;
   _begin: Point;
   _end: Point;
   _nextSwitch?: Switch;
@@ -40,20 +40,20 @@ export interface HalfTrackWip {
 }
 
 export interface Track_ {
-  station: Station | null;
+  platform: Platform | null;
 }
 
-export type StationStatus = 'NotArrived' | 'Arrived' | 'Departed';
+export type ArrivalAndDepartureStatus = 'NotArrived' | 'Arrived' | 'Departed';
 
 export interface Train {
-  trainId: number;
+  trainId: string;
   diaTrain?: DiaTrain;
   currentTimetableIndex: number;
   speed: number;
   track: HalfTrack;
   position: Point;
-  stationWaitTime: number;
-  stationStatus: StationStatus;
+  platformWaitTime: number;
+  arrivalAndDepartureStatus: ArrivalAndDepartureStatus;
 }
 
 export interface OperationTrain {
@@ -61,32 +61,27 @@ export interface OperationTrain {
 }
 
 export interface TimetableItem {
-  station: Station;
+  platform: Platform;
   operatingTrain: OperationTrain;
   departTime: number;
 }
 
-export interface Platform {
-  platformId: number /* platformId */;
-  name?: string /* name */;
-}
-
 export interface DiaStation {
-  stationId: number /* stationId */;
+  stationId: string /* stationId */;
   name: string /* name */;
   distance: number /* distance */;
   platforms: Platform[] /* platforms */;
 }
 
 export interface StationTrain {
-  stationId: number /* stationId */;
-  platformId: number /* platformId */;
+  stationId: string /* stationId */;
+  platformId: string /* platformId */;
   arrivalTime: number /* arrivalTime */;
   departureTime: number /* departureTime */;
 }
 
 export interface DiaTrain {
-  trainId: number /* trainId */;
+  trainId: string /* trainId */;
   color?: string;
   trainName: string /* name */;
   trainTimetable: StationTrain[];
@@ -102,12 +97,12 @@ function getInitialId(): number {
 }
 
 let _currentId = getInitialId();
-export function generateId(): number {
-  return ++_currentId;
+export function generateId(): string {
+  return (++_currentId).toString();
 }
 
 export interface SerializedTrain {
-  trainId: number;
+  trainId: string;
   name: string | undefined;
   color: string | undefined;
   position: Point;

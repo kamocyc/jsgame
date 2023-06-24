@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { generateId } from '../../model';
-import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-components';
+import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
 import {
   Clipboard,
   ContextData,
@@ -10,7 +10,7 @@ import {
   DiaTrain,
   TimetableDirection,
   TrainType,
-} from './timetable-model';
+} from './model';
 import { getDefaultPlatform } from './timetable-util';
 
 function TrainContextMenuComponent({
@@ -97,7 +97,7 @@ export function PlatformComponent({
       onChange={(e) => {
         if ((e.target as HTMLSelectElement)?.value != null) {
           const newDiaPlatform = allDiaPlatforms.find(
-            (diaPlatform) => diaPlatform.diaPlatformId === Number((e.target as HTMLSelectElement).value)
+            (diaPlatform) => diaPlatform.diaPlatformId === (e.target as HTMLSelectElement).value
           );
           if (newDiaPlatform) {
             setDiaPlatform(newDiaPlatform);
@@ -254,7 +254,7 @@ export function TrainListComponent({
               onChange={(e) => {
                 if ((e.target as HTMLSelectElement)?.value != null) {
                   const newTrainType = trainTypes.find(
-                    (trainType) => trainType.trainTypeId === Number((e.target as HTMLSelectElement).value)
+                    (trainType) => trainType.trainTypeId === (e.target as HTMLSelectElement).value
                   );
                   if (newTrainType) {
                     diaTrain.trainType = newTrainType;

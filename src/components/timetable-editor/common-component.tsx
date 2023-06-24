@@ -1,8 +1,8 @@
 import { ComponentChild } from 'preact';
 import { Ref, useEffect, useRef, useState } from 'preact/hooks';
 import { parseTime, showGlobalTime } from '../../timetableEditor';
+import { ContextData } from './model';
 import './timetable-editor.css';
-import { ContextData } from './timetable-model';
 
 /**
  * Hook that alerts clicks outside of the passed ref
@@ -184,4 +184,63 @@ export function SettingColumnComponent({
 
 export function reverseArray<T>(array: T[]) {
   return [...array].reverse();
+}
+
+export interface Tab {
+  tabId: number;
+  tabText: string;
+  component: () => any /* JSX.Element */;
+}
+
+export function TabComponent({ tabs, onTabChange }: { tabs: Tab[]; onTabChange: (tabId: number) => void }) {
+  const [selectedTabId, setSelectedTabId] = useState<number>(tabs[0].tabId);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', flexDirection: 'row' }}>
+        {tabs.map((tab) => (
+          <div
+            style={{
+              borderStyle: 'solid',
+              borderWidth: '1px',
+              backgroundColor: tab.tabId === selectedTabId ? 'white' : 'lightgray',
+              borderBottom: 'none',
+              height: '28px',
+            }}
+            onClick={() => {
+              setSelectedTabId(tab.tabId);
+              onTabChange(tab.tabId);
+            }}
+          >
+            <div
+              style={
+                tab.tabId === selectedTabId
+                  ? { padding: '4px', height: '22px', backgroundColor: '#fff', zIndex: '1', position: 'relative' }
+                  : { padding: '4px' }
+              }
+            >
+              {tab.tabText}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ border: '2px', borderStyle: 'solid', borderColor: '#ccc', padding: '5px' }}>
+        {tabs.find((tab) => tab.tabId === selectedTabId)?.component()}
+      </div>
+    </div>
+  );
+}
+
+export interface SplitView {
+  splitViewId: number;
+  component: () => any /* JSX.Element */;
+}
+
+export function SplitViewComponent({ splitViews }: { splitViews: SplitView[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {splitViews.map((splitView) => (
+        <div style={{ borderStyle: 'solid', borderWidth: '5px', borderBottom: 'none' }}>{splitView.component()}</div>
+      ))}
+    </div>
+  );
 }

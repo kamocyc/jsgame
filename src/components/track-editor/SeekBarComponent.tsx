@@ -1,12 +1,12 @@
 import { useState } from 'preact/hooks';
 
-const width = 1000;
-
 export function SeekBarComponent({
   positionPercentage,
+  width,
   setPositionPercentage,
 }: {
   positionPercentage: number;
+  width: number;
   setPositionPercentage: (positionPercentage: number) => void;
 }) {
   const [isMouseDown, setIsMouseDown] = useState<boolean>(false);

@@ -1,5 +1,5 @@
 import { assert } from './common.js';
-import { HalfTrack, Point, StationStatus, Switch } from './model.js';
+import { ArrivalAndDepartureStatus, HalfTrack, Point, Switch } from './model.js';
 import {
   getDistance,
   getMidPoint,
@@ -11,7 +11,7 @@ import {
 import { BranchDirection, Timetable, Train } from './uiEditorModel.js';
 
 function getStopPosition(_train: PlacedTrain, stationTrack: HalfTrack): Point | undefined {
-  if (!stationTrack.track.station) return undefined;
+  if (!stationTrack.track.platform) return undefined;
 
   const midPoint = getMidPoint(stationTrack._begin, stationTrack._end);
   return midPoint;
@@ -19,7 +19,7 @@ function getStopPosition(_train: PlacedTrain, stationTrack: HalfTrack): Point | 
 
 function shouldStopTrain(train: PlacedTrain): false | Point {
   if (
-    !train.track.track.station ||
+    !train.track.track.platform ||
     train.stationStatus !== 'NotArrived' /*|| train.stationWaitTime >= this.maxStationWaitTime*/
   )
     return false;
@@ -42,7 +42,7 @@ function shouldStopTrain(train: PlacedTrain): false | Point {
 class TrainOccupy {
   /* trackId => train */
   // readonly occupyingTrain: Map<number, Train> = new Map<number, Train>();
-  readonly occupyingTracks: Map<number, HalfTrack[]> = new Map<number, HalfTrack[]>();
+  readonly occupyingTracks: Map<string, HalfTrack[]> = new Map<string, HalfTrack[]>();
 
   addTrain(train: PlacedTrain) {
     this.occupyingTracks.set(train.trainId, [train.track]);
@@ -106,13 +106,13 @@ function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: HalfTrack) {
 }
 
 interface PlacedTrain {
-  trainId: number;
+  trainId: string;
   diaTrain: Train;
   speed: number;
   track: HalfTrack;
   position: Point;
   stationWaitTime: number;
-  stationStatus: StationStatus;
+  stationStatus: ArrivalAndDepartureStatus;
 }
 
 const TimeActionMode: 'Just' | 'After' = 'After';
@@ -176,12 +176,12 @@ export class TrainMove2 {
   moveTrain(train: PlacedTrain): void {
     // 現在stationだったら出発条件を満たすまで停止する
     if (
-      train.track.track.station !== null &&
+      train.track.track.platform !== null &&
       train.stationStatus === 'Arrived' &&
       train.stationWaitTime < this.maxStationWaitTime
     ) {
       const timetableItems = this.timetable.stationTTItems.filter(
-        (t) => t.station.stationId === train.track.track.station!.stationId && t.train.trainId === train.trainId
+        (t) => t.station.platformId === train.track.track.platform!.platformId && t.train.trainId === train.trainId
       );
       if (timetableItems.length === 0) {
         // 時刻が設定されていないときは即座に発車

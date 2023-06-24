@@ -1,11 +1,11 @@
 import { StateUpdater, useState } from 'preact/hooks';
-import { Cell, CellHeight, CellWidth, MapHeight, MapWidth } from '../mapEditorModel';
-import { Point, Switch, generateId } from '../model';
-import { createLine } from '../trackEditor';
-import { drawEditor } from '../trackEditorDrawer';
-import { getMidPoint } from '../trackUtil';
-import { TrainMove2 } from '../trainMove2';
-import { AppStates, EditorDialogMode, Station, Timetable, Train } from '../uiEditorModel';
+import { Cell, CellHeight, CellWidth, MapHeight, MapWidth } from '../../mapEditorModel';
+import { Point, Switch, generateId } from '../../model';
+import { createLine } from '../../trackEditor';
+import { drawEditor } from '../../trackEditorDrawer';
+import { getMidPoint } from '../../trackUtil';
+import { TrainMove2 } from '../../trainMove2';
+import { AppStates, EditorDialogMode, Platform, Timetable, Train } from '../../uiEditorModel';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationEditorComponent';
 
 function mouseToMapPosition(mousePoint: Point): null | Point {
@@ -38,19 +38,19 @@ function createStation(cell: Cell) {
     const track = tracks[0];
 
     const id = generateId();
-    track.track.station = {
-      stationId: id,
-      stationName: '駅' + id,
+    track.track.platform = {
+      platformId: id,
+      platformName: '駅' + id,
       shouldDepart: () => false,
     };
-    track.reverseTrack.track.station = track.track.station;
+    track.reverseTrack.track.platform = track.track.platform;
   }
 }
 
 function showInfoPanel(
   cell: Cell,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
-  setStation: (station: Station | null) => void,
+  setStation: (station: Platform | null) => void,
   setSwitch: (station: Switch | null) => void
 ) {
   if (cell.lineType?.lineClass === 'Branch') {
@@ -61,11 +61,11 @@ function showInfoPanel(
   } else if (
     cell.lineType?.lineClass != null &&
     cell.lineType?.tracks.length > 0 &&
-    cell.lineType?.tracks[0].track.station !== null
+    cell.lineType?.tracks[0].track.platform !== null
   ) {
-    const station = cell.lineType.tracks[0].track.station;
+    const platform = cell.lineType.tracks[0].track.platform;
 
-    setStation(station);
+    setStation(platform);
     setEditorDialogMode('StationEditor');
   }
 }
@@ -97,12 +97,24 @@ function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
   return true;
 }
 
+function placeStation(cell: Cell, timetable: Timetable) {
+  const platformNumber = 2;
+
+  const id = generateId();
+  // track.track.station = {
+  //   stationId: id,
+  //   stationName: '駅' + id,
+  //   shouldDepart: () => false,
+  // };
+  // track.reverseTrack.track.station = track.track.station;
+}
+
 function onmousedown(
   e: MouseEvent,
   appStates: AppStates,
   selectedTrain: Train,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
-  setStation: (station: Station | null) => void,
+  setStation: (station: Platform | null) => void,
   setSwitch: (station: Switch | null) => void,
   setMouseStartCell: (cell: Cell | null) => void,
   setMouseDragMode: (mode: 'Create' | 'Delete' | 'Station' | null) => void
@@ -122,6 +134,8 @@ function onmousedown(
     } else if (appStates.editMode === 'Station') {
       setMouseDragMode('Station');
       createStation(appStates.map[mapPosition.x][mapPosition.y]);
+    } else if (appStates.editMode === 'Station2') {
+      placeStation(appStates.map[mapPosition.x][mapPosition.y], appStates.timetable);
     } else {
       setMouseDragMode('Create');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
@@ -162,7 +176,6 @@ function onmouseup(
       // deleteLine(map, mouseStartCell, mouseEndCell)
     }
     drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
-    // draw(trainMove, null, null);
   }
   drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
 
@@ -182,7 +195,7 @@ export function EditorContainer({
   editorDialogMode: EditorDialogMode | null;
   timetable: Timetable | null;
   trains: Train[] | null;
-  station: Station | null;
+  station: Platform | null;
   Switch: Switch | null;
 }) {
   return (
@@ -212,7 +225,7 @@ export function CanvasComponent({
   setAppStates: StateUpdater<AppStates>;
 }) {
   const [editorDialogMode, setEditorDialogMode] = useState<EditorDialogMode | null>(null);
-  const [station, setStation] = useState<Station | null>(null);
+  const [station, setStation] = useState<Platform | null>(null);
   const [Switch, setSwitch] = useState<Switch | null>(null);
   const [mouseStartCell, setMouseStartCell] = useState<Cell | null>(null);
   const [mouseDragMode, setMouseDragMode] = useState<'Create' | 'Delete' | 'Station' | null>(null);
@@ -222,8 +235,8 @@ export function CanvasComponent({
     <>
       <canvas
         id='canvas'
-        width='2000'
-        height='500'
+        width='610'
+        height='310'
         onMouseDown={(e) =>
           onmousedown(
             e,

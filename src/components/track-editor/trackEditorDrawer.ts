@@ -33,7 +33,7 @@ function fillRect(
   width: number,
   height: number
 ) {
-  ctx.fillRect(rx(x, mapContext), ry(y + height, mapContext), width, height);
+  ctx.fillRect(rx(x, mapContext), ry(y + height, mapContext), width * mapContext.scale, height * mapContext.scale);
 }
 
 function drawLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, begin: Point, end: Point) {

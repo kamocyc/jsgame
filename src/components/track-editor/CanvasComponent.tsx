@@ -185,8 +185,8 @@ function onmousedown(
   setMouseDragMode: (mode: MouseDragMode | null) => void
 ) {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const x = rrx(e.clientX - rect.left, appStates.mapContext);
+  const y = rry(e.clientY - rect.top, appStates.mapContext);
 
   // 右クリックでドラッグするときは、マップを移動させる
   if (e.button === 2) {
@@ -232,8 +232,8 @@ function onmousemove(
   update: () => void
 ) {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const x = rrx(e.clientX - rect.left, appStates.mapContext);
+  const y = rry(e.clientY - rect.top, appStates.mapContext);
 
   if (mouseDragMode === 'MoveMap' && mouseStartPoint != null) {
     appStates.mapContext.offsetX += x - mouseStartPoint.x;
@@ -264,6 +264,13 @@ function onmousemove(
   }
 }
 
+function rrx(x: number, mapContext: MapContext) {
+  return x / mapContext.scale - mapContext.offsetX;
+}
+function rry(y: number, mapContext: MapContext) {
+  return y / mapContext.scale - mapContext.offsetY;
+}
+
 function onmouseup(
   e: MouseEvent,
   appStates: AppStates,
@@ -283,8 +290,8 @@ function onmouseup(
   if (!mouseStartCell) return;
 
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const x = rrx(e.clientX - rect.left, appStates.mapContext);
+  const y = rry(e.clientY - rect.top, appStates.mapContext);
 
   const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
   if (mapPosition != null) {
@@ -415,7 +422,10 @@ export function CanvasComponent({ appStates, update }: { appStates: AppStates; u
           onmousemove(e, appStates, mouseStartCell, mouseStartPoint, mouseDragMode, setMouseStartPoint, update)
         }
         onContextMenu={(e) => e.preventDefault()}
-        onWheel={(e) => {} /* TODO: 邪魔なのでいったんコメントアウト onwheel(e, appStates, update) */}
+        onWheel={(e) => {
+          /* TODO: 邪魔なのでいったんコメントアウト */
+          onwheel(e, appStates, update);
+        }}
       ></canvas>
       <EditorContainer
         timetable={appStates.timetable}

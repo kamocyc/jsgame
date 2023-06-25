@@ -1,10 +1,5 @@
 import { HalfTrack, Point, Switch } from './model';
 
-export const MapWidth = 20;
-export const MapHeight = 10;
-
-export type GameMap = Cell[][];
-
 export const CellWidth = 30;
 export const CellHeight = 30;
 
@@ -74,6 +69,8 @@ export interface Cell {
   position: Point;
   lineType: null | LineTypeStraight | LineTypeTerminal | LineTypeCurve | LineTypeBranch;
 }
+
+export type GameMap = Cell[][];
 
 export function timesVector(vector: Point, times: number): Point {
   return {

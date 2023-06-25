@@ -9,26 +9,43 @@ import {
   LineTypeCurve,
   LineTypeStraight,
   LineTypeTerminal,
-  MapHeight,
-  MapWidth,
   addVector,
   timesVector,
 } from '../../mapEditorModel';
 import { HalfTrack, Point, Station } from '../../model';
-import { AppStates } from './uiEditorModel';
+import { AppStates, MapContext } from './uiEditorModel';
 
-function r_(position: Point) {
-  return { x: position.x, y: MapHeight * CellHeight - position.y };
+function rx(x: number, mapContext: MapContext) {
+  return (x + mapContext.offsetX) * mapContext.scale;
 }
-function fillRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
-  ctx.fillRect(x, MapHeight * CellHeight - y - height, width, height);
+function ry(y: number, mapContext: MapContext) {
+  return (mapContext.mapTotalHeight - y + mapContext.offsetY) * mapContext.scale;
+}
+function r_(position: Point, mapContext: MapContext): Point {
+  return { x: rx(position.x, mapContext), y: ry(position.y, mapContext) };
 }
 
-function drawLine(ctx: CanvasRenderingContext2D, begin: Point, end: Point) {
-  drawLine_(ctx, r_(begin), r_(end));
+function fillRect(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
+  ctx.fillRect(rx(x, mapContext), ry(y + height, mapContext), width, height);
 }
 
-function drawStraight(ctx: CanvasRenderingContext2D, position: Point, lineType: LineTypeStraight) {
+function drawLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, begin: Point, end: Point) {
+  drawLine_(ctx, r_(begin, mapContext), r_(end, mapContext));
+}
+
+function drawStraight(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  position: Point,
+  lineType: LineTypeStraight
+) {
   const straightTypeToPositionMap = {
     Horizontal: { begin: { x: -1, y: 0 }, end: { x: 1, y: 0 } },
     Vertical: { begin: { x: 0, y: -1 }, end: { x: 0, y: 1 } },
@@ -53,11 +70,16 @@ function drawStraight(ctx: CanvasRenderingContext2D, position: Point, lineType: 
   );
 
   ctx.strokeStyle = 'green';
-  drawLine(ctx, begin, end);
+  drawLine(ctx, mapContext, begin, end);
   ctx.strokeStyle = 'black';
 }
 
-function drawTerminal(ctx: CanvasRenderingContext2D, position: Point, lineType: LineTypeTerminal) {
+function drawTerminal(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  position: Point,
+  lineType: LineTypeTerminal
+) {
   const angleToPositionMap = {
     0: { x: 1, y: 0 },
     45: { x: 1, y: 1 },
@@ -80,10 +102,10 @@ function drawTerminal(ctx: CanvasRenderingContext2D, position: Point, lineType: 
     }),
     timesVector(angleToPositionMap[lineType.angle], CellWidth / 2)
   );
-  drawLine(ctx, begin, end);
+  drawLine(ctx, mapContext, begin, end);
 }
 
-function drawCurve(ctx: CanvasRenderingContext2D, position: Point, lineType: LineTypeCurve) {
+function drawCurve(ctx: CanvasRenderingContext2D, mapContext: MapContext, position: Point, lineType: LineTypeCurve) {
   const curveTypeToPositionMap = {
     Bottom_TopLeft: { begin: { x: 0, y: -1 }, end: { x: -1, y: 1 } },
     Bottom_TopRight: { begin: { x: 0, y: -1 }, end: { x: 1, y: 1 } },
@@ -105,12 +127,12 @@ function drawCurve(ctx: CanvasRenderingContext2D, position: Point, lineType: Lin
 
   // カーブはとりあえず色は赤にする
   ctx.strokeStyle = 'red';
-  drawLine(ctx, begin, center);
-  drawLine(ctx, center, end);
+  drawLine(ctx, mapContext, begin, center);
+  drawLine(ctx, mapContext, center, end);
   ctx.strokeStyle = 'black';
 }
 
-function drawBranch(ctx: CanvasRenderingContext2D, position: Point, lineType: LineTypeBranch) {
+function drawBranch(ctx: CanvasRenderingContext2D, mapContext: MapContext, position: Point, lineType: LineTypeBranch) {
   const branchTypeToPositionMap = {
     Horizontal_TopLeft: {
       begin: { x: 1, y: 0 },
@@ -204,31 +226,24 @@ function drawBranch(ctx: CanvasRenderingContext2D, position: Point, lineType: Li
   const end2 = addVector(center, timesVector(curveType.end2, CellWidth / 2));
 
   ctx.strokeStyle = 'blue';
-  drawLine(ctx, begin, end1);
-  drawLine(ctx, center, end2);
+  drawLine(ctx, mapContext, begin, end1);
+  drawLine(ctx, mapContext, center, end2);
   ctx.strokeStyle = 'black';
 }
 
-function drawLineType(ctx: CanvasRenderingContext2D, position: Point, lineType: LineType) {
+function drawLineType(ctx: CanvasRenderingContext2D, mapContext: MapContext, position: Point, lineType: LineType) {
   if (lineType.lineClass === 'Branch') {
-    drawBranch(ctx, position, lineType as LineTypeBranch);
+    drawBranch(ctx, mapContext, position, lineType as LineTypeBranch);
   } else if (lineType.lineClass === 'Straight') {
-    drawStraight(ctx, position, lineType as LineTypeStraight);
+    drawStraight(ctx, mapContext, position, lineType as LineTypeStraight);
   } else if (lineType.lineClass === 'Terminal') {
-    drawTerminal(ctx, position, lineType as LineTypeTerminal);
+    drawTerminal(ctx, mapContext, position, lineType as LineTypeTerminal);
   } else if (lineType.lineClass === 'Curve') {
-    drawCurve(ctx, position, lineType as LineTypeCurve);
+    drawCurve(ctx, mapContext, position, lineType as LineTypeCurve);
   }
 }
 
-function _y(y: number) {
-  return y + 10;
-}
-function _x(x: number) {
-  return x + 10;
-}
-
-function drawStations(ctx: CanvasRenderingContext2D, stations: Station[], tracks: HalfTrack[]) {
+function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, stations: Station[], tracks: HalfTrack[]) {
   const fontSize = 15;
 
   const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
@@ -239,7 +254,7 @@ function drawStations(ctx: CanvasRenderingContext2D, stations: Station[], tracks
     // 駅はtrackに対応するが、それは2セルにまたがるので、調整が必要。。。
     if (track.track.platform) {
       ctx.strokeStyle = 'red';
-      drawLine(ctx, track._begin, track._end);
+      drawLine(ctx, mapContext, track._begin, track._end);
 
       const name = track.track.platform.platformName;
       const metrics = ctx.measureText(name);
@@ -248,8 +263,8 @@ function drawStations(ctx: CanvasRenderingContext2D, stations: Station[], tracks
       ctx.font = '10px sans-serif';
       ctx.fillText(
         name,
-        _x((track._begin.x + track._end.x) / 2 - metrics.width / 2 - 10),
-        MapHeight * CellHeight - _y((track._begin.y + track._end.y) / 2 - 5)
+        rx((track._begin.x + track._end.x) / 2 - metrics.width / 2 - 10, mapContext),
+        ry((track._begin.y + track._end.y) / 2 - 10, mapContext)
       );
 
       const station = stations.find((station) =>
@@ -270,14 +285,14 @@ function drawStations(ctx: CanvasRenderingContext2D, stations: Station[], tracks
     const metrics = ctx.measureText(name);
     const x = points.reduce((acc, p) => acc + p.x, 0) / points.length;
     const y = Math.max(...points.map((p) => p.y));
-    ctx.fillText(name, _x(x - metrics.width / 2 - 10), MapHeight * CellHeight - _y(y + 10));
+    ctx.fillText(name, rx(x - metrics.width / 2 - 10, mapContext), ry(y + 10, mapContext));
   }
 
   ctx.strokeStyle = 'black';
 }
 
 export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
-  const { stations, tracks, trainMove, map } = appStates;
+  const { stations, tracks, trainMove, map, mapWidth, mapHeight, mapContext } = appStates;
 
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -287,33 +302,47 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // 罫線を描画
   ctx.strokeStyle = 'rgb(0, 0, 0, 0.2)';
-  for (let x = 0; x <= MapWidth; x++) {
-    drawLine(ctx, { x: x * CellWidth, y: 0 }, { x: x * CellWidth, y: MapHeight * CellHeight });
+  for (let x = 0; x <= mapWidth; x++) {
+    drawLine(ctx, mapContext, { x: x * CellWidth, y: 0 }, { x: x * CellWidth, y: mapHeight * CellHeight });
   }
-  for (let y = 0; y <= MapHeight; y++) {
-    drawLine(ctx, { x: 0, y: y * CellHeight }, { x: MapWidth * CellWidth, y: y * CellHeight });
+  for (let y = 0; y <= mapHeight; y++) {
+    drawLine(ctx, mapContext, { x: 0, y: y * CellHeight }, { x: mapWidth * CellWidth, y: y * CellHeight });
   }
 
   ctx.strokeStyle = 'black';
 
-  drawStations(ctx, stations, tracks);
+  drawStations(ctx, mapContext, stations, tracks);
 
   if (mouseStartCell !== null) {
     ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
-    fillRect(ctx, mouseStartCell.position.x * CellWidth, mouseStartCell.position.y * CellHeight, CellWidth, CellHeight);
+    fillRect(
+      ctx,
+      mapContext,
+      mouseStartCell.position.x * CellWidth,
+      mouseStartCell.position.y * CellHeight,
+      CellWidth,
+      CellHeight
+    );
   }
   if (mouseEndCell !== null) {
     ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-    fillRect(ctx, mouseEndCell.position.x * CellWidth, mouseEndCell.position.y * CellHeight, CellWidth, CellHeight);
+    fillRect(
+      ctx,
+      mapContext,
+      mouseEndCell.position.x * CellWidth,
+      mouseEndCell.position.y * CellHeight,
+      CellWidth,
+      CellHeight
+    );
   }
 
   if (!map) return;
 
-  for (let x = 0; x < MapWidth; x++) {
-    for (let y = 0; y < MapHeight; y++) {
+  for (let x = 0; x < mapWidth; x++) {
+    for (let y = 0; y < mapHeight; y++) {
       const cell = map[x][y];
       if (cell.lineType) {
-        drawLineType(ctx, cell.position, cell.lineType);
+        drawLineType(ctx, mapContext, cell.position, cell.lineType);
       }
     }
   }
@@ -325,7 +354,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     ctx.beginPath();
     ctx.strokeStyle = 'red';
     ctx.fillStyle = 'red';
-    ctx.arc(position.x, MapHeight * CellHeight - position.y, 10, 0, 2 * Math.PI);
+    ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 10, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 

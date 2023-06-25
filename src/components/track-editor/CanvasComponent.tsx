@@ -1,36 +1,29 @@
 import { useState } from 'preact/hooks';
-import { Cell, CellHeight, CellWidth, GameMap, MapHeight, MapWidth } from '../../mapEditorModel';
+import { Cell, CellHeight, CellWidth, GameMap } from '../../mapEditorModel';
 import { HalfTrack, Platform, Point, Station, Switch, generateId } from '../../model';
 import { getMidPoint } from '../../trackUtil';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationEditorComponent';
 import { createLine } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
-import { AppStates, EditorDialogMode, Timetable, Train } from './uiEditorModel';
+import { AppStates, EditorDialogMode, MapContext, Timetable, Train } from './uiEditorModel';
 
-type MouseDragMode = 'Create' | 'Delete' | 'SetPlatform';
+type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform';
 
-function mouseToMapPosition(mousePoint: Point): null | Point {
+function mouseToMapPosition(
+  mousePoint: Point,
+  mapWidth: number,
+  mapHeight: number,
+  mapContext: MapContext
+): null | Point {
   const mapPosition = {
     x: Math.floor(mousePoint.x / CellWidth),
-    y: Math.floor((MapHeight * CellHeight - mousePoint.y) / CellHeight),
+    y: Math.floor((mapContext.mapTotalHeight - mousePoint.y) / CellHeight),
   };
-  if (mapPosition.x >= 0 && mapPosition.x < MapWidth && mapPosition.y >= 0 && mapPosition.y < MapHeight) {
+  if (mapPosition.x >= 0 && mapPosition.x < mapWidth && mapPosition.y >= 0 && mapPosition.y < mapHeight) {
     return mapPosition;
   } else {
     return null;
-  }
-}
-
-function onmousemove(e: MouseEvent, appStates: AppStates, mouseStartCell: null | Cell) {
-  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const mapPosition = mouseToMapPosition({ x, y });
-  if (mapPosition != null) {
-    const mouseMoveCell = appStates.map[mapPosition.x][mapPosition.y];
-    drawEditor(appStates, mouseStartCell, mouseMoveCell);
   }
 }
 
@@ -91,7 +84,12 @@ function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
   return true;
 }
 
-function placeStation(map: GameMap, position: Point): [HalfTrack[], Switch[], Station] | null {
+function placeStation(
+  map: GameMap,
+  position: Point,
+  mapWidth: number,
+  mapHeight: number
+): [HalfTrack[], Switch[], Station] | null {
   const numberOfPlatforms = 2;
 
   const newTracks: HalfTrack[] = [];
@@ -108,9 +106,9 @@ function placeStation(map: GameMap, position: Point): [HalfTrack[], Switch[], St
 
   if (
     position.x < 0 ||
-    position.x >= MapWidth - 1 ||
+    position.x >= mapWidth - 1 ||
     position.y < 0 ||
-    position.y >= MapHeight + numberOfPlatforms - 1
+    position.y >= mapHeight + numberOfPlatforms - 1
   ) {
     console.warn('positionが範囲外');
     return null;
@@ -183,13 +181,22 @@ function onmousedown(
   setPlatform: (platform: Platform | null) => void,
   setSwitch: (Switch: Switch | null) => void,
   setMouseStartCell: (cell: Cell | null) => void,
+  setMouseStartPoint: (point: Point | null) => void,
   setMouseDragMode: (mode: MouseDragMode | null) => void
 ) {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  const mapPosition = mouseToMapPosition({ x, y });
+  // 右クリックでドラッグするときは、マップを移動させる
+  if (e.button === 2) {
+    setMouseStartCell(null);
+    setMouseStartPoint({ x, y });
+    setMouseDragMode('MoveMap');
+    return;
+  }
+
+  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
   if (mapPosition != null) {
     if (appStates.editMode === 'Info') {
       showInfoPanel(appStates.map[mapPosition.x][mapPosition.y], setEditorDialogMode, setPlatform, setSwitch);
@@ -201,7 +208,7 @@ function onmousedown(
       setMouseDragMode('SetPlatform');
       const newPlatform = createPlatform(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'Station') {
-      const result = placeStation(appStates.map, mapPosition);
+      const result = placeStation(appStates.map, mapPosition, appStates.mapWidth, appStates.mapHeight);
       if (result) {
         const [newTracks, newSwitches, newStation] = result;
         appStates.tracks.push(...newTracks);
@@ -215,6 +222,48 @@ function onmousedown(
   }
 }
 
+function onmousemove(
+  e: MouseEvent,
+  appStates: AppStates,
+  mouseStartCell: null | Cell,
+  mouseStartPoint: Point | null,
+  mouseDragMode: MouseDragMode | null,
+  setMouseStartPoint: (point: Point) => void,
+  update: () => void
+) {
+  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  if (mouseDragMode === 'MoveMap' && mouseStartPoint != null) {
+    appStates.mapContext.offsetX += x - mouseStartPoint.x;
+    appStates.mapContext.offsetY += y - mouseStartPoint.y;
+    const canvasWidth = (e.target as HTMLCanvasElement).clientWidth;
+    const canvasHeight = (e.target as HTMLCanvasElement).clientHeight;
+    if (appStates.mapContext.mapTotalWidth + appStates.mapContext.offsetX < canvasWidth) {
+      appStates.mapContext.offsetX = canvasWidth - appStates.mapContext.mapTotalWidth;
+    }
+    if (appStates.mapContext.mapTotalHeight + appStates.mapContext.offsetY < canvasHeight) {
+      appStates.mapContext.offsetY = canvasHeight - appStates.mapContext.mapTotalHeight;
+    }
+    if (appStates.mapContext.offsetX > 0) {
+      appStates.mapContext.offsetX = 0;
+    }
+    if (appStates.mapContext.offsetY > 0) {
+      appStates.mapContext.offsetY = 0;
+    }
+    setMouseStartPoint({ x, y });
+    update();
+    return;
+  }
+
+  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
+  if (mapPosition != null) {
+    const mouseMoveCell = appStates.map[mapPosition.x][mapPosition.y];
+    drawEditor(appStates, mouseStartCell, mouseMoveCell);
+  }
+}
+
 function onmouseup(
   e: MouseEvent,
   appStates: AppStates,
@@ -222,15 +271,22 @@ function onmouseup(
   mouseDragMode: MouseDragMode | null,
   update: () => void,
   setMouseStartCell: (cell: Cell | null) => void,
+  setMouseStartPoint: (point: Point | null) => void,
   setMouseDragMode: (mode: MouseDragMode | null) => void
 ) {
+  if (mouseDragMode === 'MoveMap') {
+    setMouseDragMode(null);
+    setMouseStartPoint(null);
+    return;
+  }
+
   if (!mouseStartCell) return;
 
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  const mapPosition = mouseToMapPosition({ x, y });
+  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
   if (mapPosition != null) {
     const mouseEndCell = appStates.map[mapPosition.x][mapPosition.y];
 
@@ -301,11 +357,25 @@ export function EditorContainer({
   );
 }
 
+function onwheel(e: WheelEvent, appStates: AppStates, update: () => void) {
+  e.preventDefault();
+
+  const scaleBy = 1.05;
+  const delta = e.deltaY;
+
+  const oldScale = appStates.mapContext.scale;
+  const newScale = delta > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+  appStates.mapContext.scale = newScale;
+
+  update();
+}
+
 export function CanvasComponent({ appStates, update }: { appStates: AppStates; update: () => void }) {
   const [editorDialogMode, setEditorDialogMode] = useState<EditorDialogMode | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [Switch, setSwitch] = useState<Switch | null>(null);
   const [mouseStartCell, setMouseStartCell] = useState<Cell | null>(null);
+  const [mouseStartPoint, setMouseStartPoint] = useState<Point | null>(null);
   const [mouseDragMode, setMouseDragMode] = useState<MouseDragMode | null>(null);
   const [selectedTrain, setSelectedTrain] = useState<Train>(appStates.trains[0]);
 
@@ -324,14 +394,28 @@ export function CanvasComponent({ appStates, update }: { appStates: AppStates; u
             setPlatform,
             setSwitch,
             setMouseStartCell,
+            setMouseStartPoint,
             setMouseDragMode
           );
           update();
         }}
         onMouseUp={(e) =>
-          onmouseup(e, appStates, mouseStartCell, mouseDragMode, update, setMouseStartCell, setMouseDragMode)
+          onmouseup(
+            e,
+            appStates,
+            mouseStartCell,
+            mouseDragMode,
+            update,
+            setMouseStartCell,
+            setMouseStartPoint,
+            setMouseDragMode
+          )
         }
-        onMouseMove={(e) => onmousemove(e, appStates, mouseStartCell)}
+        onMouseMove={(e) =>
+          onmousemove(e, appStates, mouseStartCell, mouseStartPoint, mouseDragMode, setMouseStartPoint, update)
+        }
+        onContextMenu={(e) => e.preventDefault()}
+        onWheel={(e) => {} /* TODO: 邪魔なのでいったんコメントアウト onwheel(e, appStates, update) */}
       ></canvas>
       <EditorContainer
         timetable={appStates.timetable}

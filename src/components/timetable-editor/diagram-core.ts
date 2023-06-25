@@ -279,7 +279,7 @@ function drawTrain(
 }
 
 let canvasHeight = 600;
-let canvasWidth = 600; // dummy width
+let canvasWidth = 600; // dummy width (will be set by initializeKonva)
 let virtualCanvasHeight = 2000;
 let virtualCanvasWidth = 2000;
 

@@ -35,6 +35,24 @@ export type EditorDialogMode = 'StationEditor' | 'SwitchEditor';
 
 export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info';
 
+export interface MapContext {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+  mapTotalWidth: number;
+  mapTotalHeight: number;
+}
+
+export function createMapContext(mapWidth: number, mapHeight: number): MapContext {
+  return {
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0,
+    mapTotalWidth: mapWidth * 30,
+    mapTotalHeight: mapHeight * 30,
+  };
+}
+
 export interface AppStates {
   editMode: EditMode;
   timetable: Timetable;
@@ -43,5 +61,8 @@ export interface AppStates {
   stations: Station[];
   tracks: HalfTrack[];
   map: GameMap;
+  mapWidth: number;
+  mapHeight: number;
+  mapContext: MapContext;
   trainMove: TrainMove2;
 }

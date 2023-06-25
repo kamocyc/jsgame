@@ -1,16 +1,16 @@
 import { useState } from 'preact/hooks';
-import { Cell, GameMap, MapHeight, MapWidth } from '../mapEditorModel';
+import { Cell, GameMap } from '../mapEditorModel';
 import { TimetableEditorComponent } from './timetable-editor/TimetableEditorComponent';
 import { SplitViewComponent } from './timetable-editor/common-component';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { TrainMove2 } from './track-editor/trainMove2';
-import { AppStates, Timetable } from './track-editor/uiEditorModel';
+import { AppStates, Timetable, createMapContext } from './track-editor/uiEditorModel';
 
-function initializeMap(): GameMap {
+function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
-  for (let x = 0; x < MapWidth; x++) {
+  for (let x = 0; x < mapWidth; x++) {
     map.push([]);
-    for (let y = 0; y < MapHeight; y++) {
+    for (let y = 0; y < mapHeight; y++) {
       map[x].push({
         position: { x, y },
         lineType: null,
@@ -24,6 +24,9 @@ const timetable: Timetable = {
   platformTTItems: [],
   switchTTItems: [],
 };
+
+const defaultMapWidth = 40;
+const defaultMapHeight = 10;
 
 export function App() {
   const [appStates, setAppStates] = useState<AppStates>(() => ({
@@ -43,7 +46,10 @@ export function App() {
         trainTimetable: [],
       },
     ],
-    map: initializeMap(),
+    map: initializeMap(defaultMapWidth, defaultMapHeight),
+    mapWidth: defaultMapWidth,
+    mapHeight: defaultMapHeight,
+    mapContext: createMapContext(defaultMapWidth, defaultMapHeight),
     trainMove: new TrainMove2(timetable),
     switches: [],
     stations: [],

@@ -1,13 +1,13 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { fromJSON } from '../../jsonSerialize';
-import { Cell, MapHeight, MapWidth } from '../../mapEditorModel';
+import { Cell } from '../../mapEditorModel';
 import { DiaTrain, Point, Station, Switch } from '../../model';
 import { CanvasComponent } from './CanvasComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
-import { AppStates, EditMode, Timetable, Train } from './uiEditorModel';
+import { AppStates, EditMode, Timetable, Train, createMapContext } from './uiEditorModel';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -72,7 +72,9 @@ function saveMapData(appStates: AppStates) {
 
 function loadMapData(setAppStates: StateUpdater<AppStates>) {
   const mapData = JSON_retrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
-  if (mapData.length !== MapWidth || mapData[0].length !== MapHeight) {
+  const mapWidth = mapData.length;
+  const mapHeight = mapData[0].length;
+  if (mapData.some((row) => row.length !== mapHeight)) {
     alert('マップデータが不正です');
     return;
   }
@@ -93,6 +95,7 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
   );
 
+  // TODO: とりあえずダイヤから生成するのに統一する。
   // const placedTrains = (JSON.parse(localStorage.getItem('placedTrains') ?? '[]') as SerializedPlacedTrain[]).map(
   //   (t) => ({
   //     trainId: t.trainId,
@@ -117,6 +120,9 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     trainMove: trainMove,
     timetable: timetable,
     stations: stations,
+    mapWidth: mapWidth,
+    mapHeight: mapHeight,
+    mapContext: createMapContext(mapWidth, mapHeight),
   }));
 }
 

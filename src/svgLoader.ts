@@ -1,4 +1,4 @@
-import { assert, deepEqual, max } from './common.js';
+import { assert, createNewStationWithPlatform, deepEqual, max } from './common.js';
 import { draw } from './drawer.js';
 import { Point, generateId } from './model.js';
 import { createNewTrack, getRadian } from './trackUtil.js';
@@ -322,11 +322,10 @@ function createTrainMove(data: SvgParsedData): TrainMove {
       );
       if (tracks_.length !== 1) throw new Error('tracks_.length');
       const track = tracks_[0];
-      track.track.platform = {
+      track.track.platform = createNewStationWithPlatform({
         platformId: generateId(),
         platformName: stationName + ' ' + (trackIndex + 1),
-        shouldDepart: () => true,
-      };
+      });
     });
 
     draw(trainMove, null, null);

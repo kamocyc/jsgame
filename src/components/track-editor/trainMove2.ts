@@ -1,5 +1,5 @@
-import { assert } from './common.js';
-import { ArrivalAndDepartureStatus, HalfTrack, Point, Switch } from './model.js';
+import { assert } from '../../common.js';
+import { ArrivalAndDepartureStatus, HalfTrack, Point, Switch } from '../../model.js';
 import {
   getDistance,
   getMidPoint,
@@ -7,7 +7,7 @@ import {
   getRadian,
   getTrackDirection,
   isTrainOutTrack,
-} from './trackUtil.js';
+} from '../../trackUtil.js';
 import { BranchDirection, Timetable, Train } from './uiEditorModel.js';
 
 function getStopPosition(_train: PlacedTrain, stationTrack: HalfTrack): Point | undefined {
@@ -74,35 +74,53 @@ class TrainOccupy {
   }
 }
 
-function getNextTrackOfSwitchPattern(Switch: Switch, currentTrack: HalfTrack, switchPatternIndex: [number, number]) {
+function getNextTrackOfSwitchPattern(
+  Switch: Switch,
+  currentTrack: HalfTrack,
+  switchPatternIndex: [number, number]
+): HalfTrack | null {
   const [index1, index2] = switchPatternIndex;
   if (Switch.switchPatterns[index1][0] === currentTrack) {
     return Switch.switchPatterns[index1][1];
-  } else {
-    assert(Switch.switchPatterns[index2][0] === currentTrack);
+  } else if (Switch.switchPatterns[index2][0].trackId === currentTrack.trackId) {
     return Switch.switchPatterns[index2][1];
+  } else {
+    // 定位の方向ではないtrackからswitchに侵入している
+    return null;
   }
 }
 
+// 定位のtrackを返す
+export function getNextTrackOfStraightPattern(currentSwitch: Switch, track: HalfTrack): HalfTrack | null {
+  assert(currentSwitch.straightPatternIndex !== null);
+  return getNextTrackOfSwitchPattern(currentSwitch, track, currentSwitch.straightPatternIndex);
+}
+
 // 反位のtrackを返す
-function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: HalfTrack) {
-  // switchPatternsのうち、straightPatternIndexの2つ以外のもので、index 0がcurrentTrackと一致するもの
+export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: HalfTrack): HalfTrack | null {
   assert(Switch.straightPatternIndex !== null);
-  const [straightPatternIndex1, straightPatternIndex2] = Switch.straightPatternIndex!;
-  const candidatePatterns = Switch.switchPatterns.filter(
-    (_, i) => i !== straightPatternIndex1 && i !== straightPatternIndex2
-  );
-  if (candidatePatterns.length !== 2) {
-    throw new Error('candidatePatterns.length !== 2');
+  const [straightPatternIndex1, straightPatternIndex2] = Switch.straightPatternIndex;
+  const candidatePatterns = Switch.switchPatterns
+    .filter(
+      // straightPatternIndexの2つ以外
+      (_, i) => i !== straightPatternIndex1 && i !== straightPatternIndex2
+    )
+    .filter(
+      ([t, _]) =>
+        // 分岐の始点がcurrentTrackと一致するもの
+        t.trackId === currentTrack.trackId
+    );
+
+  if (candidatePatterns.length === 0) {
+    return null;
   }
 
-  const [pattern1, pattern2] = candidatePatterns;
-  if (pattern1[0] === currentTrack) {
-    return pattern1[1];
-  } else {
-    assert(pattern2[0] === currentTrack);
-    return pattern2[1];
+  if (candidatePatterns.length !== 1) {
+    // 一般のレイアウトだと2つ以上分岐がありうるが、とりあえず1つのみの制約とする
+    throw new Error('candidatePatterns.length !== 1');
   }
+
+  return candidatePatterns[0][1];
 }
 
 interface PlacedTrain {
@@ -132,7 +150,9 @@ export class TrainMove2 {
   }
 
   resetGlobalTime() {
-    const minTimetableTime = Math.min(...this.timetable.stationTTItems.map((t) => t.departureTime - 60));
+    const minTimetableTime = Math.min(
+      ...this.timetable.platformTTItems.filter((t) => t.departureTime !== null).map((t) => t.departureTime! - 60)
+    );
     this.globalTime = minTimetableTime === Infinity ? 0 : minTimetableTime;
   }
 
@@ -162,14 +182,14 @@ export class TrainMove2 {
       branchDirection = ttItems[0].branchDirection;
     }
 
-    if (currentSwitch.straightPatternIndex == null) {
-      throw new Error('currentSwitch.straightPatternIndex == null');
-    }
-
     if (branchDirection === 'Straight') {
-      return getNextTrackOfSwitchPattern(currentSwitch, track, currentSwitch.straightPatternIndex);
+      const nextTrack = getNextTrackOfStraightPattern(currentSwitch, track);
+      assert(nextTrack !== null, 'nextTrack !== null'); // TODO: 3分岐以上になった場合、進行方向に進めるtrackが2つ以上かつ定位方向ではない方向から進入する場合がある。といってもその場合は、Straight/Branchという区別ではどちらにしても足りなくなる。
+      return nextTrack;
     } else {
-      return getNextTrackOfBranchPattern(currentSwitch, track);
+      const nextTrack = getNextTrackOfBranchPattern(currentSwitch, track);
+      assert(nextTrack !== null, 'nextTrack !== null'); // 分岐方向に設定されていたら分岐が無いといけないはずなので、nullはありえない
+      return nextTrack;
     }
   }
 
@@ -180,8 +200,8 @@ export class TrainMove2 {
       train.stationStatus === 'Arrived' &&
       train.stationWaitTime < this.maxStationWaitTime
     ) {
-      const timetableItems = this.timetable.stationTTItems.filter(
-        (t) => t.station.platformId === train.track.track.platform!.platformId && t.train.trainId === train.trainId
+      const timetableItems = this.timetable.platformTTItems.filter(
+        (t) => t.platform.platformId === train.track.track.platform!.platformId && t.train.trainId === train.trainId
       );
       if (timetableItems.length === 0) {
         // 時刻が設定されていないときは即座に発車
@@ -190,7 +210,10 @@ export class TrainMove2 {
         if (TimeActionMode === 'Just') {
           // ちょうど発車時間になったら出発する
           const departureItems = timetableItems.filter(
-            (tt) => tt.departureTime > this.globalTime - this.globalTimeSpeed && tt.departureTime <= this.globalTime
+            (tt) =>
+              tt.departureTime !== null &&
+              tt.departureTime > this.globalTime - this.globalTimeSpeed &&
+              tt.departureTime <= this.globalTime
           );
           if (departureItems.length === 0) {
             // 発車時間ではない
@@ -199,7 +222,7 @@ export class TrainMove2 {
 
           console.log('departureItems.length >= 1', departureItems);
         } else {
-          // TODO
+          // TODO: 別のモードを実装
         }
       }
       // 発車

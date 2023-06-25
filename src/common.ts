@@ -1,3 +1,5 @@
+import { Platform, Station, generateId } from './model';
+
 export function max(arr: number[]): number {
   let cur = Number.MIN_SAFE_INTEGER;
   for (const n of arr) {
@@ -14,8 +16,8 @@ export function min(arr: number[]): number {
   return cur;
 }
 
-export function assert(b: boolean) {
-  if (!b) throw new Error('assert');
+export function assert(b: boolean, message?: string): asserts b {
+  if (!b) throw new Error('assert' + (message ? ': ' + message : ''));
 }
 
 export function deepEqual(x: any, y: any): boolean {
@@ -37,4 +39,30 @@ export function moduloRoundDown(value: number, mod: number): number {
   } else {
     return value;
   }
+}
+
+export function createNewStationWithPlatform({
+  platformId,
+  platformName,
+}: {
+  platformId: string;
+  platformName: string;
+}): Platform {
+  const newStation: Station = {
+    stationId: generateId(),
+    stationName: platformName,
+    platforms: [],
+    defaultInboundDiaPlatformId: platformId,
+    defaultOutboundDiaPlatformId: platformId,
+  };
+
+  const newPlatform = {
+    platformId: platformId,
+    platformName: platformName,
+    station: newStation,
+  };
+
+  newStation.platforms.push(newPlatform);
+
+  return newPlatform;
 }

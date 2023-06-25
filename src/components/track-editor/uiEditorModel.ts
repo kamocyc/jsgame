@@ -1,5 +1,5 @@
-import { GameMap } from './mapEditorModel';
-import { DiaTrain, HalfTrack, Switch } from './model';
+import { GameMap } from '../../mapEditorModel';
+import { DiaTrain, HalfTrack, Platform, Station, Switch } from '../../model';
 import { TrainMove2 } from './trainMove2';
 
 export type BranchDirection = 'Straight' | 'Branch';
@@ -9,17 +9,13 @@ export interface Train {
   trainName: string;
 }
 
-export interface Platform {
-  platformId: string;
-  platformName: string;
-}
+// 1つのtrain, platformに対して、複数のtimetableItemが存在する
 
-// 1つのtrain, stationに対して、複数のtimetableItemが存在する
-
-export interface StationTimetableItem {
+export interface PlatformTimetableItem {
   train: Train;
-  station: Platform;
-  departureTime: number;
+  platform: Platform;
+  arrivalTime: number | null;
+  departureTime: number | null;
 }
 
 export interface SwitchTimetableItem {
@@ -30,19 +26,20 @@ export interface SwitchTimetableItem {
 }
 
 export interface Timetable {
-  stationTTItems: StationTimetableItem[];
+  platformTTItems: PlatformTimetableItem[];
   switchTTItems: SwitchTimetableItem[];
 }
 
 export type EditorDialogMode = 'StationEditor' | 'SwitchEditor';
 
-export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'Station' | 'Station2' | 'Info';
+export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info';
 
 export interface AppStates {
   editMode: EditMode;
   timetable: Timetable;
   trains: DiaTrain[];
-  switches: Switch[];
+  switches: Switch[]; // 今は使っていない
+  stations: Station[];
   tracks: HalfTrack[];
   map: GameMap;
   trainMove: TrainMove2;

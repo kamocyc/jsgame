@@ -1,4 +1,4 @@
-import { assert, deepEqual } from './common';
+import { assert, deepEqual } from '../../common';
 import {
   BranchType,
   Cell,
@@ -10,9 +10,9 @@ import {
   LineDirection,
   addVector,
   timesVector,
-} from './mapEditorModel';
-import { HalfTrack, Switch } from './model';
-import { createNewTrack, getRadian } from './trackUtil';
+} from '../../mapEditorModel';
+import { HalfTrack, Switch } from '../../model';
+import { createNewTrack, getRadian } from '../../trackUtil';
 
 type CreateLineError = { error: string };
 
@@ -301,6 +301,7 @@ function getStraightPatternIndex(Switch: Switch): [number, number] {
 }
 
 // 破壊的変更はしない
+// 返すtracksは、順方向のtrack, 逆方向のtrackの順で、複数セルをまとめて作った場合はその配列
 function createTrackOnAdjacentCells(
   cell1: Cell,
   cell2: Cell,

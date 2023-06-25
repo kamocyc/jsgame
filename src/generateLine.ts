@@ -1,4 +1,4 @@
-import { getStationIdMapKey } from './common.js';
+import { createNewStationWithPlatform, getStationIdMapKey } from './common.js';
 import { DiaStation, Diagram, HalfTrack, Point, StationTrain, Switch, generateId } from './model.js';
 import { createNewTrack } from './trackUtil.js';
 import { TrainMove } from './trainMove.js';
@@ -41,13 +41,18 @@ export function generateLines(trainMove: TrainMove, stations: DiaStation[], stat
         )
       );
       const [stationTrack] = add_(
-        createNewTrack(branchTrack._end, addPoint(branchTrack._end, { x: 50, y: 0 }), [], [branchTrack], {
-          shouldDepart: () => true,
-          platformId: stationIdMap.get(
-            getStationIdMapKey(station.stationId, station.platforms[platformIndex].platformId)
-          )!,
-          platformName: station.name + (station.platforms[platformIndex].platformName ?? ''),
-        })
+        createNewTrack(
+          branchTrack._end,
+          addPoint(branchTrack._end, { x: 50, y: 0 }),
+          [],
+          [branchTrack],
+          createNewStationWithPlatform({
+            platformId: stationIdMap.get(
+              getStationIdMapKey(station.stationId, station.platforms[platformIndex].platformId)
+            )!,
+            platformName: station.name + (station.platforms[platformIndex].platformName ?? ''),
+          })
+        )
       );
       const [afterBranchTrack] = add_(
         createNewTrack(

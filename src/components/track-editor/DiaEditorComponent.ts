@@ -1,6 +1,5 @@
 import { _x, _y, canvasHeight, canvasWidth, drawLine, fontSize } from '../../drawer';
-import { DiaTrain } from '../../model';
-import { Platform } from '../../uiEditorModel';
+import { DiaTrain, Platform } from '../../model';
 
 interface DiaStation {
   diaStationId: string;

@@ -1,11 +1,12 @@
 import { useState } from 'preact/hooks';
-import { DiaStation, DiaTime, DiaTrain, TimetableDirection } from './model';
+import { Station } from '../../model';
+import { DiaTime, DiaTrain, TimetableDirection } from './model';
 
-function getStationTimetable(diaTrains: DiaTrain[], diaStation: DiaStation) {
+function getStationTimetable(diaTrains: DiaTrain[], diaStation: Station) {
   const stationTimetable = diaTrains
     .map((diaTrain) => {
       const stationTimes = diaTrain.diaTimes.filter(
-        (diaTime) => diaTime.diaStation.diaStationId === diaStation.diaStationId && !diaTime.isPassing
+        (diaTime) => diaTime.diaStation.stationId === diaStation.stationId && !diaTime.isPassing
       );
       if (stationTimes.length === 0) {
         return null;
@@ -14,9 +15,9 @@ function getStationTimetable(diaTrains: DiaTrain[], diaStation: DiaStation) {
       // 終着駅の情報はこれだとまずい？
       const finalStation = diaTrain.diaTimes[diaTrain.diaTimes.length - 1].diaStation;
 
-      return [stationTimes[0], finalStation] as [DiaTime, DiaStation];
+      return [stationTimes[0], finalStation] as [DiaTime, Station];
     })
-    .filter((t) => t != null && t[0].departureTime != null) as [DiaTime, DiaStation][];
+    .filter((t) => t != null && t[0].departureTime != null) as [DiaTime, Station][];
 
   return stationTimetable.reduce((acc, [diaTime, diaStation]) => {
     const hour = Math.floor(diaTime.departureTime! / 60 / 60);
@@ -25,10 +26,10 @@ function getStationTimetable(diaTrains: DiaTrain[], diaStation: DiaStation) {
     }
     acc[hour].push([diaTime, diaStation]);
     return acc;
-  }, [] as { [key: number]: [DiaTime, DiaStation][] });
+  }, [] as { [key: number]: [DiaTime, Station][] });
 }
 
-function StationTimetableComponent({ diaTrains, diaStation }: { diaTrains: DiaTrain[]; diaStation: DiaStation }) {
+function StationTimetableComponent({ diaTrains, diaStation }: { diaTrains: DiaTrain[]; diaStation: Station }) {
   const stationTimetable = getStationTimetable(diaTrains, diaStation);
 
   function showMinutes(seconds: number) {
@@ -46,7 +47,7 @@ function StationTimetableComponent({ diaTrains, diaStation }: { diaTrains: DiaTr
                 {stationTimetable[Number(hour)].map(([diaTime, diaStation]) => (
                   <span style={{ margin: '5px' }}>
                     <span>{showMinutes(diaTime.departureTime!)}</span>
-                    <span style={{ fontSize: '10px' }}>{diaStation.diaStationName}</span>
+                    <span style={{ fontSize: '10px' }}>{diaStation.stationName}</span>
                   </span>
                 ))}
               </td>
@@ -65,7 +66,7 @@ export function StationTimetablePageComponent({
 }: {
   inboundDiaTrains: DiaTrain[];
   outboundDiaTrains: DiaTrain[];
-  diaStations: DiaStation[];
+  diaStations: Station[];
 }) {
   const [selectedDiaStation, setSelectedDiaStation] = useState(diaStations[0]);
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
@@ -75,10 +76,10 @@ export function StationTimetablePageComponent({
       <div>
         <span>駅:</span>
         <select
-          value={selectedDiaStation.diaStationId}
+          value={selectedDiaStation.stationId}
           onChange={(e) => {
             const diaStationId = e.currentTarget.value;
-            const diaStation = diaStations.find((diaStation) => diaStation.diaStationId === diaStationId);
+            const diaStation = diaStations.find((diaStation) => diaStation.stationId === diaStationId);
             if (diaStation == null) {
               return;
             }
@@ -86,7 +87,7 @@ export function StationTimetablePageComponent({
           }}
         >
           {diaStations.map((diaStation) => (
-            <option value={diaStation.diaStationId}>{diaStation.diaStationName}</option>
+            <option value={diaStation.stationId}>{diaStation.stationName}</option>
           ))}
         </select>
       </div>

@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
-import { Switch } from '../../model';
+import { Platform, Switch } from '../../model';
 import { parseTime, showGlobalTime } from '../../timetableEditor';
-import { Platform, Timetable, Train } from '../../uiEditorModel';
+import { Timetable, Train } from './uiEditorModel';
 
 export function TrainSelector({
   trains,
@@ -94,51 +94,106 @@ export function SwitchEditor({ timetable, trains, Switch }: { timetable: Timetab
   );
 }
 
+function PlatformSelector({
+  platforms,
+  platform,
+  setSelectedPlatform,
+}: {
+  platforms: Platform[];
+  platform: Platform;
+  setSelectedPlatform: (platform: Platform) => void;
+}) {
+  return (
+    <>
+      プラットフォーム:
+      <select
+        onChange={(e) => {
+          const platformId = (e.target as HTMLSelectElement).value;
+          const platform = platforms.find((platform) => platform.platformId === platformId);
+          if (platform) {
+            setSelectedPlatform(platform);
+          }
+        }}
+      >
+        {platforms.map((p) => (
+          <option value={p.platformId} selected={p.platformId === platform.platformId ? true : false}>
+            {p.platformName}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+}
+
 export function StationEditor({
   timetable,
   trains,
-  station,
+  platform,
+  setPlatform,
+  update,
 }: {
   timetable: Timetable;
   trains: Train[];
-  station: Platform;
+  platform: Platform;
+  setPlatform: (platform: Platform) => void;
+  update: () => void;
 }) {
   const [selectedTrain, setSelectedTrain] = useState<Train>(trains[0]);
-  const [_, setUpdate] = useState([]);
-  const ttItems = timetable.stationTTItems.filter(
-    (item) => item.station.platformId === station.platformId && item.train.trainId === selectedTrain.trainId
+  const [_, setUpdate_] = useState([]);
+  const setUpdate = () => {
+    setUpdate_([]);
+    update();
+  };
+
+  const station = platform.station;
+  const ttItems = timetable.platformTTItems.filter(
+    (item) => item.platform.platformId === platform.platformId && item.train.trainId === selectedTrain.trainId
   );
 
   return (
     <div>
       <div>
-        <input value={station.platformName} />
-        <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
+        <div>
+          <input
+            value={station.stationName}
+            onChange={(e) => {
+              station.stationName = (e.target as HTMLInputElement).value;
+              setUpdate();
+            }}
+          />
+        </div>
+        <div>
+          <PlatformSelector platforms={station.platforms} platform={platform} setSelectedPlatform={setPlatform} />
+        </div>
+        <div>
+          <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
+        </div>
       </div>
 
       <>
         <button
           onClick={() => {
-            timetable.stationTTItems.push({
+            timetable.platformTTItems.push({
               train: selectedTrain,
-              station: station,
+              platform: platform,
               departureTime: 0,
+              arrivalTime: 0,
             });
 
-            setUpdate([]);
+            setUpdate();
           }}
         >
           時刻を追加
         </button>
       </>
-      <>
+      <div style={{ border: '1px', borderStyle: 'solid', padding: '1px', minHeight: '10px' }}>
         {ttItems.map((item) => (
           <div>
-            <span>
+            <span style={{ marginRight: '5px' }}>
               <button
                 onClick={(e) => {
-                  timetable.stationTTItems = timetable.stationTTItems.filter((item2) => item2 !== item);
-                  setUpdate([]);
+                  timetable.platformTTItems = timetable.platformTTItems.filter((item2) => item2 !== item);
+                  setUpdate();
                 }}
               >
                 削除
@@ -146,19 +201,19 @@ export function StationEditor({
             </span>
             出発時間：
             <input
-              value={showGlobalTime(item.departureTime)}
+              value={item.departureTime === null ? '' : showGlobalTime(item.departureTime)}
               onChange={(e) => {
                 const stringValue = (e.target as HTMLInputElement).value;
                 const newTime = parseTime(stringValue);
                 if (newTime) {
                   item.departureTime = newTime;
-                  setUpdate([]);
+                  setUpdate();
                 }
               }}
             />
           </div>
         ))}
-      </>
+      </div>
     </div>
   );
 }

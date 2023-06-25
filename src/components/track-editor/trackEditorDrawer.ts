@@ -1,9 +1,9 @@
-import { drawLine as drawLine_ } from './drawer';
+import { assert } from '../../common';
+import { drawLine as drawLine_ } from '../../drawer';
 import {
   Cell,
   CellHeight,
   CellWidth,
-  GameMap,
   LineType,
   LineTypeBranch,
   LineTypeCurve,
@@ -13,9 +13,9 @@ import {
   MapWidth,
   addVector,
   timesVector,
-} from './mapEditorModel';
-import { HalfTrack, Point } from './model';
-import { TrainMove2 } from './trainMove2';
+} from '../../mapEditorModel';
+import { HalfTrack, Point, Station } from '../../model';
+import { AppStates } from './uiEditorModel';
 
 function r_(position: Point) {
   return { x: position.x, y: MapHeight * CellHeight - position.y };
@@ -228,49 +228,57 @@ function _x(x: number) {
   return x + 10;
 }
 
-function drawTracks(ctx: CanvasRenderingContext2D, tracks: HalfTrack[]) {
+function drawStations(ctx: CanvasRenderingContext2D, stations: Station[], tracks: HalfTrack[]) {
   const fontSize = 15;
+
+  const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
 
   for (const track of tracks) {
     // ctx.strokeStyle = 'gray';
     // drawLine(ctx, addVector(track._begin, { x: 10, y: 10 }), addVector(track._end, { x: 10, y: 10 }));
     // 駅はtrackに対応するが、それは2セルにまたがるので、調整が必要。。。
     if (track.track.platform) {
-      ctx.beginPath();
       ctx.strokeStyle = 'red';
-      ctx.arc(
-        (track._begin.x + track._end.x) / 2,
-        MapHeight * CellHeight - (track._begin.y + track._end.y) / 2,
-        5,
-        0,
-        2 * Math.PI
-      );
-      ctx.stroke();
-
-      // stationの名前を描画
-      ctx.font = fontSize.toString() + 'px sans-serif';
+      drawLine(ctx, track._begin, track._end);
 
       const name = track.track.platform.platformName;
       const metrics = ctx.measureText(name);
+
+      // platformの名前を描画
+      ctx.font = '10px sans-serif';
       ctx.fillText(
         name,
-        _x((track._begin.x + track._end.x) / 2 - metrics.width / 2),
-        MapHeight * CellHeight - _y((track._begin.y + track._end.y) / 2 + 30)
+        _x((track._begin.x + track._end.x) / 2 - metrics.width / 2 - 10),
+        MapHeight * CellHeight - _y((track._begin.y + track._end.y) / 2 - 5)
       );
 
-      ctx.strokeStyle = 'gray';
+      const station = stations.find((station) =>
+        station.platforms.some((platform) => platform.platformId === track.track.platform!.platformId)
+      );
+      assert(station !== undefined);
+
+      drawnStationPoints.get(station.stationId)!.push(track._begin);
     }
   }
+
+  // 駅名を描画
+  ctx.font = fontSize.toString() + 'px sans-serif';
+  ctx.fillStyle = '#aa0000';
+  for (const [stationId, points] of drawnStationPoints) {
+    const station = stations.find((station) => station.stationId === stationId)!;
+    const name = station.stationName;
+    const metrics = ctx.measureText(name);
+    const x = points.reduce((acc, p) => acc + p.x, 0) / points.length;
+    const y = Math.max(...points.map((p) => p.y));
+    ctx.fillText(name, _x(x - metrics.width / 2 - 10), MapHeight * CellHeight - _y(y + 10));
+  }
+
   ctx.strokeStyle = 'black';
 }
 
-export function drawEditor(
-  trainMove: TrainMove2,
-  tracks: HalfTrack[],
-  map?: GameMap,
-  mouseStartCell: Cell | null = null,
-  mouseEndCell: Cell | null = null
-) {
+export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
+  const { stations, tracks, trainMove, map } = appStates;
+
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
 
@@ -278,6 +286,7 @@ export function drawEditor(
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // 罫線を描画
+  ctx.strokeStyle = 'rgb(0, 0, 0, 0.2)';
   for (let x = 0; x <= MapWidth; x++) {
     drawLine(ctx, { x: x * CellWidth, y: 0 }, { x: x * CellWidth, y: MapHeight * CellHeight });
   }
@@ -285,7 +294,9 @@ export function drawEditor(
     drawLine(ctx, { x: 0, y: y * CellHeight }, { x: MapWidth * CellWidth, y: y * CellHeight });
   }
 
-  drawTracks(ctx, tracks);
+  ctx.strokeStyle = 'black';
+
+  drawStations(ctx, stations, tracks);
 
   if (mouseStartCell !== null) {
     ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
@@ -321,8 +332,4 @@ export function drawEditor(
     ctx.strokeStyle = 'black';
     ctx.fillStyle = 'black';
   }
-
-  // if (document.getElementById('time')) {
-  //   document.getElementById('time')!.innerHTML = trainMove.toStringGlobalTime();
-  // }
 }

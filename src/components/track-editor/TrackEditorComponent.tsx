@@ -1,13 +1,13 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { fromJSON } from '../../jsonSerialize';
-import { Cell, GameMap, MapHeight, MapWidth } from '../../mapEditorModel';
-import { DiaTrain, Point, Switch } from '../../model';
-import { drawEditor } from '../../trackEditorDrawer';
-import { TrainMove2 } from '../../trainMove2';
-import { AppStates, EditMode, Timetable, Train } from '../../uiEditorModel';
+import { Cell, MapHeight, MapWidth } from '../../mapEditorModel';
+import { DiaTrain, Point, Station, Switch } from '../../model';
 import { CanvasComponent } from './CanvasComponent';
 import { SeekBarComponent } from './SeekBarComponent';
+import { drawEditor } from './trackEditorDrawer';
+import { TrainMove2 } from './trainMove2';
+import { AppStates, EditMode, Timetable, Train } from './uiEditorModel';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -33,20 +33,6 @@ export function ModeOptionRadioComponent({
       {text}
     </label>
   );
-}
-
-function initializeMap(): GameMap {
-  const map: Cell[][] = [];
-  for (let x = 0; x < MapWidth; x++) {
-    map.push([]);
-    for (let y = 0; y < MapHeight; y++) {
-      map[x].push({
-        position: { x, y },
-        lineType: null,
-      } as Cell);
-    }
-  }
-  return map;
 }
 
 interface SerializedPlacedTrain {
@@ -119,6 +105,9 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     })
   );
   trainMove.trains = placedTrains;
+  const stations = mapData.flatMap((row) =>
+    row.flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station)).filter((x) => x != null)
+  ) as Station[];
 
   setAppStates((appStates) => ({
     ...appStates,
@@ -127,40 +116,24 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     tracks: tracks,
     trainMove: trainMove,
     timetable: timetable,
+    stations: stations,
   }));
 }
 
-const timetable: Timetable = {
-  stationTTItems: [],
-  switchTTItems: [],
-};
-
-export function TrackEditorComponent() {
-  const [appStates, setAppStates] = useState<AppStates>(() => ({
-    editMode: 'Create',
-    timetable: timetable,
-    trains: [
-      {
-        trainId: '1',
-        trainName: 'A',
-        color: 'red',
-        trainTimetable: [],
-      },
-      {
-        trainId: '2',
-        trainName: 'B',
-        color: 'black',
-        trainTimetable: [],
-      },
-    ],
-    map: initializeMap(),
-    trainMove: new TrainMove2(timetable),
-    switches: [],
-    tracks: [],
-  }));
+export function TrackEditorComponent({
+  appStates,
+  setAppStates,
+}: {
+  appStates: AppStates;
+  setAppStates: StateUpdater<AppStates>;
+}) {
   const [runningIntervalId, setRunningIntervalId] = useState<number | null>(null);
   const [positionPercentage, setPositionPercentage] = useState<number>(0);
-  const [_, setUpdate] = useState<never[]>([]);
+  const [_, setUpdate_] = useState<never[]>([]);
+  const update = () => {
+    setUpdate_([]);
+    drawEditor(appStates);
+  };
 
   const setEditMode = (mode: EditMode) => {
     setAppStates((appStates) => ({ ...appStates, editMode: mode }));
@@ -171,7 +144,7 @@ export function TrackEditorComponent() {
   }, []);
 
   useEffect(() => {
-    drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
+    drawEditor(appStates);
   }, [appStates]);
 
   function stopInterval() {
@@ -185,22 +158,16 @@ export function TrackEditorComponent() {
     const intervalId = setInterval(() => {
       appStates.trainMove.tick();
       setPositionPercentage(appStates.trainMove.globalTime / (24 * 60 * 60));
-      drawEditor(appStates.trainMove, appStates.tracks, appStates.map);
+      drawEditor(appStates);
     }, interval);
     setRunningIntervalId(intervalId);
   }
 
   return (
     <>
-      <CanvasComponent appStates={appStates} setAppStates={setAppStates} />
+      <CanvasComponent appStates={appStates} update={update} />
       <div id='control-div'>
-        <button id='save-button' onClick={() => saveMapData(appStates)}>
-          保存
-        </button>
-        <button id='load-button' onClick={() => loadMapData(setAppStates)}>
-          読み込み
-        </button>
-        <div style={{ borderStyle: 'solid', borderWidth: '1px' }}>
+        <div className='dialog'>
           <ModeOptionRadioComponent
             mode='Create'
             text='線路を作成'
@@ -226,9 +193,9 @@ export function TrackEditorComponent() {
             setEditorMode={setEditMode}
           /> */}
           <ModeOptionRadioComponent
-            mode='Station2'
+            mode='Station'
             text='駅を作成'
-            checked={appStates.editMode === 'Station2'}
+            checked={appStates.editMode === 'Station'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
@@ -238,6 +205,12 @@ export function TrackEditorComponent() {
             setEditorMode={setEditMode}
           />
         </div>
+        <button id='save-button' onClick={() => saveMapData(appStates)}>
+          保存
+        </button>
+        <button id='load-button' onClick={() => loadMapData(setAppStates)}>
+          読み込み
+        </button>
       </div>
       <button
         id='button-slow-speed'

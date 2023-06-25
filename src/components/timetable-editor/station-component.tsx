@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
-import { generateId } from '../../model';
+import { generateId, Station } from '../../model';
 import { ContextMenuComponent, EditableTextComponent } from './common-component';
-import { ContextData, DiaStation, DiaTrain, SettingData } from './model';
+import { ContextData, DiaTrain, SettingData } from './model';
 import './timetable-editor.css';
 import { createNewStation, getDefaultPlatform } from './timetable-util';
 
@@ -9,14 +9,14 @@ function StationComponent({
   diaStation,
   setDiaStation,
 }: {
-  diaStation: DiaStation;
-  setDiaStation: (diaStation: DiaStation) => void;
+  diaStation: Station;
+  setDiaStation: (diaStation: Station) => void;
 }) {
   return (
     <EditableTextComponent
-      value={diaStation.diaStationName}
+      value={diaStation.stationName}
       onChange={(value) => {
-        diaStation.diaStationName = value;
+        diaStation.stationName = value;
         setDiaStation({ ...diaStation });
         return true;
       }}
@@ -39,12 +39,12 @@ function StationContextMenuComponent({
 }: {
   contextData: ContextData;
   setContextData: (contextData: ContextData) => void;
-  diaStations: DiaStation[];
-  setDiaStations: (diaStations: DiaStation[]) => void;
+  diaStations: Station[];
+  setDiaStations: (diaStations: Station[]) => void;
   diaTrains: DiaTrain[];
   otherDirectionDiaTrains: DiaTrain[];
-  selectedStation: DiaStation | null;
-  showStationDetail: (diaStation: DiaStation) => void;
+  selectedStation: Station | null;
+  showStationDetail: (diaStation: Station) => void;
   timetableDirection: 'Inbound' | 'Outbound';
 }) {
   return (
@@ -56,17 +56,15 @@ function StationContextMenuComponent({
           label: '駅を削除',
           onClick: () => {
             if (selectedStation) {
-              diaStations = diaStations.filter(
-                (diaStation) => diaStation.diaStationId !== selectedStation.diaStationId
-              );
+              diaStations = diaStations.filter((diaStation) => diaStation.stationId !== selectedStation.stationId);
               diaTrains.forEach((diaTrain) => {
                 diaTrain.diaTimes = diaTrain.diaTimes.filter(
-                  (diaTime) => diaTime.diaStation.diaStationId !== selectedStation.diaStationId
+                  (diaTime) => diaTime.diaStation.stationId !== selectedStation.stationId
                 );
               });
               otherDirectionDiaTrains.forEach((diaTrain) => {
                 diaTrain.diaTimes = diaTrain.diaTimes.filter(
-                  (diaTime) => diaTime.diaStation.diaStationId !== selectedStation.diaStationId
+                  (diaTime) => diaTime.diaStation.stationId !== selectedStation.stationId
                 );
               });
 
@@ -87,9 +85,7 @@ function StationContextMenuComponent({
           onClick: () => {
             const newStation = createNewStation('-');
             // selectedStationの直前に挿入する
-            const index = diaStations.findIndex(
-              (diaStation) => diaStation.diaStationId === selectedStation?.diaStationId
-            );
+            const index = diaStations.findIndex((diaStation) => diaStation.stationId === selectedStation?.stationId);
             if (index === -1) {
               return;
             }
@@ -133,8 +129,8 @@ export function StationListComponent({
   timetableDirection,
   setSettingData,
 }: {
-  diaStations: DiaStation[];
-  setDiaStations: (diaStations: DiaStation[]) => void;
+  diaStations: Station[];
+  setDiaStations: (diaStations: Station[]) => void;
   diaTrains: DiaTrain[];
   otherDirectionDiaTrains: DiaTrain[];
   timetableDirection: 'Inbound' | 'Outbound';
@@ -145,9 +141,9 @@ export function StationListComponent({
     posX: 0,
     posY: 0,
   });
-  const [selectedStation, setSelectedStation] = useState<DiaStation | null>(null);
+  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
 
-  const showStationDetail = (diaStation: DiaStation) => {
+  const showStationDetail = (diaStation: Station) => {
     setSettingData({
       settingType: 'StationSetting',
       diaStation,
@@ -173,7 +169,7 @@ export function StationListComponent({
         onContextMenu={(e) => {
           const targetStation = (() => {
             for (const diaStation of diaStations) {
-              const id = 'dia-station-block-' + diaStation.diaStationId;
+              const id = 'dia-station-block-' + diaStation.stationId;
               const elem = document.getElementById(id);
               if (elem && elem.contains(e.target as Node)) {
                 return diaStation;
@@ -192,12 +188,12 @@ export function StationListComponent({
         {diaStations.map((diaStation) => (
           <div
             style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', paddingRight: '3px' }}
-            id={'dia-station-block-' + diaStation.diaStationId}
+            id={'dia-station-block-' + diaStation.stationId}
           >
             <StationComponent
               diaStation={diaStation}
               setDiaStation={(diaStation) => {
-                diaStation.diaStationName = diaStation.diaStationName;
+                diaStation.stationName = diaStation.stationName;
                 setDiaStations([...diaStations]);
               }}
             />
@@ -244,17 +240,17 @@ export function StationDetailComponent({
   diaStation,
   setDiaStation,
 }: {
-  diaStation: DiaStation;
-  setDiaStation: (diaStation: DiaStation) => void;
+  diaStation: Station;
+  setDiaStation: (diaStation: Station) => void;
 }) {
   return (
     <div>
       <div>
         駅名:{' '}
         <EditableTextComponent
-          value={diaStation.diaStationName}
+          value={diaStation.stationName}
           onChange={(value) => {
-            diaStation.diaStationName = value;
+            diaStation.stationName = value;
             setDiaStation({ ...diaStation });
             return true;
           }}
@@ -277,12 +273,12 @@ export function StationDetailComponent({
             </div>
           </div>
           <div>
-            {diaStation.diaPlatforms.map((diaPlatform) => (
+            {diaStation.platforms.map((diaPlatform) => (
               <div style={{ display: 'flex', flexDirection: 'row' }}>
                 <EditableTextComponent
-                  value={diaPlatform.diaPlatformName}
+                  value={diaPlatform.platformName}
                   onChange={(value) => {
-                    diaPlatform.diaPlatformName = value;
+                    diaPlatform.platformName = value;
                     setDiaStation({ ...diaStation });
                     return true;
                   }}
@@ -293,7 +289,7 @@ export function StationDetailComponent({
                   type='radio'
                   name='default-inbound-platform'
                   style={{ width: 50 + 'px', margin: '0' }}
-                  value={diaPlatform.diaPlatformId}
+                  value={diaPlatform.platformId}
                   onChange={(e) => {
                     if ((e.target as HTMLInputElement)?.value) {
                       const targetPlatformId = (e.target as HTMLInputElement).value;
@@ -306,7 +302,7 @@ export function StationDetailComponent({
                   type='radio'
                   name='default-outbound-platform'
                   style={{ width: 50 + 'px', margin: '0' }}
-                  value={diaPlatform.diaPlatformId}
+                  value={diaPlatform.platformId}
                   onChange={(e) => {
                     if ((e.target as HTMLInputElement)?.value) {
                       const targetPlatformId = (e.target as HTMLInputElement).value;
@@ -317,8 +313,8 @@ export function StationDetailComponent({
                 />
                 <button
                   onClick={() => {
-                    diaStation.diaPlatforms = diaStation.diaPlatforms.filter(
-                      (diaPlatform_) => diaPlatform_.diaPlatformId !== diaPlatform.diaPlatformId
+                    diaStation.platforms = diaStation.platforms.filter(
+                      (diaPlatform_) => diaPlatform_.platformId !== diaPlatform.platformId
                     );
                     setDiaStation({ ...diaStation });
                   }}
@@ -331,14 +327,14 @@ export function StationDetailComponent({
           <div>
             <button
               onClick={() => {
-                diaStation.diaPlatforms.push({
-                  diaPlatformId: generateId(),
-                  diaPlatformName:
-                    diaStation.diaPlatforms.length === 0
+                diaStation.platforms.push({
+                  platformId: generateId(),
+                  platformName:
+                    diaStation.platforms.length === 0
                       ? '1'
                       : Math.max(
-                          ...diaStation.diaPlatforms.map((p) => {
-                            const n = Number(p.diaPlatformName);
+                          ...diaStation.platforms.map((p) => {
+                            const n = Number(p.platformName);
                             if (isNaN(n)) {
                               return 0;
                             } else {
@@ -348,6 +344,7 @@ export function StationDetailComponent({
                         ) +
                         1 +
                         '',
+                  station: diaStation,
                 });
                 setDiaStation({ ...diaStation });
               }}

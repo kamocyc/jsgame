@@ -258,10 +258,11 @@ export class TrainMove {
       }
 
       // const stationCenter = getMidPoint(train.track._begin, train.track._end);
-      if (!train.track.track.platform!.shouldDepart(train, this.globalTime)) {
-        train.platformWaitTime++;
-        return;
-      }
+      // TODO: 復活させたい
+      // if (!train.track.track.platform!.shouldDepart(train, this.globalTime)) {
+      //   train.platformWaitTime++;
+      //   return;
+      // }
 
       // 発車
       train.arrivalAndDepartureStatus = 'Departed';

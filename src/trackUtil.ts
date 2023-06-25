@@ -110,6 +110,8 @@ export function createNewTrack(
   // 整合性チェック
   prevTracks.forEach((track) => assert(track._nextSwitch === prevSwitch_));
   nextTracks.forEach((track) => assert(track._prevSwitch === nextSwitch_));
+  assert(newTrack[0].reverseTrack === newTrack[1]);
+  assert(newTrack[1].reverseTrack === newTrack[0]);
 
   prevSwitch_.switchPatterns.push(...prevTracks.map((track) => [track, newTrack[0]] as [HalfTrack, HalfTrack]));
   nextSwitch_.switchPatterns.push(...nextTracks.map((track) => [newTrack[0], track] as [HalfTrack, HalfTrack]));
@@ -264,7 +266,7 @@ export function abstractSearch<T>(
 }
 
 export function getNextTracks(track: HalfTrack): HalfTrack[] {
-  return track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack);
+  return track._nextSwitch.switchPatterns.filter(([t, _]) => t.trackId === track.trackId).map(([_, t]) => t);
 }
 
 export function searchTrack(

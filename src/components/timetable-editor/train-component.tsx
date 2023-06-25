@@ -1,16 +1,7 @@
 import { useState } from 'preact/hooks';
-import { generateId } from '../../model';
+import { Platform, Station, generateId } from '../../model';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
-import {
-  Clipboard,
-  ContextData,
-  DiaPlatform,
-  DiaStation,
-  DiaTime,
-  DiaTrain,
-  TimetableDirection,
-  TrainType,
-} from './model';
+import { Clipboard, ContextData, DiaTime, DiaTrain, TimetableDirection, TrainType } from './model';
 import { getDefaultPlatform } from './timetable-util';
 
 function TrainContextMenuComponent({
@@ -86,18 +77,18 @@ export function PlatformComponent({
   allDiaPlatforms,
   setDiaPlatform,
 }: {
-  diaPlatform: DiaPlatform;
-  allDiaPlatforms: DiaPlatform[];
-  setDiaPlatform: (diaPlatform: DiaPlatform) => void;
+  diaPlatform: Platform;
+  allDiaPlatforms: Platform[];
+  setDiaPlatform: (diaPlatform: Platform) => void;
 }) {
   return (
     <select
-      value={diaPlatform.diaPlatformId}
+      value={diaPlatform.platformId}
       style={{ height: 22 + 'px' }}
       onChange={(e) => {
         if ((e.target as HTMLSelectElement)?.value != null) {
           const newDiaPlatform = allDiaPlatforms.find(
-            (diaPlatform) => diaPlatform.diaPlatformId === (e.target as HTMLSelectElement).value
+            (diaPlatform) => diaPlatform.platformId === (e.target as HTMLSelectElement).value
           );
           if (newDiaPlatform) {
             setDiaPlatform(newDiaPlatform);
@@ -106,7 +97,7 @@ export function PlatformComponent({
       }}
     >
       {allDiaPlatforms.map((diaPlatform) => (
-        <option value={diaPlatform.diaPlatformId}>{diaPlatform.diaPlatformName}</option>
+        <option value={diaPlatform.platformId}>{diaPlatform.platformName}</option>
       ))}
     </select>
   );
@@ -152,7 +143,7 @@ function TrainListItemComponent({
         />
         <PlatformComponent
           diaPlatform={diaTime.diaPlatform}
-          allDiaPlatforms={diaTime.diaStation.diaPlatforms}
+          allDiaPlatforms={diaTime.diaStation.platforms}
           setDiaPlatform={(diaPlatform) => {
             diaTime.diaPlatform = diaPlatform;
             setDiaTrains([...diaTrains]);
@@ -178,7 +169,7 @@ export function TrainListComponent({
   trainTypes,
 }: {
   diaTrains: DiaTrain[];
-  diaStations: DiaStation[];
+  diaStations: Station[];
   timetableDirection: TimetableDirection;
   setDiaTrains: (diaTrains: DiaTrain[]) => void;
   trainTypes: TrainType[];
@@ -193,9 +184,9 @@ export function TrainListComponent({
   });
   const [selectedDiaTrain, setSelectedDiaTrain] = useState<DiaTrain | null>(null);
 
-  function getDiaTimesOfStations(diaTrain: DiaTrain, diaStations: DiaStation[]): DiaTime[] {
+  function getDiaTimesOfStations(diaTrain: DiaTrain, diaStations: Station[]): DiaTime[] {
     return diaStations.map((diaStation) => {
-      const diaTime = diaTrain.diaTimes.find((diaTime) => diaTime.diaStation.diaStationId === diaStation.diaStationId);
+      const diaTime = diaTrain.diaTimes.find((diaTime) => diaTime.diaStation.stationId === diaStation.stationId);
       if (diaTime) {
         return diaTime;
       } else {

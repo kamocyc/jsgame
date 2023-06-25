@@ -1,4 +1,4 @@
-import { DiaStation, DiaTrain, Diagram, StationTrain, generateId } from './model.js';
+import { DiaStation, DiaTrain, Diagram, Platform, Station, StationTrain, generateId } from './model.js';
 
 // oud形式をjson形式に変換する
 function oudToJson(oudBuf: string): any {
@@ -140,16 +140,28 @@ function timeToSeconds(time: Time): number {
 }
 
 function convertEkis(ekis: any[]): DiaStation[] {
-  return ekis.map((eki, i) => ({
-    stationId: generateId(),
-    name: eki['Ekimei'] as string,
-    distance: i * 10 /* TODO */,
-    platforms: (eki['EkiTrack2Cont'][0]['EkiTrack2'] as any[]).map((track) => ({
-      platformId: generateId(),
-      platformName: track['TrackName'] as string,
-      shouldDepart: (t) => true,
-    })),
-  }));
+  return ekis.map((eki, i) => {
+    const station: DiaStation = {
+      stationId: generateId(),
+      name: eki['Ekimei'] as string,
+      distance: i * 10 /* TODO */,
+      platforms: [],
+    };
+    for (const track of eki['EkiTrack2Cont'][0]['EkiTrack2'] as any[]) {
+      const platform: Platform = {
+        platformId: generateId(),
+        platformName: track['TrackName'] as string,
+        station: station as unknown as Station,
+      };
+      station.platforms.push(platform);
+    }
+
+    // 本来はこれらはoutデータから取得するべき
+    (station as any).defaultOutboundDiaPlatformId = station.platforms[0].platformId;
+    (station as any).defaultInboundDiaPlatformId = station.platforms[0].platformId;
+
+    return station;
+  });
 }
 
 function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus: any[]): DiaTrainExt[] {

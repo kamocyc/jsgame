@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'preact/hooks';
+import { JSON_decycle, JSON_retrocycle } from '../../cycle';
+import { Station } from '../../model';
+import { toDetailedTimetable } from '../track-editor/timetableConverter';
+import { AppStates } from '../track-editor/uiEditorModel';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
-import { DiaStation, DiaTrain, SettingData, TimetableData, TimetableDirection, TrainType } from './model';
+import { DiaTrain, SettingData, TimetableData, TimetableDirection, TrainType } from './model';
 import { StationDetailComponent, StationListComponent } from './station-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
@@ -9,7 +13,7 @@ import { getInitialTimetable } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 
-export function TrainListRowHeaderComponent({ diaStations }: { diaStations: DiaStation[] }) {
+export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Station[] }) {
   return (
     <div>
       {diaStations.map((diaStation) => (
@@ -24,12 +28,12 @@ export function TrainListRowHeaderComponent({ diaStations }: { diaStations: DiaS
 }
 
 function saveTimetable(timetable: TimetableData) {
-  localStorage.setItem('timetableEditorData', JSON.stringify(timetable));
+  localStorage.setItem('timetableEditorData', JSON.stringify(JSON_decycle(timetable)));
 }
 
 function loadTimetableData(): TimetableData {
   const timetableString = localStorage.getItem('timetableEditorData');
-  return timetableString ? JSON.parse(timetableString) : getInitialTimetable();
+  return timetableString ? JSON_retrocycle(JSON.parse(timetableString)) : getInitialTimetable();
 }
 
 export function TimetableEditorTableComponent({
@@ -42,8 +46,8 @@ export function TimetableEditorTableComponent({
   trainTypes,
   setSettingData,
 }: {
-  diaStations: DiaStation[];
-  setDiaStations: (diaStations: DiaStation[]) => void;
+  diaStations: Station[];
+  setDiaStations: (diaStations: Station[]) => void;
   diaTrains: DiaTrain[];
   otherDirectionDiaTrains: DiaTrain[];
   setDiaTrains: (diaTrains: DiaTrain[]) => void;
@@ -80,7 +84,7 @@ export function TimetableEditorTableComponent({
   );
 }
 
-export function TimetableEditorComponent() {
+export function TimetableEditorComponent({ appStates }: { appStates: AppStates }) {
   const [timetableData, setTimetableData] = useState<TimetableData>(getInitialTimetable());
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
   const [trainTypes, setTrainTypes] = useState<TrainType[]>([
@@ -101,7 +105,7 @@ export function TimetableEditorComponent() {
   }, []);
   const [settingData, setSettingData] = useState<SettingData | null>(null);
 
-  const setDiaStations = (diaStations: DiaStation[]) => {
+  const setDiaStations = (diaStations: Station[]) => {
     const timetableData_ = {
       ...timetableData,
       timetable: {
@@ -136,6 +140,20 @@ export function TimetableEditorComponent() {
 
   return (
     <div style={{ display: 'flex' }}>
+      <button
+        onClick={() => {
+          const timetable = toDetailedTimetable(
+            timetableData.timetable.stations,
+            timetableData.timetable,
+            appStates.tracks
+          );
+
+          console.log('timetable');
+          console.log(timetable);
+        }}
+      >
+        詳細ダイヤ
+      </button>
       <div style={{ flex: '1 1 auto' }}>
         <TabComponent
           onTabChange={(tabId) => {
@@ -148,7 +166,7 @@ export function TimetableEditorComponent() {
               component: () => (
                 <TimetableEditorTableComponent
                   {...{
-                    diaStations: timetableData.timetable.diaStations,
+                    diaStations: timetableData.timetable.stations,
                     setDiaStations: setDiaStations,
                     diaTrains: timetableData.timetable.inboundDiaTrains,
                     otherDirectionDiaTrains: timetableData.timetable.outboundDiaTrains,
@@ -166,7 +184,7 @@ export function TimetableEditorComponent() {
               component: () => (
                 <TimetableEditorTableComponent
                   {...{
-                    diaStations: reverseArray(timetableData.timetable.diaStations),
+                    diaStations: reverseArray(timetableData.timetable.stations),
                     setDiaStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
                     diaTrains: timetableData.timetable.outboundDiaTrains,
                     otherDirectionDiaTrains: timetableData.timetable.inboundDiaTrains,
@@ -188,7 +206,7 @@ export function TimetableEditorComponent() {
               tabText: '駅時刻表',
               component: () => (
                 <StationTimetablePageComponent
-                  diaStations={timetableData.timetable.diaStations}
+                  diaStations={timetableData.timetable.stations}
                   inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
                   outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
                 />
@@ -199,7 +217,7 @@ export function TimetableEditorComponent() {
               tabText: 'ダイヤグラム',
               component: () => (
                 <DiagramPageComponent
-                  diaStations={timetableData.timetable.diaStations}
+                  diaStations={timetableData.timetable.stations}
                   inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
                   outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
                   setUpdate={() => {
@@ -220,8 +238,8 @@ export function TimetableEditorComponent() {
               diaStation={settingData.diaStation}
               setDiaStation={(diaStation) => {
                 setDiaStations(
-                  timetableData.timetable.diaStations.map((diaStation_) =>
-                    diaStation_.diaStationId === diaStation.diaStationId ? diaStation : diaStation_
+                  timetableData.timetable.stations.map((diaStation_) =>
+                    diaStation_.stationId === diaStation.stationId ? diaStation : diaStation_
                   )
                 );
               }}

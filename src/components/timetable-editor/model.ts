@@ -1,23 +1,12 @@
-export interface DiaPlatform {
-  diaPlatformId: string;
-  diaPlatformName: string;
-}
-
-export interface DiaStation {
-  diaStationId: string;
-  diaStationName: string;
-  diaPlatforms: DiaPlatform[];
-  defaultOutboundDiaPlatformId: string;
-  defaultInboundDiaPlatformId: string;
-}
+import { Platform, Station } from '../../model';
 
 export interface DiaTime {
   diaTimeId: string;
   arrivalTime: number | null;
   departureTime: number | null;
   isPassing: boolean;
-  diaStation: DiaStation;
-  diaPlatform: DiaPlatform;
+  diaStation: Station;
+  diaPlatform: Platform;
 }
 
 export interface TrainType {
@@ -43,7 +32,7 @@ export interface TimetableData {
 export interface Timetable {
   inboundDiaTrains: DiaTrain[];
   outboundDiaTrains: DiaTrain[];
-  diaStations: DiaStation[];
+  stations: Station[];
 }
 
 export interface Clipboard {
@@ -58,7 +47,7 @@ export interface ContextData {
 
 export interface StationSettingData {
   settingType: 'StationSetting';
-  diaStation: DiaStation;
+  diaStation: Station;
 }
 
 export type SettingData = StationSettingData;

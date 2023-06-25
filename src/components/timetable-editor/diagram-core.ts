@@ -1,11 +1,11 @@
 import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
-import { generateId } from '../../model';
-import { DiaStation, DiaTime, DiaTrain } from './model';
+import { generateId, Station } from '../../model';
+import { DiaTime, DiaTrain } from './model';
 import { getDefaultPlatform } from './timetable-util';
 
 export interface DiagramProps {
-  diaStations: DiaStation[];
+  diaStations: Station[];
   setUpdate: () => void;
   inboundDiaTrains: DiaTrain[];
   outboundDiaTrains: DiaTrain[];
@@ -17,7 +17,7 @@ let editMode: 'Edit' | 'Create' = 'Edit';
 
 // 線を伸ばしている途中の線
 let drawingLine: Konva.Line | null = null;
-let drawingLineTimes: { diaStation: DiaStation; time: number }[] = [];
+let drawingLineTimes: { diaStation: Station; time: number }[] = [];
 
 function drawTimeGrid(layer: Konva.Layer, layerHeight: number, secondWidth: number) {
   const timeGrid = new Konva.Group();
@@ -74,10 +74,10 @@ function commitDrawingLine(props: DiagramProps) {
   if (drawingLineTimes.length >= 2) {
     // 1番目のstationのindexと2番目のstationのindexを比較し、inbound / outboundを判定する
     const firstStationIndex = props.diaStations.findIndex(
-      (diaStation) => diaStation.diaStationId === drawingLineTimes[0].diaStation.diaStationId
+      (diaStation) => diaStation.stationId === drawingLineTimes[0].diaStation.stationId
     );
     const secondStationIndex = props.diaStations.findIndex(
-      (diaStation) => diaStation.diaStationId === drawingLineTimes[1].diaStation.diaStationId
+      (diaStation) => diaStation.stationId === drawingLineTimes[1].diaStation.stationId
     );
     const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
     const diaTrain = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
@@ -110,7 +110,7 @@ function getPointerPosition(stage: Stage) {
 
 function drawStations(
   layer: Konva.Layer,
-  stationPositions: (DiaStation & { diagramPosition: number })[],
+  stationPositions: (Station & { diagramPosition: number })[],
   secondWidth: number,
   props: DiagramProps
 ) {
@@ -124,7 +124,7 @@ function drawStations(
     const stationText = new Konva.Text({
       x: 0,
       y: stationPosition.diagramPosition,
-      text: stationPosition.diaStationName,
+      text: stationPosition.stationName,
       fontSize: 20,
       fontFamily: 'Calibri',
       fill: 'black',
@@ -169,9 +169,7 @@ function drawStations(
 
         // 整合性チェック
         if (
-          drawingLineTimes.some(
-            (drawingLineTime) => drawingLineTime.diaStation.diaStationId === stationPosition.diaStationId
-          )
+          drawingLineTimes.some((drawingLineTime) => drawingLineTime.diaStation.stationId === stationPosition.stationId)
         ) {
           // 既に同じ駅が追加されている。 => 分けないとデータ構造上。。
           // TODO: 直前と同じなら、停車時間、発車時間
@@ -215,7 +213,7 @@ function drawStations(
 // TODO: 変更を反映する
 function drawTrain(
   layer: Konva.Layer,
-  stationPositions: { diaStationId: string; diagramPosition: number }[],
+  stationPositions: (Station & { diagramPosition: number })[],
   secondWidth: number,
   diaTrain: DiaTrain
 ) {
@@ -223,11 +221,9 @@ function drawTrain(
   layer.add(train);
 
   const positionDiaTimeMap = diaTrain.diaTimes.flatMap((diaTime) => {
-    const stationPosition = stationPositions.find(
-      (station) => station.diaStationId === diaTime.diaStation.diaStationId
-    );
+    const stationPosition = stationPositions.find((station) => station.stationId === diaTime.diaStation.stationId);
     if (!stationPosition) {
-      throw new Error(`station ${diaTime.diaStation.diaStationId} not found`);
+      throw new Error(`station ${diaTime.diaStation.stationId} not found`);
     }
 
     if (diaTime.departureTime == null && diaTime.arrivalTime == null) {

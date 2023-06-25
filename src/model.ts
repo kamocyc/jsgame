@@ -16,7 +16,15 @@ export interface Switch {
 export interface Platform {
   platformId: string;
   platformName: string;
-  shouldDepart: (train: Train, globalTime: number) => boolean;
+  station: Station;
+}
+
+export interface Station {
+  stationId: string;
+  stationName: string;
+  platforms: Platform[];
+  defaultOutboundDiaPlatformId: string;
+  defaultInboundDiaPlatformId: string;
 }
 
 export interface HalfTrack {

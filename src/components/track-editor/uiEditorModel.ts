@@ -16,6 +16,7 @@ export interface PlatformTimetableItem {
   platform: Platform;
   arrivalTime: number | null;
   departureTime: number | null;
+  track: HalfTrack | null;
 }
 
 export interface SwitchTimetableItem {

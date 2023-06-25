@@ -318,7 +318,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     }
   }
 
-  for (const train of trainMove.trains) {
+  for (const train of trainMove.placedTrains) {
     const position = train.position;
 
     // 塗りつぶした円を描画

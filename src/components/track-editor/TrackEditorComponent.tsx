@@ -37,7 +37,7 @@ export function ModeOptionRadioComponent({
 
 interface SerializedPlacedTrain {
   trainId: string;
-  diaTrain: Train;
+  train: Train;
   speed: number;
   trackId: string;
   position: Point;
@@ -56,9 +56,9 @@ function saveMapData(appStates: AppStates) {
   localStorage.setItem(
     'placedTrains',
     JSON.stringify(
-      appStates.trainMove.trains.map((t) => ({
+      appStates.trainMove.placedTrains.map((t) => ({
         trainId: t.trainId,
-        diaTrain: t.diaTrain,
+        diaTrain: t.train,
         speed: t.speed,
         trackId: t.track.trackId,
         position: t.position,
@@ -93,18 +93,18 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
   );
 
-  const placedTrains = (JSON.parse(localStorage.getItem('placedTrains') ?? '[]') as SerializedPlacedTrain[]).map(
-    (t) => ({
-      trainId: t.trainId,
-      diaTrain: t.diaTrain,
-      speed: t.speed,
-      track: tracks.find((track) => track.trackId === t.trackId)!,
-      position: t.position,
-      stationWaitTime: t.stationWaitTime,
-      stationStatus: t.stationStatus,
-    })
-  );
-  trainMove.trains = placedTrains;
+  // const placedTrains = (JSON.parse(localStorage.getItem('placedTrains') ?? '[]') as SerializedPlacedTrain[]).map(
+  //   (t) => ({
+  //     trainId: t.trainId,
+  //     train: t.train,
+  //     speed: t.speed,
+  //     track: tracks.find((track) => track.trackId === t.trackId)!,
+  //     position: t.position,
+  //     stationWaitTime: t.stationWaitTime,
+  //     stationStatus: t.stationStatus,
+  //   })
+  // );
+  // trainMove.placedTrains = placedTrains;
   const stations = mapData.flatMap((row) =>
     row.flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station)).filter((x) => x != null)
   ) as Station[];

@@ -59,7 +59,7 @@ export function App() {
         },
         {
           splitViewId: 2,
-          component: () => <TimetableEditorComponent appStates={appStates} />,
+          component: () => <TimetableEditorComponent appStates={appStates} setAppStates={setAppStates} />,
         },
       ]}
     />

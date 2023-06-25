@@ -72,11 +72,11 @@ function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
   const track = cell.lineType?.tracks[0];
   const position = getMidPoint(track._begin, track._end);
 
-  const moveTrain = trainMove.trains.find((train) => train.diaTrain.trainId === selectedTrain.trainId);
+  const moveTrain = trainMove.placedTrains.find((train) => train.train.trainId === selectedTrain.trainId);
   if (moveTrain === undefined) {
-    trainMove.trains.push({
+    trainMove.placedTrains.push({
       trainId: selectedTrain.trainId,
-      diaTrain: selectedTrain,
+      train: selectedTrain,
       speed: 10,
       stationWaitTime: 0,
       stationStatus: 'NotArrived',

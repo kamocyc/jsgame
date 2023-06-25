@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'preact/hooks';
+import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { Station } from '../../model';
-import { toDetailedTimetable } from '../track-editor/timetableConverter';
+import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
+import { TrainMove2 } from '../track-editor/trainMove2';
 import { AppStates } from '../track-editor/uiEditorModel';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
@@ -84,7 +85,13 @@ export function TimetableEditorTableComponent({
   );
 }
 
-export function TimetableEditorComponent({ appStates }: { appStates: AppStates }) {
+export function TimetableEditorComponent({
+  appStates,
+  setAppStates,
+}: {
+  appStates: AppStates;
+  setAppStates: StateUpdater<AppStates>;
+}) {
   const [timetableData, setTimetableData] = useState<TimetableData>(getInitialTimetable());
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
   const [trainTypes, setTrainTypes] = useState<TrainType[]>([
@@ -150,9 +157,27 @@ export function TimetableEditorComponent({ appStates }: { appStates: AppStates }
 
           console.log('timetable');
           console.log(timetable);
+
+          setAppStates((appStates) => ({
+            ...appStates,
+            trainMove: new TrainMove2(timetable),
+            timetable: timetable,
+          }));
         }}
       >
-        詳細ダイヤ
+        詳細ダイヤに反映
+      </button>
+      <button
+        onClick={() => {
+          const timetable = toOutlinedTimetableStations(appStates.tracks);
+          console.log(timetable);
+          setTimetableData((timetableData) => ({
+            ...timetableData,
+            timetable: timetable,
+          }));
+        }}
+      >
+        概要ダイヤに反映
       </button>
       <div style={{ flex: '1 1 auto' }}>
         <TabComponent

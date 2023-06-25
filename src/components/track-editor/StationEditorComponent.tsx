@@ -178,6 +178,7 @@ export function StationEditor({
               platform: platform,
               departureTime: 0,
               arrivalTime: 0,
+              track: null /* TODO: 方向を指定する */,
             });
 
             setUpdate();

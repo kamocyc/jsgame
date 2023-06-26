@@ -34,12 +34,14 @@ export function App() {
     timetable: timetable,
     trains: [
       {
+        diaTimes: [],
         trainId: '1',
         trainName: 'A',
         color: 'red',
         trainTimetable: [],
       },
       {
+        diaTimes: [],
         trainId: '2',
         trainName: 'B',
         color: 'black',

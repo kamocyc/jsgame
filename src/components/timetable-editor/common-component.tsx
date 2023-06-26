@@ -1,8 +1,55 @@
 import { ComponentChild } from 'preact';
 import { Ref, useEffect, useRef, useState } from 'preact/hooks';
-import { parseTime, showGlobalTime } from '../../timetableEditor';
 import { ContextData } from './model';
 import './timetable-editor.css';
+
+export function showGlobalTime(timeSeconds: number): string {
+  const m = Math.floor((timeSeconds / 60) % 60);
+  return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);
+}
+
+export function parseTime(text: string): number | undefined {
+  if (text === '') {
+    return undefined;
+  }
+  if (text.length === 3) {
+    text = '0' + text;
+  }
+  const hour = parseInt(text.substring(0, 2));
+  const minute = parseInt(text.substring(2));
+
+  // 1日の範囲害ならundefinedを返す
+  if (hour >= 24 || minute >= 60 || hour < 0 || minute < 0) {
+    return undefined;
+  }
+
+  return hour * 60 * 60 + minute * 60;
+}
+
+function parseInputTextAsTime(text: string): string | undefined {
+  text = text.replace(/[^0-9]/g, '');
+  if (text.length <= 2) {
+    // 分のみ => TODO: 直前の時間の次の分を利用する
+  } else if (text.length === 3) {
+    // 時が1桁
+    const _hourText = text.substring(0, 1);
+    const minuteText = text.substring(1);
+
+    if (Number(minuteText) < 60) {
+      return text;
+    }
+  } else if (text.length === 4) {
+    // 時が2桁
+    const hourText = text.substring(0, 2);
+    const minuteText = text.substring(2);
+
+    if (Number(hourText) < 24 && Number(minuteText) < 60) {
+      return text;
+    }
+  } else {
+    return undefined;
+  }
+}
 
 /**
  * Hook that alerts clicks outside of the passed ref

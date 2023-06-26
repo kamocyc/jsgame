@@ -96,14 +96,14 @@ export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimeta
     stations: inboundDiaTimes.length === 0 ? uniqueStations : inboundDiaTimes.map((d) => d.diaStation),
     inboundDiaTrains: [
       {
-        diaTrainId: generateId(),
+        trainId: generateId(),
         diaTimes: inboundDiaTimes,
         trainName: 'Inbound',
       },
     ],
     outboundDiaTrains: [
       {
-        diaTrainId: generateId(),
+        trainId: generateId(),
         diaTimes: outboundDiaTimes,
         trainName: 'Outbound',
       },
@@ -184,7 +184,7 @@ function toPlatformTTItems(
 
       platformTTItems.push({
         train: {
-          trainId: diaTrain.diaTrainId,
+          trainId: diaTrain.trainId,
           trainName: diaTrain.trainName ?? 'No Name',
         },
         platform: {
@@ -312,7 +312,7 @@ function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetab
 
       switchTTItems.push({
         train: {
-          trainId: diaTrain.diaTrainId,
+          trainId: diaTrain.trainId,
           trainName: diaTrain.trainName ?? 'No Name',
         },
         Switch: { ...currentSwitch },

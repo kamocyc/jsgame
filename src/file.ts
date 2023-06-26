@@ -1,10 +1,10 @@
+import { Timetable } from './components/timetable-editor/model.js';
 import { getDiaFreaks } from './diaFreaksParser.js';
-import { Diagram } from './model.js';
 import { getEkiJikokus } from './oudParser.js';
 
 type FileType = 'oud' | 'diafreaks';
 
-export async function onFileSelectorChange(event: Event): Promise<null | Diagram> {
+export async function loadFile(event: Event): Promise<null | Timetable> {
   return new Promise((resolve) => {
     const file = (event.target as HTMLInputElement).files![0];
     const reader = new FileReader();
@@ -13,15 +13,12 @@ export async function onFileSelectorChange(event: Event): Promise<null | Diagram
     reader.addEventListener(
       'load',
       () => {
-        console.log(reader.result);
         if (fileType === 'oud') {
-          const r = getEkiJikokus(reader.result as string);
-          console.log(r);
-          resolve(r);
+          const diagram = getEkiJikokus(reader.result as string);
+          resolve(diagram);
         } else {
-          const r = getDiaFreaks(reader.result as string);
-          console.log(r);
-          resolve(r);
+          const diagram = getDiaFreaks(reader.result as string);
+          resolve(diagram);
         }
       },
       false
@@ -32,10 +29,12 @@ export async function onFileSelectorChange(event: Event): Promise<null | Diagram
         // oud形式
         fileType = 'oud';
         reader.readAsText(file, 'Shift_JIS');
-      } else {
+      } else if (/.*\.json$/.test(file.name)) {
         // json形式 (diafreaks)
         fileType = 'diafreaks';
         reader.readAsText(file, 'utf-8');
+      } else {
+        resolve(null);
       }
     } else {
       resolve(null);

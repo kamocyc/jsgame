@@ -83,7 +83,7 @@ function commitDrawingLine(props: DiagramProps) {
     const diaTrain = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
 
     diaTrain.push({
-      diaTrainId: generateId(),
+      trainId: generateId(),
       trainName: '',
       trainType: undefined,
       diaTimes: drawingLineTimes.map(

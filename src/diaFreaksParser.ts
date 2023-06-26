@@ -1,4 +1,30 @@
-import { DiaStation, Diagram } from './model.js';
+import { Platform } from './model.js';
+
+interface DiaStation {
+  stationId: string /* stationId */;
+  name: string /* name */;
+  distance: number /* distance */;
+  platforms: Platform[] /* platforms */;
+}
+
+interface StationTrain {
+  stationId: string /* stationId */;
+  platformId: string /* platformId */;
+  arrivalTime: number /* arrivalTime */;
+  departureTime: number /* departureTime */;
+}
+
+interface DiaTrain {
+  trainId: string /* trainId */;
+  color?: string;
+  trainName: string /* name */;
+  trainTimetable: StationTrain[];
+}
+
+interface Diagram {
+  stations: DiaStation[];
+  trains: DiaTrain[];
+}
 
 export function getDiaFreaks(buf: string): Diagram {
   function getPlatforms(obj: any) {

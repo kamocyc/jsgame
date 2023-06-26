@@ -146,134 +146,138 @@ export function TimetableEditorComponent({
   };
 
   return (
-    <div style={{ display: 'flex' }}>
-      <button
-        onClick={() => {
-          const timetable = toDetailedTimetable(
-            timetableData.timetable.stations,
-            timetableData.timetable,
-            appStates.tracks
-          );
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div>
+        <button
+          onClick={() => {
+            const timetable = toDetailedTimetable(
+              timetableData.timetable.stations,
+              timetableData.timetable,
+              appStates.tracks
+            );
 
-          console.log('timetable');
-          console.log(timetable);
+            console.log('timetable');
+            console.log(timetable);
 
-          setAppStates((appStates) => ({
-            ...appStates,
-            trainMove: new TrainMove2(timetable),
-            timetable: timetable,
-          }));
-        }}
-      >
-        詳細ダイヤに反映
-      </button>
-      <button
-        onClick={() => {
-          const timetable = toOutlinedTimetableStations(appStates.tracks);
-          console.log(timetable);
-          setTimetableData((timetableData) => ({
-            ...timetableData,
-            timetable: timetable,
-          }));
-        }}
-      >
-        概要ダイヤに反映
-      </button>
-      <div style={{ flex: '1 1 auto' }}>
-        <TabComponent
-          onTabChange={(tabId) => {
-            setTimetableDirection(tabId === 1 ? 'Inbound' : 'Outbound');
+            setAppStates((appStates) => ({
+              ...appStates,
+              trainMove: new TrainMove2(timetable),
+              timetable: timetable,
+            }));
           }}
-          tabs={[
-            {
-              tabId: 1,
-              tabText: '上り',
-              component: () => (
-                <TimetableEditorTableComponent
-                  {...{
-                    diaStations: timetableData.timetable.stations,
-                    setDiaStations: setDiaStations,
-                    diaTrains: timetableData.timetable.inboundDiaTrains,
-                    otherDirectionDiaTrains: timetableData.timetable.outboundDiaTrains,
-                    setDiaTrains: setDiaTrains,
-                    timetableDirection,
-                    trainTypes,
-                    setSettingData,
-                  }}
-                />
-              ),
-            },
-            {
-              tabId: 2,
-              tabText: '下り',
-              component: () => (
-                <TimetableEditorTableComponent
-                  {...{
-                    diaStations: reverseArray(timetableData.timetable.stations),
-                    setDiaStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
-                    diaTrains: timetableData.timetable.outboundDiaTrains,
-                    otherDirectionDiaTrains: timetableData.timetable.inboundDiaTrains,
-                    setDiaTrains: setDiaTrains,
-                    timetableDirection,
-                    trainTypes,
-                    setSettingData,
-                  }}
-                />
-              ),
-            },
-            {
-              tabId: 3,
-              tabText: '種別の設定',
-              component: () => <TrainTypeSettingComponent trainTypes={trainTypes} setTrainTypes={setTrainTypes} />,
-            },
-            {
-              tabId: 4,
-              tabText: '駅時刻表',
-              component: () => (
-                <StationTimetablePageComponent
-                  diaStations={timetableData.timetable.stations}
-                  inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
-                  outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
-                />
-              ),
-            },
-            {
-              tabId: 5,
-              tabText: 'ダイヤグラム',
-              component: () => (
-                <DiagramPageComponent
-                  diaStations={timetableData.timetable.stations}
-                  inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
-                  outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
-                  setUpdate={() => {
-                    setTimetableData({ ...timetableData });
-                  }}
-                />
-              ),
-            },
-          ]}
-        />
+        >
+          ⇑詳細ダイヤに反映
+        </button>
+        <button
+          onClick={() => {
+            const timetable = toOutlinedTimetableStations(appStates.tracks);
+            console.log(timetable);
+            setTimetableData((timetableData) => ({
+              ...timetableData,
+              timetable: timetable,
+            }));
+          }}
+        >
+          ⇓概要ダイヤに反映
+        </button>
       </div>
-      {settingData == null ? (
-        <></>
-      ) : (
-        <SettingColumnComponent setSettingData={setSettingData}>
-          {settingData.settingType === 'StationSetting' ? (
-            <StationDetailComponent
-              diaStation={settingData.diaStation}
-              setDiaStation={(diaStation) => {
-                setDiaStations(
-                  timetableData.timetable.stations.map((diaStation_) =>
-                    diaStation_.stationId === diaStation.stationId ? diaStation : diaStation_
-                  )
-                );
-              }}
-            />
-          ) : (
-            <></>
-          )}
-        </SettingColumnComponent>
-      )}
+      <div style={{ display: 'flex' }}>
+        <div style={{ flex: '1 1 auto' }}>
+          <TabComponent
+            onTabChange={(tabId) => {
+              setTimetableDirection(tabId === 1 ? 'Inbound' : 'Outbound');
+            }}
+            tabs={[
+              {
+                tabId: 1,
+                tabText: '上り',
+                component: () => (
+                  <TimetableEditorTableComponent
+                    {...{
+                      diaStations: timetableData.timetable.stations,
+                      setDiaStations: setDiaStations,
+                      diaTrains: timetableData.timetable.inboundDiaTrains,
+                      otherDirectionDiaTrains: timetableData.timetable.outboundDiaTrains,
+                      setDiaTrains: setDiaTrains,
+                      timetableDirection,
+                      trainTypes,
+                      setSettingData,
+                    }}
+                  />
+                ),
+              },
+              {
+                tabId: 2,
+                tabText: '下り',
+                component: () => (
+                  <TimetableEditorTableComponent
+                    {...{
+                      diaStations: reverseArray(timetableData.timetable.stations),
+                      setDiaStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
+                      diaTrains: timetableData.timetable.outboundDiaTrains,
+                      otherDirectionDiaTrains: timetableData.timetable.inboundDiaTrains,
+                      setDiaTrains: setDiaTrains,
+                      timetableDirection,
+                      trainTypes,
+                      setSettingData,
+                    }}
+                  />
+                ),
+              },
+              {
+                tabId: 3,
+                tabText: '種別の設定',
+                component: () => <TrainTypeSettingComponent trainTypes={trainTypes} setTrainTypes={setTrainTypes} />,
+              },
+              {
+                tabId: 4,
+                tabText: '駅時刻表',
+                component: () => (
+                  <StationTimetablePageComponent
+                    diaStations={timetableData.timetable.stations}
+                    inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
+                    outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
+                  />
+                ),
+              },
+              {
+                tabId: 5,
+                tabText: 'ダイヤグラム',
+                component: () => (
+                  <DiagramPageComponent
+                    diaStations={timetableData.timetable.stations}
+                    inboundDiaTrains={timetableData.timetable.inboundDiaTrains}
+                    outboundDiaTrains={timetableData.timetable.outboundDiaTrains}
+                    setUpdate={() => {
+                      setTimetableData({ ...timetableData });
+                    }}
+                  />
+                ),
+              },
+            ]}
+          />
+        </div>
+        {settingData == null ? (
+          <></>
+        ) : (
+          <SettingColumnComponent setSettingData={setSettingData}>
+            {settingData.settingType === 'StationSetting' ? (
+              <StationDetailComponent
+                diaStation={settingData.diaStation}
+                setDiaStation={(diaStation) => {
+                  setDiaStations(
+                    timetableData.timetable.stations.map((diaStation_) =>
+                      diaStation_.stationId === diaStation.stationId ? diaStation : diaStation_
+                    )
+                  );
+                }}
+              />
+            ) : (
+              <></>
+            )}
+          </SettingColumnComponent>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { GameMap } from '../../mapEditorModel';
-import { DiaTrain, HalfTrack, Platform, Station, Switch } from '../../model';
+import { HalfTrack, Platform, Station, Switch } from '../../model';
+import { DiaTrain } from '../timetable-editor/model';
 import { TrainMove2 } from './trainMove2';
 
 export type BranchDirection = 'Straight' | 'Branch';
@@ -22,7 +23,7 @@ export interface PlatformTimetableItem {
 export interface SwitchTimetableItem {
   train: Train;
   Switch: Switch;
-  changeTime: number;
+  changeTime: number | null;
   branchDirection: BranchDirection;
 }
 

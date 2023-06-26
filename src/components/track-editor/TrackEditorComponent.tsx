@@ -1,8 +1,8 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
-import { fromJSON } from '../../jsonSerialize';
+import { loadFile } from '../../file';
 import { Cell } from '../../mapEditorModel';
-import { DiaTrain, Point, Station, Switch } from '../../model';
+import { Point, Station, Switch } from '../../model';
 import { CanvasComponent } from './CanvasComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { drawEditor } from './trackEditorDrawer';
@@ -79,7 +79,6 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     return;
   }
   const trainsJson = localStorage.getItem('trains') ?? '[]';
-  const trains = fromJSON(trainsJson) as unknown as DiaTrain[];
   const timetable = JSON_retrocycle(
     JSON.parse(localStorage.getItem('timetable') ?? '{"stationTTItems": [], "switchTTItems": []}')
   ) as Timetable;
@@ -262,9 +261,17 @@ export function TrackEditorComponent({
       <div id='time'>{appStates.trainMove.toStringGlobalTime()}</div>
       <div>{positionPercentage}</div>
 
-      <div id='timetable-root'></div>
-
-      <input type='file' id='file-selector' accept='.oud, .oud2, .json' />
+      <input
+        type='file'
+        id='file-selector'
+        accept='.oud, .oud2, .json'
+        onClick={async (event) => {
+          const diagram = await loadFile(event);
+          if (diagram != null) {
+            // const diagram_ = convertDiagram(diagram);
+          }
+        }}
+      />
     </>
   );
 }

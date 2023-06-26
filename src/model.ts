@@ -23,9 +23,12 @@ export interface Station {
   stationId: string;
   stationName: string;
   platforms: Platform[];
+  distance: number;
   defaultOutboundDiaPlatformId: string;
   defaultInboundDiaPlatformId: string;
 }
+
+export const DefaultStationDistance = 100;
 
 export interface HalfTrack {
   trackId: string;
@@ -55,7 +58,6 @@ export type ArrivalAndDepartureStatus = 'NotArrived' | 'Arrived' | 'Departed';
 
 export interface Train {
   trainId: string;
-  diaTrain?: DiaTrain;
   currentTimetableIndex: number;
   speed: number;
   track: HalfTrack;
@@ -72,32 +74,6 @@ export interface TimetableItem {
   platform: Platform;
   operatingTrain: OperationTrain;
   departTime: number;
-}
-
-export interface DiaStation {
-  stationId: string /* stationId */;
-  name: string /* name */;
-  distance: number /* distance */;
-  platforms: Platform[] /* platforms */;
-}
-
-export interface StationTrain {
-  stationId: string /* stationId */;
-  platformId: string /* platformId */;
-  arrivalTime: number /* arrivalTime */;
-  departureTime: number /* departureTime */;
-}
-
-export interface DiaTrain {
-  trainId: string /* trainId */;
-  color?: string;
-  trainName: string /* name */;
-  trainTimetable: StationTrain[];
-}
-
-export interface Diagram {
-  stations: DiaStation[];
-  trains: DiaTrain[];
 }
 
 function getInitialId(): number {

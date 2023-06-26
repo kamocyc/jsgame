@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { Cell, CellHeight, CellWidth, GameMap } from '../../mapEditorModel';
-import { HalfTrack, Platform, Point, Station, Switch, generateId } from '../../model';
+import { DefaultStationDistance, HalfTrack, Platform, Point, Station, Switch, generateId } from '../../model';
 import { getMidPoint } from '../../trackUtil';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationEditorComponent';
 import { createLine } from './trackEditor';
@@ -38,6 +38,7 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
       stationId: generateId(),
       stationName: '駅' + generateId(),
       platforms: [],
+      distance: DefaultStationDistance,
       defaultInboundDiaPlatformId: id,
       defaultOutboundDiaPlatformId: id,
     };

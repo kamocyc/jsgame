@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { Platform, Switch } from '../../model';
-import { parseTime, showGlobalTime } from '../../timetableEditor';
+import { TimeInputComponent } from '../timetable-editor/common-component';
 import { Timetable, Train } from './uiEditorModel';
 
 export function TrainSelector({
@@ -46,7 +46,7 @@ export function SwitchEditor({ timetable, trains, Switch }: { timetable: Timetab
       train: selectedTrain,
       Switch: Switch,
       branchDirection: 'Straight',
-      changeTime: 0,
+      changeTime: null,
     });
 
     timetable.switchTTItems.push(ttItems[0]);
@@ -54,42 +54,55 @@ export function SwitchEditor({ timetable, trains, Switch }: { timetable: Timetab
     setUpdate([]);
   }
 
-  const ttItem = ttItems[0];
-
   return (
     <div>
       <div>
         <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
       </div>
 
-      <>
-        <label>
-          直進
-          <input
-            type='radio'
-            name='switchType'
-            value='normal'
-            checked={ttItem.branchDirection === 'Straight'}
-            onChange={(e) => {
-              ttItem.branchDirection = 'Straight';
-              setUpdate([]);
-            }}
-          />
-        </label>
-        <label>
-          分岐
-          <input
-            type='radio'
-            name='switchType'
-            value='branch'
-            checked={ttItem.branchDirection === 'Branch'}
-            onChange={(e) => {
-              ttItem.branchDirection = 'Branch';
-              setUpdate([]);
-            }}
-          />
-        </label>
-      </>
+      <div style={{ display: 'flex', flexDirection: 'column', margin: '5px' }}>
+        {ttItems.map((ttItem) => (
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
+            <div style={{ padding: '3px', margin: '3px' }}>
+              <TimeInputComponent
+                setTime={(time) => {
+                  ttItem.changeTime = time;
+                  setUpdate([]);
+                }}
+                time={ttItem.changeTime}
+              />
+            </div>
+            <div style={{ borderStyle: 'solid', borderWidth: '2px', borderColor: '#ccc', padding: '3px' }}>
+              <label>
+                直進
+                <input
+                  type='radio'
+                  name='switchType'
+                  value='normal'
+                  checked={ttItem.branchDirection === 'Straight'}
+                  onChange={(e) => {
+                    ttItem.branchDirection = 'Straight';
+                    setUpdate([]);
+                  }}
+                />
+              </label>
+              <label>
+                分岐
+                <input
+                  type='radio'
+                  name='switchType'
+                  value='branch'
+                  checked={ttItem.branchDirection === 'Branch'}
+                  onChange={(e) => {
+                    ttItem.branchDirection = 'Branch';
+                    setUpdate([]);
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -200,8 +213,27 @@ export function StationEditor({
                 削除
               </button>
             </span>
-            出発時間：
-            <input
+            <span>
+              到着時間：
+              <TimeInputComponent
+                time={item.arrivalTime}
+                setTime={(newTime) => {
+                  item.arrivalTime = newTime;
+                  setUpdate();
+                }}
+              />
+            </span>
+            <span>
+              出発時間：
+              <TimeInputComponent
+                time={item.departureTime}
+                setTime={(newTime) => {
+                  item.departureTime = newTime;
+                  setUpdate();
+                }}
+              />
+            </span>
+            {/* <input
               value={item.departureTime === null ? '' : showGlobalTime(item.departureTime)}
               onChange={(e) => {
                 const stringValue = (e.target as HTMLInputElement).value;
@@ -211,7 +243,7 @@ export function StationEditor({
                   setUpdate();
                 }
               }}
-            />
+            /> */}
           </div>
         ))}
       </div>

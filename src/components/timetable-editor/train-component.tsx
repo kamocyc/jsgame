@@ -30,7 +30,7 @@ function TrainContextMenuComponent({
         {
           label: '列車を削除',
           onClick: () => {
-            const index = diaTrains.findIndex((diaTrain) => diaTrain.diaTrainId === selectedDiaTrain?.diaTrainId);
+            const index = diaTrains.findIndex((diaTrain) => diaTrain.trainId === selectedDiaTrain?.trainId);
             if (index >= 0) {
               diaTrains.splice(index, 1);
               setDiaTrains([...diaTrains]);
@@ -41,10 +41,10 @@ function TrainContextMenuComponent({
         {
           label: '列車をコピー',
           onClick: () => {
-            const index = diaTrains.findIndex((diaTrain) => diaTrain.diaTrainId === selectedDiaTrain?.diaTrainId);
+            const index = diaTrains.findIndex((diaTrain) => diaTrain.trainId === selectedDiaTrain?.trainId);
             if (index >= 0) {
               const newDiaTrain = JSON.parse(JSON.stringify(selectedDiaTrain)) as DiaTrain;
-              newDiaTrain.diaTrainId = generateId();
+              newDiaTrain.trainId = generateId();
               setClipboard({ diaTrain: newDiaTrain });
             }
             setContextData({ ...contextData, visible: false });
@@ -56,7 +56,7 @@ function TrainContextMenuComponent({
             const newDiaTrain = clipboard.diaTrain;
             if (newDiaTrain) {
               // 現在のdiaTrainの直前に挿入
-              const index = diaTrains.findIndex((diaTrain) => diaTrain.diaTrainId === selectedDiaTrain?.diaTrainId);
+              const index = diaTrains.findIndex((diaTrain) => diaTrain.trainId === selectedDiaTrain?.trainId);
               if (index >= 0) {
                 diaTrains.splice(index, 0, newDiaTrain);
               } else {
@@ -201,7 +201,7 @@ export function TrainListComponent({
       onContextMenu={(e) => {
         const targetDiaTrain = (() => {
           for (const diaTrain of diaTrains) {
-            const id = 'dia-train-block-' + diaTrain.diaTrainId;
+            const id = 'dia-train-block-' + diaTrain.trainId;
             const elem = document.getElementById(id);
             if (elem && elem.contains(e.target as Node)) {
               return diaTrain;
@@ -262,7 +262,7 @@ export function TrainListComponent({
               ))}
             </select>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + diaTrain.diaTrainId}>
+          <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + diaTrain.trainId}>
             {getDiaTimesOfStations(diaTrain, diaStations).map((diaTime) => (
               <TrainListItemComponent {...{ diaTime, diaTrains, setDiaTrains }} />
             ))}
@@ -273,7 +273,7 @@ export function TrainListComponent({
         <button
           onClick={() => {
             diaTrains.push({
-              diaTrainId: generateId(),
+              trainId: generateId(),
               diaTimes: diaStations.map((diaStation) => ({
                 diaTimeId: generateId(),
                 arrivalTime: null,

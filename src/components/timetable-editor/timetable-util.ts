@@ -43,7 +43,7 @@ export function getInitialTimetable(): TimetableData {
   const timetable: Timetable = {
     inboundDiaTrains: [
       {
-        diaTrainId: generateId(),
+        trainId: generateId(),
         diaTimes: [
           {
             diaTimeId: generateId(),
@@ -66,7 +66,7 @@ export function getInitialTimetable(): TimetableData {
     ],
     outboundDiaTrains: [
       {
-        diaTrainId: generateId(),
+        trainId: generateId(),
         diaTimes: [
           {
             diaTimeId: generateId(),

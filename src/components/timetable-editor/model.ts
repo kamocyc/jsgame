@@ -16,8 +16,8 @@ export interface TrainType {
 }
 
 export interface DiaTrain {
-  diaTrainId: string;
-  trainName?: string;
+  trainId: string;
+  trainName: string;
   trainType?: TrainType;
   diaTimes: DiaTime[];
 }

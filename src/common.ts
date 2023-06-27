@@ -1,4 +1,4 @@
-import { Platform, Station, generateId } from './model';
+import { DefaultStationDistance, Platform, Station, generateId } from './model';
 
 export function max(arr: number[]): number {
   let cur = Number.MIN_SAFE_INTEGER;
@@ -54,6 +54,7 @@ export function createNewStationWithPlatform({
     platforms: [],
     defaultInboundDiaPlatformId: platformId,
     defaultOutboundDiaPlatformId: platformId,
+    distance: DefaultStationDistance,
   };
 
   const newPlatform = {

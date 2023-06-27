@@ -1,5 +1,4 @@
 import { assert } from '../../common';
-import { drawLine as drawLine_ } from '../../drawer';
 import {
   Cell,
   CellHeight,
@@ -37,7 +36,10 @@ function fillRect(
 }
 
 function drawLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, begin: Point, end: Point) {
-  drawLine_(ctx, r_(begin, mapContext), r_(end, mapContext));
+  ctx.beginPath();
+  ctx.moveTo(rx(begin.x, mapContext), ry(begin.y, mapContext));
+  ctx.lineTo(rx(end.x, mapContext), ry(end.y, mapContext));
+  ctx.stroke();
 }
 
 function drawStraight(

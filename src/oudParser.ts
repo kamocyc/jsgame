@@ -1,4 +1,5 @@
-import { DiaStation, DiaTrain, Diagram, Platform, Station, StationTrain, generateId } from './model.js';
+import { DiaTime, DiaTrain, Timetable } from './components/timetable-editor/model.js';
+import { Platform, Station, generateId } from './model.js';
 
 // oud形式をjson形式に変換する
 function oudToJson(oudBuf: string): any {
@@ -45,7 +46,8 @@ function oudToJson(oudBuf: string): any {
   return obj;
 }
 
-type Houkou = 'Kudari' | 'Nobori' /* */;
+// 方向
+type Houkou = 'Kudari' | 'Nobori';
 
 interface Time {
   hour: number;
@@ -60,15 +62,13 @@ interface EkiJikokuData {
 }
 
 export interface DiaTrainExt extends DiaTrain {
+  color: string;
+  houkou: Houkou;
   trainCode: string | undefined; // 列車番号
   // operationCode: string | undefined;  // 運用番号
   trainTypeName: string | undefined; // 列車種別名
   trainMei: string | undefined; // 列車名
   trainGo: string | undefined; // 列車の○号
-}
-
-export interface DiagramExt extends Diagram {
-  trains: DiaTrainExt[];
 }
 
 function parseEkiJikoku(jikoku: string): EkiJikokuData | undefined {
@@ -139,13 +139,15 @@ function timeToSeconds(time: Time): number {
   return time.hour * 60 * 60 + time.minute * 60;
 }
 
-function convertEkis(ekis: any[]): DiaStation[] {
+function convertEkis(ekis: any[]): Station[] {
   return ekis.map((eki, i) => {
-    const station: DiaStation = {
+    const station: Station = {
       stationId: generateId(),
-      name: eki['Ekimei'] as string,
+      stationName: eki['Ekimei'] as string,
       distance: i * 10 /* TODO */,
       platforms: [],
+      defaultInboundDiaPlatformId: '', // dummy
+      defaultOutboundDiaPlatformId: '', // dummy
     };
     for (const track of eki['EkiTrack2Cont'][0]['EkiTrack2'] as any[]) {
       const platform: Platform = {
@@ -164,10 +166,10 @@ function convertEkis(ekis: any[]): DiaStation[] {
   });
 }
 
-function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus: any[]): DiaTrainExt[] {
+function convertRessyas(ressyas: any[], stations: Station[], ressyasyubetsus: any[]): DiaTrainExt[] {
   return ressyas.map((ressya) => {
     const houkou = ressya['Houkou'] as Houkou;
-    const timetable = (ressya['EkiJikoku'] as string)
+    const diaTimes = (ressya['EkiJikoku'] as string)
       .split(',')
       .map(parseEkiJikoku)
       .map((ekiJikoku, index) => {
@@ -191,13 +193,15 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
         }
 
         return {
-          stationId: station.stationId,
-          platformId: platform.platformId,
+          diaTimeId: generateId(),
           arrivalTime: timeToSeconds(arrivalTime as Time) - (arrivalTime === departureTime ? 20 : 0), // 0秒停車はまずい気がするので20秒くらい停車させる
           departureTime: timeToSeconds(departureTime as Time),
-        };
+          diaPlatform: platform,
+          diaStation: station,
+          isPassing: false,
+        } as DiaTime;
       })
-      .filter((e) => e !== undefined) as StationTrain[];
+      .filter((e) => e !== undefined) as DiaTime[];
 
     const trainType = ressya['Syubetsu'] !== undefined ? ressyasyubetsus[ressya['Syubetsu']] : undefined;
     const trainTypeName = trainType?.['Syubetsumei'];
@@ -213,12 +217,12 @@ function convertRessyas(ressyas: any[], stations: DiaStation[], ressyasyubetsus:
       trainMei: ressya['Ressyamei'],
       trainGo: ressya['Gousuu'],
       trainName: trainName,
-      trainTimetable: timetable,
-    };
+      diaTimes: diaTimes,
+    } as DiaTrainExt;
   });
 }
 
-export function getEkiJikokus(oudBuf: string): DiagramExt {
+export function getEkiJikokus(oudBuf: string): Timetable {
   const oudJson = oudToJson(oudBuf);
   const rosen = oudJson['Rosen'][0];
   const stations = convertEkis(rosen['Eki']);
@@ -227,8 +231,10 @@ export function getEkiJikokus(oudBuf: string): DiagramExt {
   const ressyas = (dia['Kudari'][0]['Ressya'] ?? []).concat(dia['Nobori'][0]['Ressya'] ?? []);
   const trains = convertRessyas(ressyas, stations, ressyasyubetsus);
 
+  //  TODO: trainの他のフィールドの扱い
   return {
-    stations,
-    trains,
+    inboundDiaTrains: trains.filter((t) => t.houkou === 'Nobori'),
+    outboundDiaTrains: trains.filter((t) => t.houkou === 'Kudari'),
+    stations: stations,
   };
 }

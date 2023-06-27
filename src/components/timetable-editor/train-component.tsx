@@ -227,7 +227,7 @@ export function TrainListComponent({
               value={diaTrain.trainName ?? ''}
               onChange={(value) => {
                 if (value == '') {
-                  diaTrain.trainName = undefined;
+                  diaTrain.trainName = '';
                 } else {
                   diaTrain.trainName = value;
                 }
@@ -274,6 +274,7 @@ export function TrainListComponent({
           onClick={() => {
             diaTrains.push({
               trainId: generateId(),
+              trainName: '',
               diaTimes: diaStations.map((diaStation) => ({
                 diaTimeId: generateId(),
                 arrivalTime: null,

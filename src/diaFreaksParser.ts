@@ -33,7 +33,7 @@ export function getDiaFreaks(buf: string): Diagram {
       name: o.n,
     }));
   }
-  function getStations(obj: any) {
+  function getStations(obj: any): DiaStation[] {
     return obj.map((o: any) => ({
       stationId: o.id,
       name: o.n,
@@ -41,7 +41,7 @@ export function getDiaFreaks(buf: string): Diagram {
       platforms: getPlatforms(o.t),
     }));
   }
-  function getTrainTimeTable(obj: any) {
+  function getTrainTimeTable(obj: any): StationTrain[] {
     return obj.map((o: any) => ({
       stationId: o.s,
       platformId: o.t,
@@ -49,7 +49,7 @@ export function getDiaFreaks(buf: string): Diagram {
       departureTime: o.d,
     }));
   }
-  function getTrains(obj: any) {
+  function getTrains(obj: any): DiaTrain[] {
     return obj.map((o: any) => ({
       trainId: o.id,
       color: o.c,

@@ -1,4 +1,4 @@
-import { Platform, Station, generateId } from '../../model';
+import { DefaultStationDistance, Platform, Station, generateId } from '../../model';
 import { Timetable, TimetableData, TimetableDirection } from './model';
 import './timetable-editor.css';
 
@@ -30,6 +30,7 @@ export function createNewStation(stationName: string): Station {
     platforms: newPlatforms,
     defaultInboundDiaPlatformId: newPlatforms[0].platformId,
     defaultOutboundDiaPlatformId: newPlatforms[1].platformId,
+    distance: DefaultStationDistance,
   };
   newPlatforms[0].station = newStation;
   newPlatforms[1].station = newStation;
@@ -44,6 +45,7 @@ export function getInitialTimetable(): TimetableData {
     inboundDiaTrains: [
       {
         trainId: generateId(),
+        trainName: '001M',
         diaTimes: [
           {
             diaTimeId: generateId(),
@@ -67,6 +69,7 @@ export function getInitialTimetable(): TimetableData {
     outboundDiaTrains: [
       {
         trainId: generateId(),
+        trainName: '002M',
         diaTimes: [
           {
             diaTimeId: generateId(),

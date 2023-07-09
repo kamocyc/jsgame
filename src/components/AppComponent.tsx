@@ -1,8 +1,8 @@
 import { useState } from 'preact/hooks';
 import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
 import { DetailedTimetable } from '../model';
-import { TimetableEditorComponent } from './timetable-editor/TimetableEditorComponent';
 import { SplitViewComponent } from './timetable-editor/common-component';
+import { TimetableEditorComponent } from './timetable-editor/timetable-editor-component';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { TrainMove2 } from './track-editor/trainMove2';
 

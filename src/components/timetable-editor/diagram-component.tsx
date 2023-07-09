@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'preact/hooks';
-import { DiagramProps, initializeKonva } from './diagram-core';
+import { DiagramProps, initializeKonva } from './diagram-konva-drawer';
 
 export function KonvaCanvas(props: DiagramProps) {
   const ref = useRef<HTMLDivElement>(null);

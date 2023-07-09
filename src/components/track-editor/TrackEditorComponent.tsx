@@ -3,8 +3,8 @@ import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import { AppStates, Cell, EditMode, createMapContext } from '../../mapEditorModel';
 import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
-import { CanvasComponent } from './CanvasComponent';
 import { SeekBarComponent } from './SeekBarComponent';
+import { CanvasComponent } from './TrackEditorContainerComponent';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
 

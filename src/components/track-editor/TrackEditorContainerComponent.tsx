@@ -12,7 +12,7 @@ import {
   generateId,
 } from '../../model';
 import { getMidPoint } from '../../trackUtil';
-import { StationEditor, SwitchEditor, TrainSelector } from './StationEditorComponent';
+import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
 import { createLine } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
@@ -336,6 +336,19 @@ function onmouseup(
   setMouseDragMode(null);
 }
 
+function onwheel(e: WheelEvent, appStates: AppStates, update: () => void) {
+  e.preventDefault();
+
+  const scaleBy = 1.05;
+  const delta = e.deltaY;
+
+  const oldScale = appStates.mapContext.scale;
+  const newScale = delta > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+  appStates.mapContext.scale = newScale;
+
+  update();
+}
+
 export function EditorContainer({
   editorDialogMode,
   timetable,
@@ -378,19 +391,6 @@ export function EditorContainer({
       )}
     </>
   );
-}
-
-function onwheel(e: WheelEvent, appStates: AppStates, update: () => void) {
-  e.preventDefault();
-
-  const scaleBy = 1.05;
-  const delta = e.deltaY;
-
-  const oldScale = appStates.mapContext.scale;
-  const newScale = delta > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-  appStates.mapContext.scale = newScale;
-
-  update();
 }
 
 export function CanvasComponent({

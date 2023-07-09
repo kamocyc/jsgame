@@ -1,5 +1,6 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
+import { loadFile } from '../../file';
 import { Station } from '../../model';
 import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { TrainMove2 } from '../track-editor/trainMove2';
@@ -18,7 +19,7 @@ export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Stat
   return (
     <div>
       {diaStations.map((diaStation) => (
-        <div style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px' }}>
+        <div style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', width: '32px' }}>
           <div style={{ height: 24 + 'px' }}>着</div>
           <div style={{ height: 24 + 'px' }}>番線</div>
           <div style={{ height: 24 + 'px' }}>発</div>
@@ -148,6 +149,20 @@ export function TimetableEditorComponent({
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div>
+        <input
+          type='file'
+          id='file-selector'
+          accept='.oud, .oud2, .json'
+          onChange={async (event) => {
+            const diagram = await loadFile(event);
+            if (diagram != null) {
+              setTimetableData({
+                timetable: diagram,
+              });
+              setTrainTypes(diagram.trainTypes);
+            }
+          }}
+        />
         <button
           onClick={() => {
             const timetable = toDetailedTimetable(
@@ -156,13 +171,23 @@ export function TimetableEditorComponent({
               appStates.tracks
             );
 
-            console.log('timetable');
-            console.log(timetable);
+            if (timetable === null) {
+              return;
+            }
+
+            // console.log('timetable');
+            // console.log(timetable);
+
+            const trains = timetable.platformTTItems
+              .map((platformTTItem) => platformTTItem.train)
+              .concat(timetable.switchTTItems.map((switchTTItem) => switchTTItem.train))
+              .filter((train, i, self) => self.findIndex((t) => t.trainId === train.trainId) === i);
 
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: new TrainMove2(timetable),
               timetable: timetable,
+              trains: trains,
             }));
           }}
         >
@@ -171,6 +196,10 @@ export function TimetableEditorComponent({
         <button
           onClick={() => {
             const timetable = toOutlinedTimetableStations(appStates.tracks);
+            if (timetable == null) {
+              return;
+            }
+
             console.log(timetable);
             setTimetableData((timetableData) => ({
               ...timetableData,

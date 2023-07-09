@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { Platform, Switch } from '../../model';
+import { Platform, Switch, generateId } from '../../model';
 import { TimeInputComponent } from '../timetable-editor/common-component';
 import { Timetable, Train } from './uiEditorModel';
 
@@ -177,6 +177,30 @@ export function StationEditor({
         </div>
         <div>
           <PlatformSelector platforms={station.platforms} platform={platform} setSelectedPlatform={setPlatform} />
+          <button
+            onClick={() => {
+              station.platforms.push({
+                platformId: generateId(),
+                platformName: '',
+                station: station,
+              });
+              setUpdate();
+            }}
+          >
+            ホーム追加
+          </button>
+          <button
+            onClick={() => {
+              if (station.platforms.length === 1) {
+                return;
+              }
+              station.platforms = station.platforms.filter((p) => p.platformId !== platform.platformId);
+              setPlatform(station.platforms[0]);
+              setUpdate();
+            }}
+          >
+            ホーム削除
+          </button>
         </div>
         <div>
           <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
@@ -215,23 +239,27 @@ export function StationEditor({
             </span>
             <span>
               到着時間：
-              <TimeInputComponent
-                time={item.arrivalTime}
-                setTime={(newTime) => {
-                  item.arrivalTime = newTime;
-                  setUpdate();
-                }}
-              />
+              <div style={{ display: 'inline-block', paddingRight: '10px' }}>
+                <TimeInputComponent
+                  time={item.arrivalTime}
+                  setTime={(newTime) => {
+                    item.arrivalTime = newTime;
+                    setUpdate();
+                  }}
+                />
+              </div>
             </span>
             <span>
               出発時間：
-              <TimeInputComponent
-                time={item.departureTime}
-                setTime={(newTime) => {
-                  item.departureTime = newTime;
-                  setUpdate();
-                }}
-              />
+              <div style={{ display: 'inline-block', paddingRight: '10px' }}>
+                <TimeInputComponent
+                  time={item.departureTime}
+                  setTime={(newTime) => {
+                    item.departureTime = newTime;
+                    setUpdate();
+                  }}
+                />
+              </div>
             </span>
             {/* <input
               value={item.departureTime === null ? '' : showGlobalTime(item.departureTime)}

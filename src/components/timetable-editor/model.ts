@@ -6,7 +6,7 @@ export interface DiaTime {
   departureTime: number | null;
   isPassing: boolean;
   diaStation: Station;
-  diaPlatform: Platform;
+  diaPlatform: Platform | null;
 }
 
 export interface TrainType {
@@ -15,24 +15,38 @@ export interface TrainType {
   trainTypeColor: string;
 }
 
+export type Operation =
+  | {
+      operationType: 'Connection';
+    }
+  | {
+      operationType: 'InOut';
+      operationTime: number;
+      operationCode: string;
+    };
+
 export interface DiaTrain {
   trainId: string;
+  trainCode: string; // 列車番号
   trainName: string;
   trainType?: TrainType;
   diaTimes: DiaTime[];
+  firstOperation?: Operation;
+  lastOperation?: Operation;
 }
 
 export type TimetableDirection = 'Outbound' | 'Inbound';
-
-// Timetableを含む全てのデータ
-export interface TimetableData {
-  timetable: Timetable;
-}
 
 export interface Timetable {
   inboundDiaTrains: DiaTrain[];
   outboundDiaTrains: DiaTrain[];
   stations: Station[];
+  trainTypes: TrainType[];
+}
+
+// Timetableを含む全てのデータ
+export interface TimetableData {
+  timetable: Timetable;
 }
 
 export interface Clipboard {

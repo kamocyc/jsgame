@@ -64,6 +64,7 @@ export function getInitialTimetable(): TimetableData {
             diaPlatform: getDefaultPlatform(diaStations[1], 'Inbound'),
           },
         ],
+        trainCode: '',
       },
     ],
     outboundDiaTrains: [
@@ -88,9 +89,11 @@ export function getInitialTimetable(): TimetableData {
             diaPlatform: getDefaultPlatform(diaStations[0], 'Outbound'),
           },
         ],
+        trainCode: '',
       },
     ],
     stations: diaStations,
+    trainTypes: [],
   };
 
   return { timetable };

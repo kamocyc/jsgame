@@ -29,7 +29,7 @@ function getStationDistances(platforms: (readonly [HalfTrack, Platform])[], stat
     return null;
   }
 
-  // result中のstationを順にたどり、途中に経由したtracksの数を数える
+  // result中のstationを順にたどり、途中に経由したtracksの数を数えて、とりあえず所要時間とする
   const stationDistances = new Map<string, [Station, number]>();
   for (let pathTrackIndex = 0; pathTrackIndex < pathTracks.length; pathTrackIndex++) {
     const station = pathTracks[pathTrackIndex].track.platform?.station;
@@ -71,11 +71,14 @@ function getInitialDiaTimes(stationDistances: [Station, number][], direction: 'I
   return diaTimes;
 }
 
-export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimetable {
+export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimetable | null {
   const platforms = tracks.filter((t) => t.track.platform != null).map((t) => [t, t.track.platform!] as const);
   const stations = platforms.map(([t, p]) => p.station);
   // 重複を削除。ただし、順番は保持する
   const uniqueStations = stations.filter((x, i, self) => self.indexOf(x) === i);
+  if (uniqueStations.length === 0) {
+    return null;
+  }
   const stationDistances = getStationDistances(platforms, uniqueStations);
 
   const [inboundDiaTimes, outboundDiaTimes] = (() => {
@@ -99,6 +102,7 @@ export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimeta
         trainId: generateId(),
         diaTimes: inboundDiaTimes,
         trainName: 'Inbound',
+        trainCode: '',
       },
     ],
     outboundDiaTrains: [
@@ -106,8 +110,10 @@ export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimeta
         trainId: generateId(),
         diaTimes: outboundDiaTimes,
         trainName: 'Outbound',
+        trainCode: '',
       },
     ],
+    trainTypes: [],
   };
 }
 
@@ -149,8 +155,8 @@ function toPlatformTTItems(
   for (const diaTrain of diaTrains) {
     let diaTimeIndex = 0;
     for (const diaTime of diaTrain.diaTimes) {
-      if (!allTrackPlatformIds.has(diaTime.diaPlatform.platformId)) {
-        throw new Error('Platform not found in allTrackStations (' + diaTime.diaPlatform.platformId + ')');
+      if (!allTrackPlatformIds.has(diaTime.diaPlatform!.platformId)) {
+        throw new Error('Platform not found in allTrackStations (' + diaTime.diaPlatform!.platformId + ')');
       }
 
       // trackの方向を決定する
@@ -158,8 +164,8 @@ function toPlatformTTItems(
         if (diaTimeIndex === diaTrain.diaTimes.length - 1) {
           return null;
         }
-        const track1 = getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex].diaPlatform);
-        const track2 = getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex + 1].diaPlatform);
+        const track1 = getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex].diaPlatform!);
+        const track2 = getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex + 1].diaPlatform!);
         if (!track1 || !track2) {
           throw new Error('Track not found');
         }
@@ -188,7 +194,7 @@ function toPlatformTTItems(
           trainName: diaTrain.trainName ?? 'No Name',
         },
         platform: {
-          ...getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex].diaPlatform)!.track.platform!,
+          ...getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex].diaPlatform!)!.track.platform!,
         } /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */,
         departureTime: diaTime.departureTime,
         arrivalTime: diaTime.arrivalTime,
@@ -255,8 +261,8 @@ function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetab
 
   for (let diaTimeIndex = 0; diaTimeIndex < diaTimes.length - 1; diaTimeIndex++) {
     // TODO: これは、反対方向のトラックが入ることがある。 => searchTrackPath で吸収したので大丈夫なはず
-    const track1 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex].diaPlatform);
-    const track2 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex + 1].diaPlatform);
+    const track1 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex].diaPlatform!);
+    const track2 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex + 1].diaPlatform!);
     if (!track1 || !track2) {
       throw new Error('Track not found');
     }
@@ -325,11 +331,30 @@ function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetab
   return switchTTItems;
 }
 
+function isPlatformsIsNotNull(timetable: OutlinedTimetable) {
+  const inboundNullPlatforms = timetable.inboundDiaTrains.filter((t) =>
+    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.diaPlatform === null)
+  );
+  const outboundNullPlatforms = timetable.outboundDiaTrains.filter((t) =>
+    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.diaPlatform === null)
+  );
+
+  if (inboundNullPlatforms.length > 0 || outboundNullPlatforms.length > 0) {
+    alert('番線が設定されていない箇所があります');
+    return false;
+  }
+  return true;
+}
+
 export function toDetailedTimetable(
   allTrackStations: Station[],
   timetable: OutlinedTimetable,
   tracks: HalfTrack[]
-): DetailedTimetable {
+): DetailedTimetable | null {
+  if (!isPlatformsIsNotNull(timetable)) {
+    return null;
+  }
+
   // 方向をどうするか。。。設置時？基本的にはダイヤ変換時に設定する。ホームトラック終端の上下 > （上下が同じなら）左右方向の区別とする。トラックが移動や回転された場合は再設定が必要になるが、その場合はどちらにしても再設定がいる。
   const platformTTItems = ([] as PlatformTimetableItem[]).concat(
     toPlatformTTItems(allTrackStations, tracks, timetable.inboundDiaTrains),

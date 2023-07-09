@@ -1,6 +1,6 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
-import { loadFile } from '../../file';
+import { loadUtf8File } from '../../file';
 import { Cell } from '../../mapEditorModel';
 import { Point, Station, Switch } from '../../model';
 import { CanvasComponent } from './CanvasComponent';
@@ -70,6 +70,67 @@ function saveMapData(appStates: AppStates) {
   console.log('保存しました');
 }
 
+function saveMapDataFile(appStates: AppStates) {
+  if (appStates.timetable == null) {
+    return;
+  }
+  const obj = {
+    map: appStates.map,
+    trains: appStates.trains,
+    timetable: appStates.timetable,
+  };
+
+  const link = document.createElement('a');
+  const content = JSON.stringify(JSON_decycle(obj));
+  const file = new Blob([content], { type: 'application/json' });
+  link.href = URL.createObjectURL(file);
+  link.download = 'data.json';
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function loadMapDataFile(buf: string, setAppStates: StateUpdater<AppStates>) {
+  const obj = JSON_retrocycle(JSON.parse(buf));
+
+  const mapData = (obj['map'] ?? []) as Cell[][];
+  const mapWidth = mapData.length;
+  const mapHeight = mapData[0].length;
+  if (mapData.some((row) => row.length !== mapHeight)) {
+    alert('マップデータが不正です');
+    return;
+  }
+  const trainsJson = obj['trains'] ?? [];
+  const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as Timetable;
+
+  const trainMove = new TrainMove2(timetable);
+  const switches = mapData.flatMap(
+    (row) =>
+      row
+        .map((cell) => (cell.lineType?.lineClass === 'Branch' ? cell.lineType.switch : null))
+        .filter((x) => x != null) as Switch[]
+  );
+  const tracks = mapData.flatMap((row) =>
+    row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
+  );
+
+  const stations = mapData.flatMap((row) =>
+    row.flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station)).filter((x) => x != null)
+  ) as Station[];
+
+  setAppStates((appStates) => ({
+    ...appStates,
+    map: mapData,
+    switches: switches,
+    tracks: tracks,
+    trainMove: trainMove,
+    timetable: timetable,
+    stations: stations,
+    mapWidth: mapWidth,
+    mapHeight: mapHeight,
+    mapContext: createMapContext(mapWidth, mapHeight),
+  }));
+}
+
 function loadMapData(setAppStates: StateUpdater<AppStates>) {
   const mapData = JSON_retrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
   const mapWidth = mapData.length;
@@ -94,19 +155,6 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
   );
 
-  // TODO: とりあえずダイヤから生成するのに統一する。
-  // const placedTrains = (JSON.parse(localStorage.getItem('placedTrains') ?? '[]') as SerializedPlacedTrain[]).map(
-  //   (t) => ({
-  //     trainId: t.trainId,
-  //     train: t.train,
-  //     speed: t.speed,
-  //     track: tracks.find((track) => track.trackId === t.trackId)!,
-  //     position: t.position,
-  //     stationWaitTime: t.stationWaitTime,
-  //     stationStatus: t.stationStatus,
-  //   })
-  // );
-  // trainMove.placedTrains = placedTrains;
   const stations = mapData.flatMap((row) =>
     row.flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station)).filter((x) => x != null)
   ) as Station[];
@@ -134,6 +182,7 @@ export function TrackEditorComponent({
 }) {
   const [runningIntervalId, setRunningIntervalId] = useState<number | null>(null);
   const [positionPercentage, setPositionPercentage] = useState<number>(0);
+  const [numberOfPlatforms, setNumberOfPlatforms] = useState<number>(2);
   const [_, setUpdate_] = useState<never[]>([]);
   const update = () => {
     setUpdate_([]);
@@ -170,7 +219,7 @@ export function TrackEditorComponent({
 
   return (
     <>
-      <CanvasComponent appStates={appStates} update={update} />
+      <CanvasComponent appStates={appStates} update={update} numberOfPlatforms={numberOfPlatforms} />
       <div id='control-div'>
         <div className='dialog'>
           <ModeOptionRadioComponent
@@ -179,29 +228,22 @@ export function TrackEditorComponent({
             checked={appStates.editMode === 'Create'}
             setEditorMode={setEditMode}
           />
-          {/* <ModeOptionRadioComponent
-            mode='Delete'
-            text='線路を削除(未実装)'
-            checked={appStates.editMode === 'Delete'}
-            setEditorMode={setEditMode}
-          />
-          <ModeOptionRadioComponent
-            mode='PlaceTrain'
-            text='列車を配置'
-            checked={appStates.editMode === 'PlaceTrain'}
-            setEditorMode={setEditMode}
-          />
-          <ModeOptionRadioComponent
-            mode='Station'
-            text='駅を作成(旧)'
-            checked={appStates.editMode === 'Station'}
-            setEditorMode={setEditMode}
-          /> */}
           <ModeOptionRadioComponent
             mode='Station'
             text='駅を作成'
             checked={appStates.editMode === 'Station'}
             setEditorMode={setEditMode}
+          />
+          <input
+            style={{ width: '30px' }}
+            type='number'
+            value={numberOfPlatforms}
+            onChange={(event) => {
+              const value = parseInt((event.target as HTMLInputElement).value);
+              if (value > 0) {
+                setNumberOfPlatforms(value);
+              }
+            }}
           />
           <ModeOptionRadioComponent
             mode='Info'
@@ -210,12 +252,21 @@ export function TrackEditorComponent({
             setEditorMode={setEditMode}
           />
         </div>
-        <button id='save-button' onClick={() => saveMapData(appStates)}>
-          保存
-        </button>
-        <button id='load-button' onClick={() => loadMapData(setAppStates)}>
-          読み込み
-        </button>
+        <button onClick={() => saveMapData(appStates)}>保存</button>
+        <button onClick={() => loadMapData(setAppStates)}>読み込み</button>
+        <button onClick={() => saveMapDataFile(appStates)}>保存（ファイル）</button>
+        読み込み（ファイル）:
+        <input
+          type='file'
+          accept='.json'
+          onChange={async (event) => {
+            const buf = await loadUtf8File(event);
+            if (buf == null) {
+              return;
+            }
+            loadMapDataFile(buf, setAppStates);
+          }}
+        />
       </div>
       <button
         id='button-slow-speed'
@@ -260,18 +311,6 @@ export function TrackEditorComponent({
       />
       <div id='time'>{appStates.trainMove.toStringGlobalTime()}</div>
       <div>{positionPercentage}</div>
-
-      <input
-        type='file'
-        id='file-selector'
-        accept='.oud, .oud2, .json'
-        onClick={async (event) => {
-          const diagram = await loadFile(event);
-          if (diagram != null) {
-            // const diagram_ = convertDiagram(diagram);
-          }
-        }}
-      />
     </>
   );
 }

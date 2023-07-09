@@ -1,11 +1,11 @@
-import { useState } from 'preact/hooks';
+import { StateUpdater, useState } from 'preact/hooks';
 import { generateId } from '../../model';
 import { SettingColumnComponent } from './common-component';
 import { TrainType } from './model';
 
 interface TrainTypeSettingData {
   settingType: 'TrainTypeSetting';
-  trainType: TrainType;
+  trainTypeId: string;
 }
 
 // 種別の編集
@@ -54,7 +54,7 @@ export function TrainTypeSettingComponent({
   setTrainTypes,
 }: {
   trainTypes: TrainType[];
-  setTrainTypes: (trainTypes: TrainType[]) => void;
+  setTrainTypes: StateUpdater<TrainType[]>;
 }) {
   const [settingData, setSettingData] = useState<TrainTypeSettingData | null>(null);
 
@@ -67,7 +67,7 @@ export function TrainTypeSettingComponent({
               <div
                 style={{ width: '140px' }}
                 onClick={() => {
-                  setSettingData({ settingType: 'TrainTypeSetting', trainType: trainType });
+                  setSettingData({ settingType: 'TrainTypeSetting', trainTypeId: trainType.trainTypeId });
                 }}
                 // マウスホバー時に背景色を灰色にする
                 onMouseEnter={(e) => {
@@ -82,7 +82,7 @@ export function TrainTypeSettingComponent({
               <div>
                 <button
                   onClick={() => {
-                    setTrainTypes(trainTypes.filter((t) => t.trainTypeId !== trainType.trainTypeId));
+                    setTrainTypes((trainTypes) => trainTypes.filter((t) => t.trainTypeId !== trainType.trainTypeId));
                   }}
                 >
                   削除
@@ -94,7 +94,7 @@ export function TrainTypeSettingComponent({
         <div>
           <button
             onClick={() => {
-              setTrainTypes([
+              setTrainTypes((trainTypes) => [
                 ...trainTypes,
                 { trainTypeId: generateId(), trainTypeName: '-', trainTypeColor: '#000000' },
               ]);
@@ -108,11 +108,23 @@ export function TrainTypeSettingComponent({
         <></>
       ) : (
         <SettingColumnComponent setSettingData={setSettingData}>
-          {settingData != null && settingData.settingType === 'TrainTypeSetting' ? (
+          {settingData != null &&
+          settingData.settingType === 'TrainTypeSetting' &&
+          trainTypes.find((t) => t.trainTypeId === settingData.trainTypeId) ? (
             <TrainTypeDetailComponent
-              trainType={settingData.trainType}
+              trainType={trainTypes.find((t) => t.trainTypeId === settingData.trainTypeId)!}
               setTrainType={(trainType) => {
-                setTrainTypes(trainTypes.map((t) => (t.trainTypeId === trainType.trainTypeId ? trainType : t)));
+                setTrainTypes((trainTypes) =>
+                  trainTypes.map((t) => {
+                    if (t.trainTypeId === trainType.trainTypeId) {
+                      t.trainTypeColor = trainType.trainTypeColor;
+                      t.trainTypeName = trainType.trainTypeName;
+                      return t;
+                    } else {
+                      return t;
+                    }
+                  })
+                );
               }}
             />
           ) : (

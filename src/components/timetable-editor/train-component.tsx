@@ -77,25 +77,29 @@ export function PlatformComponent({
   allDiaPlatforms,
   setDiaPlatform,
 }: {
-  diaPlatform: Platform;
+  diaPlatform: Platform | null;
   allDiaPlatforms: Platform[];
-  setDiaPlatform: (diaPlatform: Platform) => void;
+  setDiaPlatform: (diaPlatform: Platform | null) => void;
 }) {
   return (
     <select
-      value={diaPlatform.platformId}
+      value={diaPlatform?.platformId ?? -1}
       style={{ height: 22 + 'px' }}
       onChange={(e) => {
-        if ((e.target as HTMLSelectElement)?.value != null) {
-          const newDiaPlatform = allDiaPlatforms.find(
-            (diaPlatform) => diaPlatform.platformId === (e.target as HTMLSelectElement).value
-          );
+        const value = (e.target as HTMLSelectElement)?.value;
+        if (value != null) {
+          if (value === '-1') {
+            setDiaPlatform(null);
+            return;
+          }
+          const newDiaPlatform = allDiaPlatforms.find((diaPlatform) => diaPlatform.platformId === value);
           if (newDiaPlatform) {
             setDiaPlatform(newDiaPlatform);
           }
         }
       }}
     >
+      <option value={-1}>-</option>
       {allDiaPlatforms.map((diaPlatform) => (
         <option value={diaPlatform.platformId}>{diaPlatform.platformName}</option>
       ))}
@@ -125,7 +129,12 @@ function TrainListItemComponent({
       }}
     >
       <div
-        style={{ fontSize: '12px', width: '10px', color: diaTime.isPassing ? 'black' : 'lightgray' }}
+        style={{
+          fontSize: '12px',
+          width: '10px',
+          color: diaTime.isPassing ? 'black' : 'lightgray',
+          backgroundColor: diaTime.isPassing ? 'lightgreen' : 'white',
+        }}
         onClick={() => {
           diaTime.isPassing = !diaTime.isPassing;
           setDiaTrains([...diaTrains]);
@@ -241,7 +250,7 @@ export function TrainListComponent({
           <div style={{ height: '24px' }}>
             <select
               value={diaTrain.trainType?.trainTypeId}
-              style={{ height: 22 + 'px' }}
+              style={{ height: 22 + 'px', width: '56px' }}
               onChange={(e) => {
                 if ((e.target as HTMLSelectElement)?.value != null) {
                   const newTrainType = trainTypes.find(
@@ -283,6 +292,7 @@ export function TrainListComponent({
                 diaStation: diaStation,
                 diaPlatform: getDefaultPlatform(diaStation, timetableDirection),
               })),
+              trainCode: '',
             });
             setDiaTrains([...diaTrains]);
           }}

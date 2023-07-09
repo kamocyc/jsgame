@@ -257,6 +257,7 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
     if (track.track.platform) {
       ctx.strokeStyle = 'red';
       drawLine(ctx, mapContext, track._begin, track._end);
+      drawLine(ctx, mapContext, track._begin, track._end);
 
       const name = track.track.platform.platformName;
       const metrics = ctx.measureText(name);
@@ -265,7 +266,7 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
       ctx.font = '10px sans-serif';
       ctx.fillText(
         name,
-        rx((track._begin.x + track._end.x) / 2 - metrics.width / 2 - 10, mapContext),
+        rx((track._begin.x + track._end.x) / 2 - metrics.width / 2, mapContext),
         ry((track._begin.y + track._end.y) / 2 - 10, mapContext)
       );
 
@@ -287,7 +288,7 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
     const metrics = ctx.measureText(name);
     const x = points.reduce((acc, p) => acc + p.x, 0) / points.length;
     const y = Math.max(...points.map((p) => p.y));
-    ctx.fillText(name, rx(x - metrics.width / 2 - 10, mapContext), ry(y + 10, mapContext));
+    ctx.fillText(name, rx(x - metrics.width / 2, mapContext), ry(y + 10, mapContext));
   }
 
   ctx.strokeStyle = 'black';

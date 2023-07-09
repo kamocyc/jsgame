@@ -89,10 +89,9 @@ function placeStation(
   map: GameMap,
   position: Point,
   mapWidth: number,
-  mapHeight: number
+  mapHeight: number,
+  numberOfPlatforms: number
 ): [HalfTrack[], Switch[], Station] | null {
-  const numberOfPlatforms = 2;
-
   const newTracks: HalfTrack[] = [];
   const newSwitches: Switch[] = [];
   const newPlatforms: Platform[] = [];
@@ -146,7 +145,7 @@ function placeStation(
   // stationを完成させる
   newStation.defaultOutboundDiaPlatformId = newPlatforms[0].platformId;
   newStation.defaultInboundDiaPlatformId =
-    newPlatforms.length >= 1 ? newPlatforms[1].platformId : newPlatforms[0].platformId;
+    newPlatforms.length >= 2 ? newPlatforms[1].platformId : newPlatforms[0].platformId;
 
   return [newTracks, newSwitches, newStation];
 }
@@ -178,6 +177,7 @@ function onmousedown(
   e: MouseEvent,
   appStates: AppStates,
   selectedTrain: Train,
+  numberOfPlatforms: number,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
   setPlatform: (platform: Platform | null) => void,
   setSwitch: (Switch: Switch | null) => void,
@@ -209,7 +209,13 @@ function onmousedown(
       setMouseDragMode('SetPlatform');
       const newPlatform = createPlatform(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'Station') {
-      const result = placeStation(appStates.map, mapPosition, appStates.mapWidth, appStates.mapHeight);
+      const result = placeStation(
+        appStates.map,
+        mapPosition,
+        appStates.mapWidth,
+        appStates.mapHeight,
+        numberOfPlatforms
+      );
       if (result) {
         const [newTracks, newSwitches, newStation] = result;
         appStates.tracks.push(...newTracks);
@@ -378,7 +384,15 @@ function onwheel(e: WheelEvent, appStates: AppStates, update: () => void) {
   update();
 }
 
-export function CanvasComponent({ appStates, update }: { appStates: AppStates; update: () => void }) {
+export function CanvasComponent({
+  appStates,
+  numberOfPlatforms,
+  update,
+}: {
+  appStates: AppStates;
+  numberOfPlatforms: number;
+  update: () => void;
+}) {
   const [editorDialogMode, setEditorDialogMode] = useState<EditorDialogMode | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [Switch, setSwitch] = useState<Switch | null>(null);
@@ -398,6 +412,7 @@ export function CanvasComponent({ appStates, update }: { appStates: AppStates; u
             e,
             appStates,
             selectedTrain,
+            numberOfPlatforms,
             setEditorDialogMode,
             setPlatform,
             setSwitch,

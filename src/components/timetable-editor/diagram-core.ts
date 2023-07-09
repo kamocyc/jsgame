@@ -97,6 +97,7 @@ function commitDrawingLine(props: DiagramProps) {
             diaPlatform: getDefaultPlatform(drawingLineTime.diaStation, direction),
           } as DiaTime)
       ),
+      trainCode: '',
     });
     props.setUpdate();
   }
@@ -210,7 +211,6 @@ function drawStations(
   }
 }
 
-// TODO: 変更を反映する
 function drawTrain(
   layer: Konva.Layer,
   stationPositions: (Station & { diagramPosition: number })[],
@@ -245,7 +245,7 @@ function drawTrain(
   const positions = positionDiaTimeMap.map(([_, __, position]) => position).flat();
   const line = new Konva.Line({
     points: positions,
-    stroke: 'black',
+    stroke: diaTrain.trainType?.trainTypeColor ?? 'black',
     strokeWidth: 1,
     hitStrokeWidth: 10,
     draggable: true,
@@ -301,7 +301,7 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
 
   const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
 
-  drawTimeGrid(layer, canvasHeight, secondWidth);
+  drawTimeGrid(layer, stationPositions[stationPositions.length - 1].diagramPosition + 50, secondWidth);
   drawStations(layer, stationPositions, secondWidth, props);
 
   for (const diaTrain of props.inboundDiaTrains) {
@@ -358,6 +358,8 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
 }
 
 function adjustStagePosition(stage: Stage) {
+  if (!stage.container) return;
+
   const container = stage.container();
 
   const containerWidth = container.clientWidth;

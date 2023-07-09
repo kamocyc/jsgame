@@ -1,6 +1,5 @@
 import { GameMap } from '../../mapEditorModel';
 import { HalfTrack, Platform, Station, Switch } from '../../model';
-import { DiaTrain } from '../timetable-editor/model';
 import { TrainMove2 } from './trainMove2';
 
 export type BranchDirection = 'Straight' | 'Branch';
@@ -57,7 +56,7 @@ export function createMapContext(mapWidth: number, mapHeight: number): MapContex
 export interface AppStates {
   editMode: EditMode;
   timetable: Timetable;
-  trains: DiaTrain[];
+  trains: Train[];
   switches: Switch[]; // 今は使っていない
   stations: Station[];
   tracks: HalfTrack[];

@@ -1,10 +1,10 @@
 import { useState } from 'preact/hooks';
-import { Cell, GameMap } from '../mapEditorModel';
+import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
+import { DetailedTimetable } from '../model';
 import { TimetableEditorComponent } from './timetable-editor/TimetableEditorComponent';
 import { SplitViewComponent } from './timetable-editor/common-component';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { TrainMove2 } from './track-editor/trainMove2';
-import { AppStates, Timetable, createMapContext } from './track-editor/uiEditorModel';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
@@ -20,7 +20,7 @@ function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   return map;
 }
 
-const timetable: Timetable = {
+const timetable: DetailedTimetable = {
   platformTTItems: [],
   switchTTItems: [],
 };
@@ -37,15 +37,13 @@ export function App() {
         diaTimes: [],
         trainId: '1',
         trainName: 'A',
-        color: 'red',
-        trainTimetable: [],
+        trainCode: '',
       },
       {
         diaTimes: [],
         trainId: '2',
         trainName: 'B',
-        color: 'black',
-        trainTimetable: [],
+        trainCode: '',
       },
     ],
     map: initializeMap(defaultMapWidth, defaultMapHeight),

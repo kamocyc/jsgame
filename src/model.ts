@@ -6,9 +6,9 @@ export interface Point {
 // 同じ点では同じオブジェクトを共有する
 export interface Switch {
   switchId: string;
-  endTracks: HalfTrack[];
-  beginTracks: HalfTrack[]; // switchがbeginのtrackのみ入れる
-  switchPatterns: [HalfTrack, HalfTrack][]; // 切り替わるswitchの組み合わせ
+  endTracks: Track[];
+  beginTracks: Track[]; // switchがbeginのtrackのみ入れる
+  switchPatterns: [Track, Track][]; // 切り替わるswitchの組み合わせ
   switchPatternIndex: [number, number] | null; // 現在切り替えられているswitchPatternのindex。reverseTrackの分があるので要素が2つ
   straightPatternIndex: [number, number] | null; // 定位のpatternのIndex
 }
@@ -24,57 +24,27 @@ export interface Station {
   stationName: string;
   platforms: Platform[];
   distance: number;
-  defaultOutboundDiaPlatformId: string;
-  defaultInboundDiaPlatformId: string;
+  defaultOutboundPlatformId: string;
+  defaultInboundPlatformId: string;
 }
 
 export const DefaultStationDistance = 100;
 
-export interface HalfTrack {
+export interface Track {
   trackId: string;
-  _begin: Point;
-  _end: Point;
-  _nextSwitch: Switch;
-  _prevSwitch: Switch;
-  reverseTrack: HalfTrack;
-  track: Track_;
+  begin: Point;
+  end: Point;
+  nextSwitch: Switch;
+  prevSwitch: Switch;
+  reverseTrack: Track;
+  track: TrackProperty;
 }
 
-export interface HalfTrackWip {
-  trackId?: string;
-  _begin: Point;
-  _end: Point;
-  _nextSwitch?: Switch;
-  _prevSwitch?: Switch;
-  reverseTrack?: HalfTrack;
-  track: Track_;
-}
-
-export interface Track_ {
+export interface TrackProperty {
   platform: Platform | null;
 }
 
 export type ArrivalAndDepartureStatus = 'NotArrived' | 'Arrived' | 'Departed';
-
-export interface Train {
-  trainId: string;
-  currentTimetableIndex: number;
-  speed: number;
-  track: HalfTrack;
-  position: Point;
-  platformWaitTime: number;
-  arrivalAndDepartureStatus: ArrivalAndDepartureStatus;
-}
-
-export interface OperationTrain {
-  train: Train;
-}
-
-export interface TimetableItem {
-  platform: Platform;
-  operatingTrain: OperationTrain;
-  departTime: number;
-}
 
 function getInitialId(): number {
   return Math.floor((new Date().getTime() - 1600000000000) / 1000);
@@ -85,17 +55,92 @@ export function generateId(): string {
   return (++_currentId).toString();
 }
 
-export interface SerializedTrain {
-  trainId: string;
-  name: string | undefined;
-  color: string | undefined;
-  position: Point;
+export interface DiaTime {
+  diaTimeId: string;
+  arrivalTime: number | null;
+  departureTime: number | null;
+  isPassing: boolean;
+  station: Station;
+  platform: Platform | null;
 }
 
-export interface TimedPositionData {
-  minGlobalTime: number;
-  maxGlobalTime: number;
-  globalTimeSpeed: number;
-  tracks: HalfTrack[];
-  records: SerializedTrain[][];
+export interface TrainType {
+  trainTypeId: string;
+  trainTypeName: string;
+  trainTypeColor: string;
+}
+
+export type Operation =
+  | {
+      operationType: 'Connection';
+    }
+  | {
+      operationType: 'InOut';
+      operationTime: number;
+      operationCode: string;
+    };
+
+export interface Train {
+  trainId: string;
+  trainCode: string; // 列車番号
+  trainName: string;
+  trainType?: TrainType;
+  diaTimes: DiaTime[];
+  firstOperation?: Operation;
+  lastOperation?: Operation;
+}
+
+export type TimetableDirection = 'Outbound' | 'Inbound';
+
+export interface Timetable {
+  inboundTrains: Train[];
+  outboundTrains: Train[];
+  stations: Station[];
+  trainTypes: TrainType[];
+}
+
+// Timetableを含む全てのデータ
+export interface TimetableData {
+  timetable: Timetable;
+}
+
+export interface Clipboard {
+  train: Train | null;
+}
+
+export interface ContextData {
+  visible: boolean;
+  posX: number;
+  posY: number;
+}
+
+export interface StationSettingData {
+  settingType: 'StationSetting';
+  station: Station;
+}
+
+export type SettingData = StationSettingData;
+
+export type BranchDirection = 'Straight' | 'Branch';
+
+// 1つのtrain, platformに対して、複数のtimetableItemが存在する
+
+export interface PlatformTimetableItem {
+  train: Train;
+  platform: Platform;
+  arrivalTime: number | null;
+  departureTime: number | null;
+  track: Track | null;
+}
+
+export interface SwitchTimetableItem {
+  train: Train;
+  Switch: Switch;
+  changeTime: number | null;
+  branchDirection: BranchDirection;
+}
+
+export interface DetailedTimetable {
+  platformTTItems: PlatformTimetableItem[];
+  switchTTItems: SwitchTimetableItem[];
 }

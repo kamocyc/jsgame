@@ -11,7 +11,7 @@ import {
   addVector,
   timesVector,
 } from '../../mapEditorModel';
-import { HalfTrack, Switch } from '../../model';
+import { Switch, Track } from '../../model';
 import { createNewTrack, getRadian } from '../../trackUtil';
 
 type CreateLineError = { error: string };
@@ -187,28 +187,28 @@ function getBranchTypeFromCurveTypeAndAngle(
   }
 }
 
-function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [HalfTrack[], Cell] | { error: string } {
+function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [Track[], Cell] | { error: string } {
   //: [HalfTrack[], Cell] | CreateLineError {
-  function getLeftOrRightTrack(branchType: 'Left' | 'Right' | 'Top' | 'Bottom', track1: HalfTrack, track2: HalfTrack) {
+  function getLeftOrRightTrack(branchType: 'Left' | 'Right' | 'Top' | 'Bottom', track1: Track, track2: Track) {
     switch (branchType) {
       case 'Left':
         // tracks.tracksのうち、xが小さい方を選ぶ
-        if (track1._begin.x < track2._begin.x || track1._end.x < track2._end.x) {
+        if (track1.begin.x < track2.begin.x || track1.end.x < track2.end.x) {
           return track1;
         }
         return track2;
       case 'Right':
-        if (track1._begin.x > track2._begin.x || track1._end.x > track2._end.x) {
+        if (track1.begin.x > track2.begin.x || track1.end.x > track2.end.x) {
           return track1;
         }
         return track2;
       case 'Top':
-        if (track1._begin.y > track2._begin.y || track1._end.y > track2._end.y) {
+        if (track1.begin.y > track2.begin.y || track1.end.y > track2.end.y) {
           return track1;
         }
         return track2;
       case 'Bottom':
-        if (track1._begin.y < track2._begin.y || track1._end.y < track2._end.y) {
+        if (track1.begin.y < track2.begin.y || track1.end.y < track2.end.y) {
           return track1;
         }
         return track2;
@@ -306,7 +306,7 @@ function createTrackOnAdjacentCells(
   cell1: Cell,
   cell2: Cell,
   angle: LineAngle
-): [[Cell, Cell], [HalfTrack, HalfTrack], Switch[]] | { error: string } {
+): [[Cell, Cell], [Track, Track], Switch[]] | { error: string } {
   const result_ = getAdjacentTrackAndNewCellBase(cell1, angle);
   if ('error' in result_) {
     return { error: '始点: ' + result_.error };
@@ -336,27 +336,27 @@ function createTrackOnAdjacentCells(
     prevTracks,
     null
   );
-  const beginTrack = deepEqual(newTrack1._end, _begin) ? newTrack1 : newTrack2;
-  const endTrack = deepEqual(newTrack1._end, _begin) ? newTrack2 : newTrack1;
+  const beginTrack = deepEqual(newTrack1.end, _begin) ? newTrack1 : newTrack2;
+  const endTrack = deepEqual(newTrack1.end, _begin) ? newTrack2 : newTrack1;
 
-  if (beginTrack._nextSwitch.switchPatterns.length >= 2) {
-    beginTrack._nextSwitch.straightPatternIndex = getStraightPatternIndex(beginTrack._nextSwitch);
+  if (beginTrack.nextSwitch.switchPatterns.length >= 2) {
+    beginTrack.nextSwitch.straightPatternIndex = getStraightPatternIndex(beginTrack.nextSwitch);
   }
-  if (endTrack._nextSwitch.switchPatterns.length >= 2) {
-    endTrack._nextSwitch.straightPatternIndex = getStraightPatternIndex(endTrack._nextSwitch);
+  if (endTrack.nextSwitch.switchPatterns.length >= 2) {
+    endTrack.nextSwitch.straightPatternIndex = getStraightPatternIndex(endTrack.nextSwitch);
   }
 
   // セルのtracksは、そのセルに**入る**trackを設定する（次のtrackを設定しやすくするため。）。reverseTrackは設定しない。
   newCell1.lineType!.tracks.push(beginTrack);
-  newCell1.lineType!.switch = beginTrack._nextSwitch;
+  newCell1.lineType!.switch = beginTrack.nextSwitch;
   newCell2.lineType!.tracks.push(endTrack);
-  newCell2.lineType!.switch = endTrack._nextSwitch;
+  newCell2.lineType!.switch = endTrack.nextSwitch;
 
   return [[newCell1, newCell2], [newTrack1, newTrack2], newSwitches];
 }
 
 // mapに対して破壊的変更をする
-export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [HalfTrack[], Switch[]] | CreateLineError {
+export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [Track[], Switch[]] | CreateLineError {
   if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
     return { error: '同じセル' };
   }
@@ -414,7 +414,7 @@ export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [HalfTrack[]
   let y = cell1.position.y;
   let ix = cell2.position.x < cell1.position.x ? -1 : cell2.position.x === cell1.position.x ? 0 : 1;
   let iy = cell2.position.y < cell1.position.y ? -1 : cell2.position.y === cell1.position.y ? 0 : 1;
-  const resultTracks: HalfTrack[] = [];
+  const resultTracks: Track[] = [];
   const resultSwitches: Switch[] = [];
   const mapUpdateData: [number, number, Cell][] = [];
   let prevCell = map[x][y];

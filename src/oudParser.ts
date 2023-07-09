@@ -1,5 +1,4 @@
-import { DiaTime, DiaTrain, Operation, Timetable, TrainType } from './components/timetable-editor/model.js';
-import { Platform, Station, generateId } from './model.js';
+import { DiaTime, Operation, Platform, Station, Timetable, Train, TrainType, generateId } from './model';
 
 // oud形式をjson形式に変換する
 function oudToJson(oudBuf: string): any {
@@ -61,7 +60,7 @@ interface EkiJikokuData {
   ekiOperation: number | undefined;
 }
 
-export interface DiaTrainExt extends DiaTrain {
+export interface DiaTrainExt extends Train {
   houkou: Houkou;
   // ここらへんはとりあえず後回しにする。
   // operationCode: string | undefined;  // 運用番号
@@ -147,8 +146,8 @@ function convertEkis(ekis: any[]): Station[] {
       stationName: (eki['Ekimei'] ?? '') as string,
       distance: i * 10 /* TODO: 距離はOudiaSecondでは時間から算出している */,
       platforms: [],
-      defaultInboundDiaPlatformId: '', // dummy
-      defaultOutboundDiaPlatformId: '', // dummy
+      defaultInboundPlatformId: '', // dummy
+      defaultOutboundPlatformId: '', // dummy
     };
     for (const track of eki['EkiTrack2Cont'][0]['EkiTrack2'] as any[]) {
       const platform: Platform = {
@@ -244,8 +243,8 @@ function convertRessyas(ressyas: any[], stations: Station[], trainTypes: TrainTy
           diaTimeId: generateId(),
           arrivalTime: arrivalTime !== undefined ? timeToSeconds(arrivalTime) : null,
           departureTime: departureTime !== undefined ? timeToSeconds(departureTime) : null,
-          diaPlatform: platform,
-          diaStation: station,
+          platform: platform,
+          station: station,
           isPassing: ekiJikoku.ekiOperation === 2 /* 2は通過。なお、運行無しのときはデータ自体が無い */,
         };
       })
@@ -283,15 +282,15 @@ function convertTrainTypes(ressyasyubetsus: any[]): TrainType[] {
 }
 
 // 足りない駅の時刻を補完する
-function fillMissingTimes(diaTrains: DiaTrainExt[], stations: Station[]): void {
+function fillMissingTimes(trains: DiaTrainExt[], stations: Station[]): void {
   for (const station of stations) {
-    for (const diaTrain of diaTrains) {
-      const diaTime = diaTrain.diaTimes.find((diaTime) => diaTime.diaStation.stationId === station.stationId);
+    for (const train of trains) {
+      const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === station.stationId);
       if (diaTime === undefined) {
-        diaTrain.diaTimes.push({
+        train.diaTimes.push({
           diaTimeId: generateId(),
-          diaStation: station,
-          diaPlatform: null,
+          station: station,
+          platform: null,
           arrivalTime: null,
           departureTime: null,
           isPassing: false,
@@ -313,8 +312,8 @@ export function getEkiJikokus(oudBuf: string): Timetable {
 
   return {
     trainTypes,
-    inboundDiaTrains: trains.filter((t) => t.houkou === 'Nobori'),
-    outboundDiaTrains: trains.filter((t) => t.houkou === 'Kudari'),
+    inboundTrains: trains.filter((t) => t.houkou === 'Nobori'),
+    outboundTrains: trains.filter((t) => t.houkou === 'Kudari'),
     stations: stations,
   };
 }

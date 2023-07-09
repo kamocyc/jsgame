@@ -1,7 +1,6 @@
 import { useState } from 'preact/hooks';
-import { Platform, Switch, generateId } from '../../model';
+import { DetailedTimetable, Platform, Switch, Train } from '../../model';
 import { TimeInputComponent } from '../timetable-editor/common-component';
-import { Timetable, Train } from './uiEditorModel';
 
 export function TrainSelector({
   trains,
@@ -34,7 +33,15 @@ export function TrainSelector({
   );
 }
 
-export function SwitchEditor({ timetable, trains, Switch }: { timetable: Timetable; trains: Train[]; Switch: Switch }) {
+export function SwitchEditor({
+  timetable,
+  trains,
+  Switch,
+}: {
+  timetable: DetailedTimetable;
+  trains: Train[];
+  Switch: Switch;
+}) {
   const [selectedTrain, setSelectedTrain] = useState<Train>(trains[0]);
   const [_, setUpdate] = useState([]);
   const ttItems = timetable.switchTTItems.filter(
@@ -145,7 +152,7 @@ export function StationEditor({
   setPlatform,
   update,
 }: {
-  timetable: Timetable;
+  timetable: DetailedTimetable;
   trains: Train[];
   platform: Platform;
   setPlatform: (platform: Platform) => void;
@@ -177,30 +184,6 @@ export function StationEditor({
         </div>
         <div>
           <PlatformSelector platforms={station.platforms} platform={platform} setSelectedPlatform={setPlatform} />
-          <button
-            onClick={() => {
-              station.platforms.push({
-                platformId: generateId(),
-                platformName: '',
-                station: station,
-              });
-              setUpdate();
-            }}
-          >
-            ホーム追加
-          </button>
-          <button
-            onClick={() => {
-              if (station.platforms.length === 1) {
-                return;
-              }
-              station.platforms = station.platforms.filter((p) => p.platformId !== platform.platformId);
-              setPlatform(station.platforms[0]);
-              setUpdate();
-            }}
-          >
-            ホーム削除
-          </button>
         </div>
         <div>
           <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />

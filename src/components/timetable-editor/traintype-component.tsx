@@ -1,7 +1,6 @@
 import { StateUpdater, useState } from 'preact/hooks';
-import { generateId } from '../../model';
+import { TrainType, generateId } from '../../model';
 import { SettingColumnComponent } from './common-component';
-import { TrainType } from './model';
 
 interface TrainTypeSettingData {
   settingType: 'TrainTypeSetting';

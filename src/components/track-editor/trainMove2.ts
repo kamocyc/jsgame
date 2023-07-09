@@ -1,5 +1,6 @@
 import { assert } from '../../common.js';
-import { ArrivalAndDepartureStatus, HalfTrack, Point, Switch } from '../../model.js';
+import { BranchDirection, DetailedTimetable, Train } from '../../model';
+import { ArrivalAndDepartureStatus, Point, Switch, Track } from '../../model.js';
 import {
   getDistance,
   getMidPoint,
@@ -8,12 +9,11 @@ import {
   getTrackDirection,
   isTrainOutTrack,
 } from '../../trackUtil.js';
-import { BranchDirection, Timetable, Train } from './uiEditorModel.js';
 
-function getStopPosition(_train: PlacedTrain, stationTrack: HalfTrack): Point | undefined {
+function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | undefined {
   if (!stationTrack.track.platform) return undefined;
 
-  const midPoint = getMidPoint(stationTrack._begin, stationTrack._end);
+  const midPoint = getMidPoint(stationTrack.begin, stationTrack.end);
   return midPoint;
 }
 
@@ -31,7 +31,7 @@ function shouldStopTrain(train: PlacedTrain): false | Point {
   // 列車の進行方向から、すでにstopPositionを過ぎたかどうかを判定
   if (getDistance(train.position, stopPosition) < 3) return stopPosition; // 近すぎる場合はstopと判定
 
-  const r = getRadian(train.track, { _begin: train.position, _end: stopPosition });
+  const r = getRadian(train.track, { begin: train.position, end: stopPosition });
   if (Math.abs(r) > Math.PI / 2) {
     return false;
   }
@@ -42,7 +42,7 @@ function shouldStopTrain(train: PlacedTrain): false | Point {
 class TrainOccupy {
   /* trackId => train */
   // readonly occupyingTrain: Map<number, Train> = new Map<number, Train>();
-  readonly occupyingTracks: Map<string, HalfTrack[]> = new Map<string, HalfTrack[]>();
+  readonly occupyingTracks: Map<string, Track[]> = new Map<string, Track[]>();
 
   addTrain(train: PlacedTrain) {
     this.occupyingTracks.set(train.trainId, [train.track]);
@@ -52,7 +52,7 @@ class TrainOccupy {
     this.occupyingTracks.delete(train.trainId);
   }
 
-  isOccupiedTrack(train: PlacedTrain, toOccupyTracks: HalfTrack[]): boolean {
+  isOccupiedTrack(train: PlacedTrain, toOccupyTracks: Track[]): boolean {
     const override = [];
     for (const [trainId, tracks] of this.occupyingTracks) {
       if (trainId !== train.trainId) {
@@ -67,7 +67,7 @@ class TrainOccupy {
     return override.length > 0;
   }
 
-  updateOccupyingTrack(train: PlacedTrain, toOccupyTracks: HalfTrack[]) {
+  updateOccupyingTrack(train: PlacedTrain, toOccupyTracks: Track[]) {
     this.occupyingTracks.delete(train.trainId);
 
     this.occupyingTracks.set(train.trainId, toOccupyTracks);
@@ -76,9 +76,9 @@ class TrainOccupy {
 
 function getNextTrackOfSwitchPattern(
   Switch: Switch,
-  currentTrack: HalfTrack,
+  currentTrack: Track,
   switchPatternIndex: [number, number]
-): HalfTrack | null {
+): Track | null {
   const [index1, index2] = switchPatternIndex;
   if (Switch.switchPatterns[index1][0] === currentTrack) {
     return Switch.switchPatterns[index1][1];
@@ -91,13 +91,13 @@ function getNextTrackOfSwitchPattern(
 }
 
 // 定位のtrackを返す
-export function getNextTrackOfStraightPattern(currentSwitch: Switch, track: HalfTrack): HalfTrack | null {
+export function getNextTrackOfStraightPattern(currentSwitch: Switch, track: Track): Track | null {
   assert(currentSwitch.straightPatternIndex !== null);
   return getNextTrackOfSwitchPattern(currentSwitch, track, currentSwitch.straightPatternIndex);
 }
 
 // 反位のtrackを返す
-export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: HalfTrack): HalfTrack | null {
+export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track): Track | null {
   assert(Switch.straightPatternIndex !== null);
   const [straightPatternIndex1, straightPatternIndex2] = Switch.straightPatternIndex;
   const candidatePatterns = Switch.switchPatterns
@@ -127,7 +127,7 @@ interface PlacedTrain {
   trainId: string;
   train: Train;
   speed: number;
-  track: HalfTrack;
+  track: Track;
   position: Point;
   stationWaitTime: number;
   stationStatus: ArrivalAndDepartureStatus;
@@ -137,14 +137,14 @@ const TimeActionMode: 'Just' | 'After' = 'Just';
 
 export class TrainMove2 {
   placedTrains: PlacedTrain[] = [];
-  timetable: Timetable;
+  timetable: DetailedTimetable;
   readonly trainOccupy = new TrainOccupy();
   readonly globalTimeSpeed = 10; // 1サイクルで進む秒数
   readonly maxStationWaitTime = Number.MAX_VALUE;
 
   globalTime = 0;
 
-  constructor(timetable: Timetable) {
+  constructor(timetable: DetailedTimetable) {
     this.timetable = timetable;
     this.resetGlobalTime();
   }
@@ -156,8 +156,8 @@ export class TrainMove2 {
     this.globalTime = minTimetableTime === Infinity ? 0 : minTimetableTime;
   }
 
-  private getNextTrack(track: HalfTrack, train: PlacedTrain): HalfTrack {
-    const currentSwitch = track._nextSwitch;
+  private getNextTrack(track: Track, train: PlacedTrain): Track {
+    const currentSwitch = track.nextSwitch;
     const nextTracks = currentSwitch.switchPatterns.filter(([t, _]) => t.trackId === track.trackId).map(([_, t]) => t);
     if (nextTracks.length === 0) {
       // 進行方向に進めるトラックがない場合、逆方向に進む
@@ -249,10 +249,10 @@ export class TrainMove2 {
         let nextTrack = this.getNextTrack(train.track, train);
 
         // trackの終点から行き過ぎた距離を求める
-        const distance = getDistance(train.track._end, train.position);
+        const distance = getDistance(train.track.end, train.position);
 
-        train.position.x = nextTrack._begin.x + distance * getTrackDirection(nextTrack).x;
-        train.position.y = nextTrack._begin.y + distance * getTrackDirection(nextTrack).y;
+        train.position.x = nextTrack.begin.x + distance * getTrackDirection(nextTrack).x;
+        train.position.y = nextTrack.begin.y + distance * getTrackDirection(nextTrack).y;
 
         this.trainOccupy.updateOccupyingTrack(train, getOccupyingTracks(train.track));
         train.track = nextTrack;
@@ -311,7 +311,7 @@ export class TrainMove2 {
         stationWaitTime: 0,
         stationStatus: 'NotArrived',
         track: ttItem.track,
-        position: getMidPoint(ttItem.track._begin, ttItem.track._end),
+        position: getMidPoint(ttItem.track.begin, ttItem.track.end),
       });
     }
   }

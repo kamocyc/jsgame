@@ -1,6 +1,6 @@
 import { ComponentChild } from 'preact';
 import { Ref, useEffect, useRef, useState } from 'preact/hooks';
-import { ContextData } from './model';
+import { ContextData } from '../../model';
 import './timetable-editor.css';
 
 export function showGlobalTime(timeSeconds: number): string {

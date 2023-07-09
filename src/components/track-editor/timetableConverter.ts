@@ -1,15 +1,24 @@
 import { assert } from '../../common';
-import { HalfTrack, Platform, Station, generateId } from '../../model';
+import {
+  DetailedTimetable,
+  DiaTime,
+  Timetable as OutlinedTimetable,
+  Platform,
+  PlatformTimetableItem,
+  Station,
+  SwitchTimetableItem,
+  Track,
+  Train,
+  generateId,
+} from '../../model';
 import { abstractSearch, getDistance, getNextTracks } from '../../trackUtil';
-import { DiaTime, DiaTrain, Timetable as OutlinedTimetable } from './../timetable-editor/model';
 import { getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove2';
-import { Timetable as DetailedTimetable, PlatformTimetableItem, SwitchTimetableItem } from './uiEditorModel';
 
-function getStationDistances(platforms: (readonly [HalfTrack, Platform])[], stations: Station[]) {
+function getStationDistances(platforms: (readonly [Track, Platform])[], stations: Station[]) {
   // 距離を計算する
   // platformsのtrackのうち最も左のもの
   const leftmostStation = platforms.reduce((prev, current) => {
-    if (prev[0]._begin.x < current[0]._begin.x) {
+    if (prev[0].begin.x < current[0].begin.x) {
       return prev;
     } else {
       return current;
@@ -17,7 +26,7 @@ function getStationDistances(platforms: (readonly [HalfTrack, Platform])[], stat
   });
 
   const rightmostStation = platforms.reduce((prev, current) => {
-    if (prev[0]._begin.x > current[0]._begin.x) {
+    if (prev[0].begin.x > current[0].begin.x) {
       return prev;
     } else {
       return current;
@@ -58,11 +67,11 @@ function getInitialDiaTimes(stationDistances: [Station, number][], direction: 'I
       departureTime:
         i === stationDistances.length - 1 ? null : distance * coefficient + accumulatedWaitTime + waitTimePerStation,
       isPassing: false,
-      diaStation: station,
-      diaPlatform: station.platforms.filter(
+      station: station,
+      platform: station.platforms.filter(
         (p) =>
-          (direction === 'Inbound' && p.platformId === station.defaultInboundDiaPlatformId) ||
-          (direction === 'Outbound' && p.platformId === station.defaultOutboundDiaPlatformId)
+          (direction === 'Inbound' && p.platformId === station.defaultInboundPlatformId) ||
+          (direction === 'Outbound' && p.platformId === station.defaultOutboundPlatformId)
       )[0],
     });
     accumulatedWaitTime += waitTimePerStation;
@@ -71,7 +80,7 @@ function getInitialDiaTimes(stationDistances: [Station, number][], direction: 'I
   return diaTimes;
 }
 
-export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimetable | null {
+export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable | null {
   const platforms = tracks.filter((t) => t.track.platform != null).map((t) => [t, t.track.platform!] as const);
   const stations = platforms.map(([t, p]) => p.station);
   // 重複を削除。ただし、順番は保持する
@@ -96,8 +105,8 @@ export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimeta
   })();
 
   return {
-    stations: inboundDiaTimes.length === 0 ? uniqueStations : inboundDiaTimes.map((d) => d.diaStation),
-    inboundDiaTrains: [
+    stations: inboundDiaTimes.length === 0 ? uniqueStations : inboundDiaTimes.map((d) => d.station),
+    inboundTrains: [
       {
         trainId: generateId(),
         diaTimes: inboundDiaTimes,
@@ -105,7 +114,7 @@ export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimeta
         trainCode: '',
       },
     ],
-    outboundDiaTrains: [
+    outboundTrains: [
       {
         trainId: generateId(),
         diaTimes: outboundDiaTimes,
@@ -117,7 +126,7 @@ export function toOutlinedTimetableStations(tracks: HalfTrack[]): OutlinedTimeta
   };
 }
 
-function getFirstTrackBetweenPlatforms(tracks: HalfTrack[], platform1: Platform, platform2: Platform): HalfTrack {
+function getFirstTrackBetweenPlatforms(tracks: Track[], platform1: Platform, platform2: Platform): Track {
   const track1 = getTrackOfPlatform(tracks, platform1);
   const track2 = getTrackOfPlatform(tracks, platform2);
   if (!track1 || !track2) {
@@ -142,30 +151,26 @@ function getFirstTrackBetweenPlatforms(tracks: HalfTrack[], platform1: Platform,
   return result[0];
 }
 
-function toPlatformTTItems(
-  allTrackStations: Station[],
-  tracks: HalfTrack[],
-  diaTrains: DiaTrain[]
-): PlatformTimetableItem[] {
+function toPlatformTTItems(allTrackStations: Station[], tracks: Track[], trains: Train[]): PlatformTimetableItem[] {
   const allTrackPlatformIds = new Set<string>(allTrackStations.map((s) => s.platforms.map((p) => p.platformId)).flat());
 
   // platformは基本的には時刻をそのまま転記すればよい
   const platformTTItems: PlatformTimetableItem[] = [];
 
-  for (const diaTrain of diaTrains) {
+  for (const train of trains) {
     let diaTimeIndex = 0;
-    for (const diaTime of diaTrain.diaTimes) {
-      if (!allTrackPlatformIds.has(diaTime.diaPlatform!.platformId)) {
-        throw new Error('Platform not found in allTrackStations (' + diaTime.diaPlatform!.platformId + ')');
+    for (const diaTime of train.diaTimes) {
+      if (!allTrackPlatformIds.has(diaTime.platform!.platformId)) {
+        throw new Error('Platform not found in allTrackStations (' + diaTime.platform!.platformId + ')');
       }
 
       // trackの方向を決定する
       const track = (() => {
-        if (diaTimeIndex === diaTrain.diaTimes.length - 1) {
+        if (diaTimeIndex === train.diaTimes.length - 1) {
           return null;
         }
-        const track1 = getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex].diaPlatform!);
-        const track2 = getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex + 1].diaPlatform!);
+        const track1 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!);
+        const track2 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex + 1].platform!);
         if (!track1 || !track2) {
           throw new Error('Track not found');
         }
@@ -189,12 +194,9 @@ function toPlatformTTItems(
       })();
 
       platformTTItems.push({
-        train: {
-          trainId: diaTrain.trainId,
-          trainName: diaTrain.trainName ?? 'No Name',
-        },
+        train: { ...train },
         platform: {
-          ...getTrackOfPlatform(tracks, diaTrain.diaTimes[diaTimeIndex].diaPlatform!)!.track.platform!,
+          ...getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!)!.track.platform!,
         } /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */,
         departureTime: diaTime.departureTime,
         arrivalTime: diaTime.arrivalTime,
@@ -208,7 +210,7 @@ function toPlatformTTItems(
   return platformTTItems;
 }
 
-function getTrackOfPlatform(tracks: HalfTrack[], platform: Platform): HalfTrack | undefined {
+function getTrackOfPlatform(tracks: Track[], platform: Platform): Track | undefined {
   return tracks.find(
     (t) =>
       t.track.platform?.platformId === platform.platformId ||
@@ -217,32 +219,32 @@ function getTrackOfPlatform(tracks: HalfTrack[], platform: Platform): HalfTrack 
   );
 }
 
-function searchTrackPath(track1: HalfTrack, track2: HalfTrack): HalfTrack[] | undefined {
+function searchTrackPath(track1: Track, track2: Track): Track[] | undefined {
   // TODO: nextしか使っていない。=> 直したかな？
-  const result = abstractSearch<HalfTrack>(
+  const result = abstractSearch<Track>(
     track1,
     (track) => track.trackId,
     (track) =>
       track.trackId === track1.trackId
         ? getNextTracks(track).concat(getNextTracks(track.reverseTrack))
         : getNextTracks(track),
-    (_, track) => getDistance(track._begin, track._end),
+    (_, track) => getDistance(track.begin, track.end),
     (track) => track.trackId === track2.trackId || track.trackId == track2.reverseTrack.trackId
   )[0];
 
   return result;
 }
 
-function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetableItem[] {
-  const diaTimes = diaTrain.diaTimes;
+function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
+  const diaTimes = train.diaTimes;
   if (diaTimes.length <= 1) {
     return [];
   }
 
   // 整合性チェック
   tracks.forEach((t) => {
-    const prevSwitch_ = t._prevSwitch;
-    const nextSwitch_ = t._nextSwitch;
+    const prevSwitch_ = t.prevSwitch;
+    const nextSwitch_ = t.nextSwitch;
     prevSwitch_.switchPatterns.forEach(([track1, track2]) =>
       assert(
         prevSwitch_.endTracks.filter((t) => t === track1).length === 1 &&
@@ -261,8 +263,8 @@ function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetab
 
   for (let diaTimeIndex = 0; diaTimeIndex < diaTimes.length - 1; diaTimeIndex++) {
     // TODO: これは、反対方向のトラックが入ることがある。 => searchTrackPath で吸収したので大丈夫なはず
-    const track1 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex].diaPlatform!);
-    const track2 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex + 1].diaPlatform!);
+    const track1 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex].platform!);
+    const track2 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex + 1].platform!);
     if (!track1 || !track2) {
       throw new Error('Track not found');
     }
@@ -284,7 +286,7 @@ function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetab
 
     // 通過するswitchを追加する
     for (let trackIndex = 0; trackIndex < result.length - 1; trackIndex++) {
-      const currentSwitch = result[trackIndex]._nextSwitch;
+      const currentSwitch = result[trackIndex].nextSwitch;
       const nextTrack = result[trackIndex + 1];
 
       const possibleNextTracks = getNextTracks(result[trackIndex]);
@@ -318,8 +320,7 @@ function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetab
 
       switchTTItems.push({
         train: {
-          trainId: diaTrain.trainId,
-          trainName: diaTrain.trainName ?? 'No Name',
+          ...train,
         },
         Switch: { ...currentSwitch },
         changeTime: prevDepartureTime,
@@ -332,11 +333,11 @@ function toSwitchTTItems(tracks: HalfTrack[], diaTrain: DiaTrain): SwitchTimetab
 }
 
 function isPlatformsIsNotNull(timetable: OutlinedTimetable) {
-  const inboundNullPlatforms = timetable.inboundDiaTrains.filter((t) =>
-    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.diaPlatform === null)
+  const inboundNullPlatforms = timetable.inboundTrains.filter((t) =>
+    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platform === null)
   );
-  const outboundNullPlatforms = timetable.outboundDiaTrains.filter((t) =>
-    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.diaPlatform === null)
+  const outboundNullPlatforms = timetable.outboundTrains.filter((t) =>
+    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platform === null)
   );
 
   if (inboundNullPlatforms.length > 0 || outboundNullPlatforms.length > 0) {
@@ -349,7 +350,7 @@ function isPlatformsIsNotNull(timetable: OutlinedTimetable) {
 export function toDetailedTimetable(
   allTrackStations: Station[],
   timetable: OutlinedTimetable,
-  tracks: HalfTrack[]
+  tracks: Track[]
 ): DetailedTimetable | null {
   if (!isPlatformsIsNotNull(timetable)) {
     return null;
@@ -357,19 +358,19 @@ export function toDetailedTimetable(
 
   // 方向をどうするか。。。設置時？基本的にはダイヤ変換時に設定する。ホームトラック終端の上下 > （上下が同じなら）左右方向の区別とする。トラックが移動や回転された場合は再設定が必要になるが、その場合はどちらにしても再設定がいる。
   const platformTTItems = ([] as PlatformTimetableItem[]).concat(
-    toPlatformTTItems(allTrackStations, tracks, timetable.inboundDiaTrains),
-    toPlatformTTItems(allTrackStations, tracks, timetable.outboundDiaTrains)
+    toPlatformTTItems(allTrackStations, tracks, timetable.inboundTrains),
+    toPlatformTTItems(allTrackStations, tracks, timetable.outboundTrains)
   );
 
   // switchは、駅と駅の間の経路を探索し、通過したswitchを追加する
   // changeTimeをどうするか。。。 通過の列車の指定のほうがいい気がする。。？でも列車の指定はあるから、そんなに重複することはないか。1列車が駅に到着せずに一つのswitchを複数回通過することはないはず。
   const switchTTItems: SwitchTimetableItem[] = [];
 
-  for (const diaTrain of timetable.inboundDiaTrains) {
-    switchTTItems.push(...toSwitchTTItems(tracks, diaTrain));
+  for (const train of timetable.inboundTrains) {
+    switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
-  for (const diaTrain of timetable.outboundDiaTrains) {
-    switchTTItems.push(...toSwitchTTItems(tracks, diaTrain));
+  for (const train of timetable.outboundTrains) {
+    switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
 
   return {

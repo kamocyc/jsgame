@@ -1,7 +1,6 @@
 import { useState } from 'preact/hooks';
-import { generateId, Station } from '../../model';
+import { ContextData, SettingData, Station, Train, generateId } from '../../model';
 import { ContextMenuComponent, EditableTextComponent } from './common-component';
-import { ContextData, DiaTrain, SettingData } from './model';
 import './timetable-editor.css';
 import { createNewStation, getDefaultPlatform } from './timetable-util';
 
@@ -31,7 +30,7 @@ function StationContextMenuComponent({
   setContextData,
   diaStations,
   setDiaStations,
-  diaTrains,
+  trains,
   otherDirectionDiaTrains,
   selectedStation,
   showStationDetail,
@@ -41,8 +40,8 @@ function StationContextMenuComponent({
   setContextData: (contextData: ContextData) => void;
   diaStations: Station[];
   setDiaStations: (diaStations: Station[]) => void;
-  diaTrains: DiaTrain[];
-  otherDirectionDiaTrains: DiaTrain[];
+  trains: Train[];
+  otherDirectionDiaTrains: Train[];
   selectedStation: Station | null;
   showStationDetail: (diaStation: Station) => void;
   timetableDirection: 'Inbound' | 'Outbound';
@@ -57,14 +56,14 @@ function StationContextMenuComponent({
           onClick: () => {
             if (selectedStation) {
               diaStations = diaStations.filter((diaStation) => diaStation.stationId !== selectedStation.stationId);
-              diaTrains.forEach((diaTrain) => {
-                diaTrain.diaTimes = diaTrain.diaTimes.filter(
-                  (diaTime) => diaTime.diaStation.stationId !== selectedStation.stationId
+              trains.forEach((train) => {
+                train.diaTimes = train.diaTimes.filter(
+                  (diaTime) => diaTime.station.stationId !== selectedStation.stationId
                 );
               });
-              otherDirectionDiaTrains.forEach((diaTrain) => {
-                diaTrain.diaTimes = diaTrain.diaTimes.filter(
-                  (diaTime) => diaTime.diaStation.stationId !== selectedStation.stationId
+              otherDirectionDiaTrains.forEach((train) => {
+                train.diaTimes = train.diaTimes.filter(
+                  (diaTime) => diaTime.station.stationId !== selectedStation.stationId
                 );
               });
 
@@ -91,24 +90,24 @@ function StationContextMenuComponent({
             }
             diaStations.splice(index, 0, newStation);
 
-            diaTrains.forEach((diaTrain) => {
-              diaTrain.diaTimes.push({
+            trains.forEach((train) => {
+              train.diaTimes.push({
                 diaTimeId: generateId(),
                 arrivalTime: null,
                 departureTime: null,
                 isPassing: false,
-                diaStation: newStation,
-                diaPlatform: getDefaultPlatform(newStation, timetableDirection),
+                station: newStation,
+                platform: getDefaultPlatform(newStation, timetableDirection),
               });
             });
-            otherDirectionDiaTrains.forEach((diaTrain) => {
-              diaTrain.diaTimes.push({
+            otherDirectionDiaTrains.forEach((train) => {
+              train.diaTimes.push({
                 diaTimeId: generateId(),
                 arrivalTime: null,
                 departureTime: null,
                 isPassing: false,
-                diaStation: newStation,
-                diaPlatform: getDefaultPlatform(newStation, timetableDirection),
+                station: newStation,
+                platform: getDefaultPlatform(newStation, timetableDirection),
               });
             });
 
@@ -124,15 +123,15 @@ function StationContextMenuComponent({
 export function StationListComponent({
   diaStations,
   setDiaStations,
-  diaTrains,
+  trains,
   otherDirectionDiaTrains,
   timetableDirection,
   setSettingData,
 }: {
   diaStations: Station[];
   setDiaStations: (diaStations: Station[]) => void;
-  diaTrains: DiaTrain[];
-  otherDirectionDiaTrains: DiaTrain[];
+  trains: Train[];
+  otherDirectionDiaTrains: Train[];
   timetableDirection: 'Inbound' | 'Outbound';
   setSettingData: (settingData: SettingData) => void;
 }) {
@@ -146,7 +145,7 @@ export function StationListComponent({
   const showStationDetail = (diaStation: Station) => {
     setSettingData({
       settingType: 'StationSetting',
-      diaStation,
+      station: diaStation,
     });
   };
 
@@ -157,7 +156,7 @@ export function StationListComponent({
           contextData,
           setContextData,
           diaStations,
-          diaTrains,
+          trains,
           otherDirectionDiaTrains,
           setDiaStations,
           selectedStation,
@@ -205,24 +204,24 @@ export function StationListComponent({
           onClick={() => {
             const newStation = createNewStation('-');
             diaStations.push(newStation);
-            diaTrains.forEach((diaTrain) => {
-              diaTrain.diaTimes.push({
+            trains.forEach((train) => {
+              train.diaTimes.push({
                 diaTimeId: generateId(),
                 arrivalTime: null,
                 departureTime: null,
                 isPassing: false,
-                diaStation: newStation,
-                diaPlatform: getDefaultPlatform(newStation, timetableDirection),
+                station: newStation,
+                platform: getDefaultPlatform(newStation, timetableDirection),
               });
             });
-            otherDirectionDiaTrains.forEach((diaTrain) => {
-              diaTrain.diaTimes.push({
+            otherDirectionDiaTrains.forEach((train) => {
+              train.diaTimes.push({
                 diaTimeId: generateId(),
                 arrivalTime: null,
                 departureTime: null,
                 isPassing: false,
-                diaStation: newStation,
-                diaPlatform: getDefaultPlatform(newStation, timetableDirection),
+                station: newStation,
+                platform: getDefaultPlatform(newStation, timetableDirection),
               });
             });
 
@@ -293,7 +292,7 @@ export function StationDetailComponent({
                   onChange={(e) => {
                     if ((e.target as HTMLInputElement)?.value) {
                       const targetPlatformId = (e.target as HTMLInputElement).value;
-                      diaStation.defaultInboundDiaPlatformId = targetPlatformId;
+                      diaStation.defaultInboundPlatformId = targetPlatformId;
                       setDiaStation({ ...diaStation });
                     }
                   }}
@@ -306,7 +305,7 @@ export function StationDetailComponent({
                   onChange={(e) => {
                     if ((e.target as HTMLInputElement)?.value) {
                       const targetPlatformId = (e.target as HTMLInputElement).value;
-                      diaStation.defaultOutboundDiaPlatformId = targetPlatformId;
+                      diaStation.defaultOutboundPlatformId = targetPlatformId;
                       setDiaStation({ ...diaStation });
                     }
                   }}

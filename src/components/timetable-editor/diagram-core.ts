@@ -1,14 +1,13 @@
 import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
-import { generateId, Station } from '../../model';
-import { DiaTime, DiaTrain } from './model';
+import { DiaTime, Station, Train, generateId } from '../../model';
 import { getDefaultPlatform } from './timetable-util';
 
 export interface DiagramProps {
   diaStations: Station[];
   setUpdate: () => void;
-  inboundDiaTrains: DiaTrain[];
-  outboundDiaTrains: DiaTrain[];
+  inboundDiaTrains: Train[];
+  outboundDiaTrains: Train[];
 }
 
 const hitStrokeWidth = 10;
@@ -80,21 +79,21 @@ function commitDrawingLine(props: DiagramProps) {
       (diaStation) => diaStation.stationId === drawingLineTimes[1].diaStation.stationId
     );
     const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
-    const diaTrain = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
+    const train = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
 
-    diaTrain.push({
+    train.push({
       trainId: generateId(),
       trainName: '',
       trainType: undefined,
       diaTimes: drawingLineTimes.map(
         (drawingLineTime) =>
           ({
-            diaStation: drawingLineTime.diaStation,
+            station: drawingLineTime.diaStation,
             departureTime: drawingLineTime.time,
             arrivalTime: null,
             diaTimeId: generateId(),
             isPassing: false,
-            diaPlatform: getDefaultPlatform(drawingLineTime.diaStation, direction),
+            platform: getDefaultPlatform(drawingLineTime.diaStation, direction),
           } as DiaTime)
       ),
       trainCode: '',
@@ -215,15 +214,15 @@ function drawTrain(
   layer: Konva.Layer,
   stationPositions: (Station & { diagramPosition: number })[],
   secondWidth: number,
-  diaTrain: DiaTrain
+  train: Train
 ) {
-  const train = new Konva.Group();
-  layer.add(train);
+  const trainGroup = new Konva.Group();
+  layer.add(trainGroup);
 
-  const positionDiaTimeMap = diaTrain.diaTimes.flatMap((diaTime) => {
-    const stationPosition = stationPositions.find((station) => station.stationId === diaTime.diaStation.stationId);
+  const positionDiaTimeMap = train.diaTimes.flatMap((diaTime) => {
+    const stationPosition = stationPositions.find((station) => station.stationId === diaTime.station.stationId);
     if (!stationPosition) {
-      throw new Error(`station ${diaTime.diaStation.stationId} not found`);
+      throw new Error(`station ${diaTime.station.stationId} not found`);
     }
 
     if (diaTime.departureTime == null && diaTime.arrivalTime == null) {
@@ -245,12 +244,12 @@ function drawTrain(
   const positions = positionDiaTimeMap.map(([_, __, position]) => position).flat();
   const line = new Konva.Line({
     points: positions,
-    stroke: diaTrain.trainType?.trainTypeColor ?? 'black',
+    stroke: train.trainType?.trainTypeColor ?? 'black',
     strokeWidth: 1,
     hitStrokeWidth: 10,
     draggable: true,
   });
-  train.add(line);
+  trainGroup.add(line);
 
   line.on('dragmove', function (e) {
     // 横方向にのみ動く
@@ -260,7 +259,7 @@ function drawTrain(
 
     let diaTimeIndex = 0;
     for (const [diaTime_, timeType, _] of positionDiaTimeMap) {
-      const diaTime = diaTrain.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
+      const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
 
       if (timeType === 'arrivalTime') {
         diaTime.arrivalTime = Math.round(
@@ -304,11 +303,11 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
   drawTimeGrid(layer, stationPositions[stationPositions.length - 1].diagramPosition + 50, secondWidth);
   drawStations(layer, stationPositions, secondWidth, props);
 
-  for (const diaTrain of props.inboundDiaTrains) {
-    drawTrain(layer, stationPositions, secondWidth, diaTrain);
+  for (const train of props.inboundDiaTrains) {
+    drawTrain(layer, stationPositions, secondWidth, train);
   }
-  for (const diaTrain of props.outboundDiaTrains) {
-    drawTrain(layer, stationPositions, secondWidth, diaTrain);
+  for (const train of props.outboundDiaTrains) {
+    drawTrain(layer, stationPositions, secondWidth, train);
   }
 
   function fitStageIntoParentContainer() {

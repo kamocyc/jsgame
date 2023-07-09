@@ -1,12 +1,21 @@
 import { useState } from 'preact/hooks';
-import { Cell, CellHeight, CellWidth, GameMap } from '../../mapEditorModel';
-import { DefaultStationDistance, HalfTrack, Platform, Point, Station, Switch, generateId } from '../../model';
+import { AppStates, Cell, CellHeight, CellWidth, EditorDialogMode, GameMap, MapContext } from '../../mapEditorModel';
+import {
+  DefaultStationDistance,
+  DetailedTimetable,
+  Platform,
+  Point,
+  Station,
+  Switch,
+  Track,
+  Train,
+  generateId,
+} from '../../model';
 import { getMidPoint } from '../../trackUtil';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationEditorComponent';
 import { createLine } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
-import { AppStates, EditorDialogMode, MapContext, Timetable, Train } from './uiEditorModel';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform';
 
@@ -39,8 +48,8 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
       stationName: '駅' + generateId(),
       platforms: [],
       distance: DefaultStationDistance,
-      defaultInboundDiaPlatformId: id,
-      defaultOutboundDiaPlatformId: id,
+      defaultInboundPlatformId: id,
+      defaultOutboundPlatformId: id,
     };
 
     const newPlatform = {
@@ -64,7 +73,7 @@ function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
   }
 
   const track = cell.lineType?.tracks[0];
-  const position = getMidPoint(track._begin, track._end);
+  const position = getMidPoint(track.begin, track.end);
 
   const moveTrain = trainMove.placedTrains.find((train) => train.train.trainId === selectedTrain.trainId);
   if (moveTrain === undefined) {
@@ -91,8 +100,8 @@ function placeStation(
   mapWidth: number,
   mapHeight: number,
   numberOfPlatforms: number
-): [HalfTrack[], Switch[], Station] | null {
-  const newTracks: HalfTrack[] = [];
+): [Track[], Switch[], Station] | null {
+  const newTracks: Track[] = [];
   const newSwitches: Switch[] = [];
   const newPlatforms: Platform[] = [];
 
@@ -143,8 +152,8 @@ function placeStation(
   }
 
   // stationを完成させる
-  newStation.defaultOutboundDiaPlatformId = newPlatforms[0].platformId;
-  newStation.defaultInboundDiaPlatformId =
+  newStation.defaultOutboundPlatformId = newPlatforms[0].platformId;
+  newStation.defaultInboundPlatformId =
     newPlatforms.length >= 2 ? newPlatforms[1].platformId : newPlatforms[0].platformId;
 
   return [newTracks, newSwitches, newStation];
@@ -337,7 +346,7 @@ export function EditorContainer({
   update,
 }: {
   editorDialogMode: EditorDialogMode | null;
-  timetable: Timetable | null;
+  timetable: DetailedTimetable | null;
   trains: Train[] | null;
   setPlatform: (platform: Platform) => void;
   platform: Platform | null;

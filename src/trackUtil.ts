@@ -1,7 +1,17 @@
 import { MinPriorityQueue } from '@datastructures-js/priority-queue';
 import { assert, deepEqual } from './common.js';
-import { HalfTrack, HalfTrackWip, Platform, Point, Switch, generateId } from './model.js';
+import { Platform, Point, Switch, Track, TrackProperty, generateId } from './model.js';
 import { Queue } from './queue.js';
+
+interface TrackWip {
+  trackId?: string;
+  begin: Point;
+  end: Point;
+  nextSwitch?: Switch;
+  prevSwitch?: Switch;
+  reverseTrack?: Track;
+  track: TrackProperty;
+}
 
 export function getMidPoint(point1: Point, point2: Point): Point {
   return {
@@ -14,24 +24,24 @@ export function getDistance(pointA: Point, pointB: Point): number {
   return Math.sqrt((pointA.x - pointB.x) * (pointA.x - pointB.x) + (pointA.y - pointB.y) * (pointA.y - pointB.y));
 }
 
-export function getTrackDistance(point: Point, track: HalfTrack) {
-  const a = (track._end.y - track._begin.y) / (track._end.x - track._begin.x);
-  const b = track._begin.y - a * track._begin.x;
+export function getTrackDistance(point: Point, track: Track) {
+  const a = (track.end.y - track.begin.y) / (track.end.x - track.begin.x);
+  const b = track.begin.y - a * track.begin.x;
   return Math.abs(a * point.x - point.y + b) / Math.sqrt(a * a + 1);
 }
 
 // x^2 + y^2 = 1 となるようなtrackの方向を表すベクトルを返す
-export function getTrackDirection(track: HalfTrack) {
-  const trackLength = getDistance(track._begin, track._end);
+export function getTrackDirection(track: Track) {
+  const trackLength = getDistance(track.begin, track.end);
   const trackDirection = {
-    x: (track._end.x - track._begin.x) / trackLength,
-    y: (track._end.y - track._begin.y) / trackLength,
+    x: (track.end.x - track.begin.x) / trackLength,
+    y: (track.end.y - track.begin.y) / trackLength,
   };
   return trackDirection;
 }
 
 // pointと最も近いtrackを返す
-export function getTrackByPoint(tracks: HalfTrack[], point: Point) {
+export function getTrackByPoint(tracks: Track[], point: Point) {
   let minDistance = Number.MAX_VALUE;
   let minTrack = null;
   for (const track of tracks) {
@@ -45,31 +55,31 @@ export function getTrackByPoint(tracks: HalfTrack[], point: Point) {
   return minTrack;
 }
 
-export function isTrainOutTrack(position: Point, track: HalfTrack) {
-  const trackMinX = Math.min(track._begin.x, track._end.x);
-  const trackMaxX = Math.max(track._begin.x, track._end.x);
-  const trackMinY = Math.min(track._begin.y, track._end.y);
-  const trackMaxY = Math.max(track._begin.y, track._end.y);
+export function isTrainOutTrack(position: Point, track: Track) {
+  const trackMinX = Math.min(track.begin.x, track.end.x);
+  const trackMaxX = Math.max(track.begin.x, track.end.x);
+  const trackMinY = Math.min(track.begin.y, track.end.y);
+  const trackMaxY = Math.max(track.begin.y, track.end.y);
   return position.x < trackMinX || position.x > trackMaxX || position.y < trackMinY || position.y > trackMaxY;
 }
 
 // 返す値の範囲: [Math.PI, Math.PI)
-export function getRadian(track1: { _begin: Point; _end: Point }, track2: { _begin: Point; _end: Point }) {
-  const r1 = Math.atan2(track1._end.y - track1._begin.y, track1._end.x - track1._begin.x);
-  const r2 = Math.atan2(track2._end.y - track2._begin.y, track2._end.x - track2._begin.x);
+export function getRadian(track1: { begin: Point; end: Point }, track2: { begin: Point; end: Point }) {
+  const r1 = Math.atan2(track1.end.y - track1.begin.y, track1.end.x - track1.begin.x);
+  const r2 = Math.atan2(track2.end.y - track2.begin.y, track2.end.x - track2.begin.x);
   const diffR = r1 - r2;
   const diffR_ = (diffR + 2 * Math.PI) % (2 * Math.PI);
   return diffR_ - Math.PI;
 }
 
-export function getNearestTrackPoint(tracks: HalfTrack[], point: Point) {
+export function getNearestTrackPoint(tracks: Track[], point: Point) {
   let minDistance = Number.MAX_VALUE;
   let minTrackPoint = null;
   for (const track of tracks) {
-    const distanceBegin = getDistance(point, track._begin);
+    const distanceBegin = getDistance(point, track.begin);
     if (distanceBegin < minDistance) {
       minDistance = distanceBegin;
-      minTrackPoint = track._begin;
+      minTrackPoint = track.begin;
     }
   }
 
@@ -83,46 +93,42 @@ export function getNearestTrackPoint(tracks: HalfTrack[], point: Point) {
 export function createNewTrack(
   _begin: Point,
   _end: Point,
-  nextTracks: HalfTrack[],
-  prevTracks: HalfTrack[],
+  nextTracks: Track[],
+  prevTracks: Track[],
   station: Platform | null,
   explicitNextSwitch?: Switch,
   explicitPrevSwitch?: Switch
-): [HalfTrack, HalfTrack, Switch[]] {
-  assert(nextTracks.every((t) => deepEqual(_end, t._begin)));
-  assert(prevTracks.every((t) => deepEqual(_begin, t._end)));
+): [Track, Track, Switch[]] {
+  assert(nextTracks.every((t) => deepEqual(_end, t.begin)));
+  assert(prevTracks.every((t) => deepEqual(_begin, t.end)));
 
-  const _nextSwitch = explicitNextSwitch ?? (nextTracks.length === 0 ? undefined : nextTracks[0]._prevSwitch);
-  const _prevSwitch = explicitPrevSwitch ?? (prevTracks.length === 0 ? undefined : prevTracks[0]._nextSwitch);
+  const _nextSwitch = explicitNextSwitch ?? (nextTracks.length === 0 ? undefined : nextTracks[0].prevSwitch);
+  const _prevSwitch = explicitPrevSwitch ?? (prevTracks.length === 0 ? undefined : prevTracks[0].nextSwitch);
   const newTrack = createBothTrack({
-    _begin,
-    _end,
-    _nextSwitch: _nextSwitch,
-    _prevSwitch: _prevSwitch,
+    begin: _begin,
+    end: _end,
+    nextSwitch: _nextSwitch,
+    prevSwitch: _prevSwitch,
     track: {
       platform: station,
     },
   });
 
-  const prevSwitch_ = newTrack[0]._prevSwitch;
-  const nextSwitch_ = newTrack[0]._nextSwitch;
+  const prevSwitch_ = newTrack[0].prevSwitch;
+  const nextSwitch_ = newTrack[0].nextSwitch;
 
   // 整合性チェック
-  prevTracks.forEach((track) => assert(track._nextSwitch === prevSwitch_));
-  nextTracks.forEach((track) => assert(track._prevSwitch === nextSwitch_));
+  prevTracks.forEach((track) => assert(track.nextSwitch === prevSwitch_));
+  nextTracks.forEach((track) => assert(track.prevSwitch === nextSwitch_));
   assert(newTrack[0].reverseTrack === newTrack[1]);
   assert(newTrack[1].reverseTrack === newTrack[0]);
 
-  prevSwitch_.switchPatterns.push(...prevTracks.map((track) => [track, newTrack[0]] as [HalfTrack, HalfTrack]));
-  nextSwitch_.switchPatterns.push(...nextTracks.map((track) => [newTrack[0], track] as [HalfTrack, HalfTrack]));
+  prevSwitch_.switchPatterns.push(...prevTracks.map((track) => [track, newTrack[0]] as [Track, Track]));
+  nextSwitch_.switchPatterns.push(...nextTracks.map((track) => [newTrack[0], track] as [Track, Track]));
 
   // reverse
-  prevSwitch_.switchPatterns.push(
-    ...prevTracks.map((track) => [newTrack[1], track.reverseTrack] as [HalfTrack, HalfTrack])
-  );
-  nextSwitch_.switchPatterns.push(
-    ...nextTracks.map((track) => [track.reverseTrack, newTrack[1]] as [HalfTrack, HalfTrack])
-  );
+  prevSwitch_.switchPatterns.push(...prevTracks.map((track) => [newTrack[1], track.reverseTrack] as [Track, Track]));
+  nextSwitch_.switchPatterns.push(...nextTracks.map((track) => [track.reverseTrack, newTrack[1]] as [Track, Track]));
 
   // 整合性チェック
   prevSwitch_.switchPatterns.forEach(([track1, track2]) =>
@@ -141,54 +147,54 @@ export function createNewTrack(
   return [newTrack[0], newTrack[1], newTrack[2]];
 }
 
-export function createBothTrack(trackBase: HalfTrackWip): [HalfTrack, HalfTrack, Switch[]] {
+export function createBothTrack(trackBase: TrackWip): [Track, Track, Switch[]] {
   const newSwitches: Switch[] = [];
 
   const reverseTrack = {
     trackId: generateId(),
-    _begin: trackBase._end,
-    _end: trackBase._begin,
-    _nextSwitch: trackBase._prevSwitch,
-    _prevSwitch: trackBase._nextSwitch,
-    reverseTrack: trackBase as HalfTrack,
+    begin: trackBase.end,
+    end: trackBase.begin,
+    nextSwitch: trackBase.prevSwitch,
+    prevSwitch: trackBase.nextSwitch,
+    reverseTrack: trackBase as Track,
     track: trackBase.track,
   };
-  trackBase.reverseTrack = reverseTrack as HalfTrack;
+  trackBase.reverseTrack = reverseTrack as Track;
   trackBase.trackId = generateId();
 
-  if (!trackBase._nextSwitch) {
-    trackBase._nextSwitch = {
+  if (!trackBase.nextSwitch) {
+    trackBase.nextSwitch = {
       switchId: generateId(),
-      endTracks: [trackBase as HalfTrack],
-      beginTracks: [reverseTrack as HalfTrack],
+      endTracks: [trackBase as Track],
+      beginTracks: [reverseTrack as Track],
       switchPatterns: [],
       switchPatternIndex: null,
       straightPatternIndex: null,
     };
-    reverseTrack._prevSwitch = trackBase._nextSwitch;
-    newSwitches.push(trackBase._nextSwitch);
+    reverseTrack.prevSwitch = trackBase.nextSwitch;
+    newSwitches.push(trackBase.nextSwitch);
   } else {
-    trackBase._nextSwitch.endTracks.push(trackBase as HalfTrack);
-    trackBase._nextSwitch.beginTracks.push(reverseTrack as HalfTrack);
+    trackBase.nextSwitch.endTracks.push(trackBase as Track);
+    trackBase.nextSwitch.beginTracks.push(reverseTrack as Track);
   }
 
-  if (!reverseTrack._nextSwitch) {
-    reverseTrack._nextSwitch = {
+  if (!reverseTrack.nextSwitch) {
+    reverseTrack.nextSwitch = {
       switchId: generateId(),
-      endTracks: [reverseTrack as HalfTrack],
-      beginTracks: [trackBase as HalfTrack],
+      endTracks: [reverseTrack as Track],
+      beginTracks: [trackBase as Track],
       switchPatterns: [],
       switchPatternIndex: null,
       straightPatternIndex: null,
     };
-    trackBase._prevSwitch = reverseTrack._nextSwitch;
-    newSwitches.push(reverseTrack._nextSwitch);
+    trackBase.prevSwitch = reverseTrack.nextSwitch;
+    newSwitches.push(reverseTrack.nextSwitch);
   } else {
-    reverseTrack._nextSwitch.endTracks.push(reverseTrack as HalfTrack);
-    reverseTrack._nextSwitch.beginTracks.push(trackBase as HalfTrack);
+    reverseTrack.nextSwitch.endTracks.push(reverseTrack as Track);
+    reverseTrack.nextSwitch.beginTracks.push(trackBase as Track);
   }
 
-  return [trackBase as HalfTrack, reverseTrack as HalfTrack, newSwitches];
+  return [trackBase as Track, reverseTrack as Track, newSwitches];
 }
 
 export function getRandomElementOfArray<T>(array: T[]): T {
@@ -265,32 +271,28 @@ export function abstractSearch<T>(
   return [undefined, determined];
 }
 
-export function getNextTracks(track: HalfTrack): HalfTrack[] {
-  return track._nextSwitch.switchPatterns.filter(([t, _]) => t.trackId === track.trackId).map(([_, t]) => t);
+export function getNextTracks(track: Track): Track[] {
+  return track.nextSwitch.switchPatterns.filter(([t, _]) => t.trackId === track.trackId).map(([_, t]) => t);
 }
 
-export function searchTrack(
-  startTrack: HalfTrack,
-  stationId: string,
-  bannedTrack?: HalfTrack
-): HalfTrack[] | undefined {
+export function searchTrack(startTrack: Track, stationId: string, bannedTrack?: Track): Track[] | undefined {
   return abstractSearch(
     startTrack,
     (track) => track.trackId,
     (track) => getNextTracks(track).filter((t) => !bannedTrack || t.trackId !== bannedTrack.trackId),
-    (_, track) => getDistance(track._begin, track._end),
+    (_, track) => getDistance(track.begin, track.end),
     (track) => track.track.platform?.platformId === stationId
   )[0]?.slice(1);
 }
 
 // 次の停車駅まで別の経路でも行けて（所要時間が大きく変わらないなら）別の経路で行くなど
-export function getOccupyingTracks(track: HalfTrack): HalfTrack[] {
-  function getOccupyingTracksSub(track: HalfTrack) {
+export function getOccupyingTracks(track: Track): Track[] {
+  function getOccupyingTracksSub(track: Track) {
     // 推移的に分岐（あるいは信号モードのときは信号）にぶつかるまで隣接するtrackを含める。
     // ただし、信号があって分岐があるときは、列車の進路が決まらないとわからない。
 
     // 単にポイント基準だと側線があるとそこまでで閉塞が切れてしまうので、やはり信号機が必要か
-    const queue = new Queue<HalfTrack>();
+    const queue = new Queue<Track>();
     queue.enqueue(track);
 
     let stationEncountered = false;
@@ -310,7 +312,7 @@ export function getOccupyingTracks(track: HalfTrack): HalfTrack[] {
 
       occupying.push(track);
 
-      if (track._nextSwitch.switchPatterns.length === 2) {
+      if (track.nextSwitch.switchPatterns.length === 2) {
         const nextTracks = getNextTracks(track);
         assert(nextTracks.length === 1);
         queue.enqueue(nextTracks[0]);

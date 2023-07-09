@@ -1,5 +1,5 @@
-import { Timetable } from './components/timetable-editor/model.js';
-import { getEkiJikokus } from './oudParser.js';
+import { Timetable } from './model';
+import { getEkiJikokus } from './oudParser';
 
 export async function loadUtf8File(event: Event): Promise<string | null> {
   return new Promise((resolve) => {

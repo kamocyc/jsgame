@@ -1,5 +1,6 @@
 import { assert } from '../../common';
 import {
+  AppStates,
   Cell,
   CellHeight,
   CellWidth,
@@ -8,11 +9,11 @@ import {
   LineTypeCurve,
   LineTypeStraight,
   LineTypeTerminal,
+  MapContext,
   addVector,
   timesVector,
 } from '../../mapEditorModel';
-import { HalfTrack, Point, Station } from '../../model';
-import { AppStates, MapContext } from './uiEditorModel';
+import { Point, Station, Track } from '../../model';
 
 function rx(x: number, mapContext: MapContext) {
   return (x + mapContext.offsetX) * mapContext.scale;
@@ -245,7 +246,7 @@ function drawLineType(ctx: CanvasRenderingContext2D, mapContext: MapContext, pos
   }
 }
 
-function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, stations: Station[], tracks: HalfTrack[]) {
+function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, stations: Station[], tracks: Track[]) {
   const fontSize = 15;
 
   const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
@@ -256,8 +257,8 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
     // 駅はtrackに対応するが、それは2セルにまたがるので、調整が必要。。。
     if (track.track.platform) {
       ctx.strokeStyle = 'red';
-      drawLine(ctx, mapContext, track._begin, track._end);
-      drawLine(ctx, mapContext, track._begin, track._end);
+      drawLine(ctx, mapContext, track.begin, track.end);
+      drawLine(ctx, mapContext, track.begin, track.end);
 
       const name = track.track.platform.platformName;
       const metrics = ctx.measureText(name);
@@ -266,8 +267,8 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
       ctx.font = '10px sans-serif';
       ctx.fillText(
         name,
-        rx((track._begin.x + track._end.x) / 2 - metrics.width / 2, mapContext),
-        ry((track._begin.y + track._end.y) / 2 - 10, mapContext)
+        rx((track.begin.x + track.end.x) / 2 - metrics.width / 2, mapContext),
+        ry((track.begin.y + track.end.y) / 2 - 10, mapContext)
       );
 
       const station = stations.find((station) =>
@@ -275,7 +276,7 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
       );
       assert(station !== undefined);
 
-      drawnStationPoints.get(station.stationId)!.push(track._begin);
+      drawnStationPoints.get(station.stationId)!.push(track.begin);
     }
   }
 

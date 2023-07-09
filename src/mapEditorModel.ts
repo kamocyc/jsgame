@@ -1,4 +1,5 @@
-import { HalfTrack, Point, Switch } from './model';
+import { TrainMove2 } from './components/track-editor/trainMove2';
+import { DetailedTimetable, Point, Station, Switch, Track, Train } from './model';
 
 export const CellWidth = 30;
 export const CellHeight = 30;
@@ -40,28 +41,28 @@ export type BranchType =
 export type LineTypeStraight = {
   lineClass: 'Straight';
   straightType: LineDirection;
-  tracks: HalfTrack[];
+  tracks: Track[];
   switch: Switch;
 };
 
 export type LineTypeTerminal = {
   lineClass: 'Terminal';
   angle: LineAngle;
-  tracks: HalfTrack[];
+  tracks: Track[];
   switch: Switch;
 };
 
 export type LineTypeCurve = {
   lineClass: 'Curve';
   curveType: CurveType;
-  tracks: HalfTrack[];
+  tracks: Track[];
   switch: Switch;
 };
 
 export type LineTypeBranch = {
   lineClass: 'Branch';
   branchType: BranchType;
-  tracks: HalfTrack[];
+  tracks: Track[];
   switch: Switch;
 };
 
@@ -83,4 +84,40 @@ export function addVector(vector: Point, add: Point): Point {
     x: vector.x + add.x,
     y: vector.y + add.y,
   };
+}
+
+export type EditorDialogMode = 'StationEditor' | 'SwitchEditor';
+
+export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info';
+
+export interface MapContext {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+  mapTotalWidth: number;
+  mapTotalHeight: number;
+}
+
+export function createMapContext(mapWidth: number, mapHeight: number): MapContext {
+  return {
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0,
+    mapTotalWidth: mapWidth * 30,
+    mapTotalHeight: mapHeight * 30,
+  };
+}
+
+export interface AppStates {
+  editMode: EditMode;
+  timetable: DetailedTimetable;
+  trains: Train[];
+  switches: Switch[]; // 今は使っていない
+  stations: Station[];
+  tracks: Track[];
+  map: GameMap;
+  mapWidth: number;
+  mapHeight: number;
+  mapContext: MapContext;
+  trainMove: TrainMove2;
 }

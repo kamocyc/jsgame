@@ -52,8 +52,8 @@ export function createNewStationWithPlatform({
     stationId: generateId(),
     stationName: platformName,
     platforms: [],
-    defaultInboundDiaPlatformId: platformId,
-    defaultOutboundDiaPlatformId: platformId,
+    defaultInboundPlatformId: platformId,
+    defaultOutboundPlatformId: platformId,
     distance: DefaultStationDistance,
   };
 

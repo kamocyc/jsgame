@@ -1,13 +1,12 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
-import { Cell } from '../../mapEditorModel';
-import { Point, Station, Switch } from '../../model';
+import { AppStates, Cell, EditMode, createMapContext } from '../../mapEditorModel';
+import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
 import { CanvasComponent } from './CanvasComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
-import { AppStates, EditMode, Timetable, Train, createMapContext } from './uiEditorModel';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -58,7 +57,7 @@ function saveMapData(appStates: AppStates) {
     JSON.stringify(
       appStates.trainMove.placedTrains.map((t) => ({
         trainId: t.trainId,
-        diaTrain: t.train,
+        train: t.train,
         speed: t.speed,
         trackId: t.track.trackId,
         position: t.position,
@@ -100,7 +99,7 @@ function loadMapDataFile(buf: string, setAppStates: StateUpdater<AppStates>) {
     return;
   }
   const trainsJson = obj['trains'] ?? [];
-  const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as Timetable;
+  const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
 
   const trainMove = new TrainMove2(timetable);
   const switches = mapData.flatMap(
@@ -142,7 +141,7 @@ function loadMapData(setAppStates: StateUpdater<AppStates>) {
   const trainsJson = localStorage.getItem('trains') ?? '[]';
   const timetable = JSON_retrocycle(
     JSON.parse(localStorage.getItem('timetable') ?? '{"stationTTItems": [], "switchTTItems": []}')
-  ) as Timetable;
+  ) as DetailedTimetable;
 
   const trainMove = new TrainMove2(timetable);
   const switches = mapData.flatMap(

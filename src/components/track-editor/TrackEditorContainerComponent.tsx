@@ -13,11 +13,11 @@ import {
 } from '../../model';
 import { getMidPoint } from '../../trackUtil';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
-import { createLine } from './trackEditor';
+import { createLine, deleteLine, deleteStation, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
 
-type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform';
+type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'StationDelete';
 
 function mouseToMapPosition(
   mousePoint: Point,
@@ -231,9 +231,17 @@ function onmousedown(
         appStates.switches.push(...newSwitches);
         appStates.stations.push(newStation);
       }
-    } else {
+    } else if (appStates.editMode === 'Create') {
       setMouseDragMode('Create');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    } else if (appStates.editMode === 'Delete') {
+      setMouseDragMode('Delete');
+      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    } else if (appStates.editMode === 'StationDelete') {
+      setMouseDragMode('StationDelete');
+      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    } else {
+      console.error('editModeが不正');
     }
   }
 }
@@ -320,11 +328,41 @@ function onmouseup(
         console.warn(result.error);
       } else {
         const [tracks, switches] = result;
-        appStates.tracks.push(...tracks);
+        appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
+        // appStates.tracks.push(...tracks);
         appStates.switches.push(...switches);
+        validateAppState(appStates);
       }
     } else if (mouseDragMode === 'Delete') {
-      // deleteLine(map, mouseStartCell, mouseEndCell)
+      const result = deleteLine(mouseStartCell, mouseEndCell);
+      if ('error' in result) {
+        console.warn(result.error);
+      } else {
+        const [newCell1, newCell2] = result;
+        appStates.map[mouseStartCell.position.x][mouseStartCell.position.y].lineType = newCell1;
+        appStates.map[mouseEndCell.position.x][mouseEndCell.position.y].lineType = newCell2;
+        appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
+        validateAppState(appStates);
+      }
+    } else if (mouseDragMode === 'StationDelete') {
+      const platformId1 =
+        mouseStartCell.lineType?.tracks.map((track) => track.track.platform?.platformId).filter((x) => x != null) ?? [];
+      const platformId2 =
+        mouseEndCell.lineType?.tracks.map((track) => track.track.platform?.platformId).filter((x) => x != null) ?? [];
+
+      if (platformId1.length === 1 && platformId2.length === 1 && platformId1[0] === platformId2[0]) {
+        const station = appStates.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId1[0]))[0];
+        const result = deleteStation(appStates.map, station);
+        if (result !== true && 'error' in result) {
+          console.warn(result.error);
+        } else {
+          appStates.stations.splice(appStates.stations.indexOf(station), 1);
+          appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
+          validateAppState(appStates);
+        }
+      } else {
+        console.warn('駅の削除に失敗しました');
+      }
     }
     drawEditor(appStates);
   }

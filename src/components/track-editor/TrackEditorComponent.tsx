@@ -228,6 +228,18 @@ export function TrackEditorComponent({
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
+            mode='Delete'
+            text='線路を削除'
+            checked={appStates.editMode === 'Delete'}
+            setEditorMode={setEditMode}
+          />
+          <ModeOptionRadioComponent
+            mode='StationDelete'
+            text='駅を削除'
+            checked={appStates.editMode === 'StationDelete'}
+            setEditorMode={setEditMode}
+          />
+          <ModeOptionRadioComponent
             mode='Station'
             text='駅を作成'
             checked={appStates.editMode === 'Station'}

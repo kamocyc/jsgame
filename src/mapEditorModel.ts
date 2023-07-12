@@ -88,7 +88,7 @@ export function addVector(vector: Point, add: Point): Point {
 
 export type EditorDialogMode = 'StationEditor' | 'SwitchEditor';
 
-export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info';
+export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info' | 'StationDelete';
 
 export interface MapContext {
   scale: number;

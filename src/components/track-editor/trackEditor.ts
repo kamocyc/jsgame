@@ -1,5 +1,6 @@
 import { assert, deepEqual } from '../../common';
 import {
+  AppStates,
   BranchType,
   Cell,
   CellHeight,
@@ -8,11 +9,15 @@ import {
   GameMap,
   LineAngle,
   LineDirection,
+  LineTypeBranch,
+  LineTypeCurve,
+  LineTypeStraight,
+  LineTypeTerminal,
   addVector,
   timesVector,
 } from '../../mapEditorModel';
-import { Switch, Track } from '../../model';
-import { createNewTrack, getRadian } from '../../trackUtil';
+import { Station, Switch, Track } from '../../model';
+import { createNewTrack, getRadian, validateSwitch } from '../../trackUtil';
 
 type CreateLineError = { error: string };
 
@@ -33,7 +38,6 @@ function getDirectionFromAngle(angle: LineAngle): LineDirection {
   }
 }
 
-// この関数の座標系は直したはず
 function getCurveTypeFromAngles(angle1: LineAngle, angle2: LineAngle): CurveType | undefined {
   if (angle1 > angle2) {
     return getCurveTypeFromAngles(angle2, angle1);
@@ -188,7 +192,6 @@ function getBranchTypeFromCurveTypeAndAngle(
 }
 
 function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [Track[], Cell] | { error: string } {
-  //: [HalfTrack[], Cell] | CreateLineError {
   function getLeftOrRightTrack(branchType: 'Left' | 'Right' | 'Top' | 'Bottom', track1: Track, track2: Track) {
     switch (branchType) {
       case 'Left':
@@ -265,7 +268,7 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [Track[]
     newCell1.lineType = {
       lineClass: 'Branch',
       branchType: straightType,
-      tracks: [prevTrack],
+      tracks: [...cell1.lineType.tracks],
     };
     return [[prevTrack], newCell1];
   } else if (cell1.lineType.lineClass === 'Curve') {
@@ -280,7 +283,7 @@ function getAdjacentTrackAndNewCellBase(cell1: Cell, angle: LineAngle): [Track[]
     newCell1.lineType = {
       lineClass: 'Branch',
       branchType: curveType,
-      tracks: [prevTrack],
+      tracks: [...cell1.lineType.tracks],
     };
     return [[prevTrack], newCell1];
   }
@@ -346,13 +349,47 @@ function createTrackOnAdjacentCells(
     endTrack.nextSwitch.straightPatternIndex = getStraightPatternIndex(endTrack.nextSwitch);
   }
 
-  // セルのtracksは、そのセルに**入る**trackを設定する（次のtrackを設定しやすくするため。）。reverseTrackは設定しない。
+  // セルのtracksは、そのセルに**入る**trackを設定する（次のtrackを設定しやすくするため。）。reverseTrackはtracksには設定しない。
   newCell1.lineType!.tracks.push(beginTrack);
   newCell1.lineType!.switch = beginTrack.nextSwitch;
   newCell2.lineType!.tracks.push(endTrack);
   newCell2.lineType!.switch = endTrack.nextSwitch;
 
   return [[newCell1, newCell2], [newTrack1, newTrack2], newSwitches];
+}
+
+function getAngleBetweenCells(cell1: Cell, cell2: Cell): LineAngle | 'Error' {
+  if (cell1.position.x === cell2.position.x) {
+    if (cell1.position.y < cell2.position.y) {
+      return 90;
+    } else {
+      // cell1.position.y > cell2.position.y
+      return 270;
+    }
+  } else if (cell1.position.y === cell2.position.y) {
+    if (cell1.position.x < cell2.position.x) {
+      return 0;
+    } else {
+      // cell1.position.x > cell2.position.x
+      return 180;
+    }
+  } else if (cell1.position.x - cell2.position.x === cell1.position.y - cell2.position.y) {
+    if (cell1.position.x < cell2.position.x) {
+      return 45;
+    } else {
+      // cell1.position.x > cell2.position.x
+      return 225;
+    }
+  } else if (cell1.position.x - cell2.position.x === cell2.position.y - cell1.position.y) {
+    if (cell1.position.x < cell2.position.x) {
+      return 315;
+    } else {
+      // cell1.position.x > cell2.position.x
+      return 135;
+    }
+  } else {
+    return 'Error';
+  }
 }
 
 // mapに対して破壊的変更をする
@@ -372,39 +409,7 @@ export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [Track[], Sw
   // 今回は、何もないところにswitchが生成されることは無いとする。また、分岐する線路は高々2つ（本線と側線の2つ）とする
 
   // cell1とcell2の位置関係から種類を決定する
-  const angle = (() => {
-    if (cell1.position.x === cell2.position.x) {
-      if (cell1.position.y < cell2.position.y) {
-        return 90;
-      } else {
-        // cell1.position.y > cell2.position.y
-        return 270;
-      }
-    } else if (cell1.position.y === cell2.position.y) {
-      if (cell1.position.x < cell2.position.x) {
-        return 0;
-      } else {
-        // cell1.position.x > cell2.position.x
-        return 180;
-      }
-    } else if (cell1.position.x - cell2.position.x === cell1.position.y - cell2.position.y) {
-      if (cell1.position.x < cell2.position.x) {
-        return 45;
-      } else {
-        // cell1.position.x > cell2.position.x
-        return 225;
-      }
-    } else if (cell1.position.x - cell2.position.x === cell2.position.y - cell1.position.y) {
-      if (cell1.position.x < cell2.position.x) {
-        return 315;
-      } else {
-        // cell1.position.x > cell2.position.x
-        return 135;
-      }
-    } else {
-      return 'Error';
-    }
-  })();
+  const angle = getAngleBetweenCells(cell1, cell2);
 
   if (angle === 'Error') {
     return { error: '始点と終点が直線上にない' };
@@ -440,4 +445,585 @@ export function createLine(map: GameMap, cell1: Cell, cell2: Cell): [Track[], Sw
       return [resultTracks, resultSwitches];
     }
   }
+}
+
+// deleteにおいて返り値のtracksは常に空配列、switchは常にlineTypeと同じ
+
+function deleteStraightLine(cell: Cell, angle: LineAngle): LineTypeTerminal | { error: string } {
+  const lineType = cell.lineType as LineTypeStraight;
+
+  if (lineType.straightType === 'Horizontal') {
+    if (angle === 0 || angle === 180) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 0 ? 180 : 0,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.straightType === 'Vertical') {
+    if (angle === 90 || angle === 270) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 90 ? 270 : 90,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.straightType === 'BottomTop') {
+    if (angle === 45 || angle === 225) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 45 ? 225 : 45,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else {
+    // lineType.straightType === 'TopBottom'
+    if (angle === 135 || angle === 315) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 135 ? 315 : 135,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  }
+
+  return { error: 'lineTypeとangleの関係がおかしい' };
+}
+
+function deleteCurveLine(cell: Cell, angle: LineAngle): LineTypeTerminal | { error: string } {
+  const lineType = cell.lineType as LineTypeCurve;
+
+  if (lineType.curveType === 'Bottom_TopLeft') {
+    if (angle === 270 || angle === 135) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 270 ? 135 : 270,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.curveType === 'Bottom_TopRight') {
+    if (angle === 270 || angle === 45) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 270 ? 45 : 270,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.curveType === 'Top_BottomLeft') {
+    if (angle === 90 || angle === 225) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 90 ? 225 : 90,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.curveType === 'Top_BottomRight') {
+    if (angle === 90 || angle === 315) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 90 ? 315 : 90,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.curveType === 'Left_TopRight') {
+    if (angle === 180 || angle === 45) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 180 ? 45 : 180,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.curveType === 'Left_BottomRight') {
+    if (angle === 180 || angle === 315) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 180 ? 315 : 180,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.curveType === 'Right_TopLeft') {
+    if (angle === 0 || angle === 135) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 0 ? 135 : 0,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else {
+    // lineType.curveType === 'Right_BottomLeft'
+    if (angle === 0 || angle === 225) {
+      return {
+        lineClass: 'Terminal',
+        angle: angle === 0 ? 225 : 0,
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  }
+
+  return { error: 'lineTypeとangleの関係がおかしい' };
+}
+
+function deleteBranchLine(cell: Cell, angle: LineAngle): LineTypeStraight | LineTypeCurve | { error: string } {
+  // TODO: 実装する
+  const lineType = cell.lineType as LineTypeBranch;
+
+  if (lineType.branchType === 'Horizontal_TopLeft') {
+    if (angle === 135) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Horizontal',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 180) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Right_TopLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'Horizontal_TopRight') {
+    if (angle === 45) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Horizontal',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 0) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Left_TopRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'Horizontal_BottomLeft') {
+    if (angle === 225) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Horizontal',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 180) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Right_BottomLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'Horizontal_BottomRight') {
+    if (angle === 315) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Horizontal',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 0) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Left_BottomRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'Vertical_TopLeft') {
+    if (angle === 135) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Vertical',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 90) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Bottom_TopLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'Vertical_TopRight') {
+    if (angle === 45) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Vertical',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 90) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Bottom_TopRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'Vertical_BottomLeft') {
+    if (angle === 225) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Vertical',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 270) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Top_BottomLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'Vertical_BottomRight') {
+    if (angle === 315) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'Vertical',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 270) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Top_BottomRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'BottomTop_Top') {
+    if (angle === 90) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'BottomTop',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 45) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Top_BottomLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'BottomTop_Bottom') {
+    if (angle === 270) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'BottomTop',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 225) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Bottom_TopRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'BottomTop_Left') {
+    if (angle === 180) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'BottomTop',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 225) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Left_TopRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'BottomTop_Right') {
+    if (angle === 0) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'BottomTop',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 45) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Right_BottomLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'TopBottom_Top') {
+    if (angle === 90) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'TopBottom',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 135) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Top_BottomRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'TopBottom_Bottom') {
+    if (angle === 270) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'TopBottom',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 315) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Bottom_TopLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'TopBottom_Left') {
+    if (angle === 180) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'TopBottom',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 135) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Left_BottomRight',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  } else if (lineType.branchType === 'TopBottom_Right') {
+    if (angle === 0) {
+      return {
+        lineClass: 'Straight',
+        straightType: 'TopBottom',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    } else if (angle === 315) {
+      return {
+        lineClass: 'Curve',
+        curveType: 'Right_TopLeft',
+        tracks: [],
+        switch: lineType.switch,
+      };
+    }
+  }
+
+  return { error: 'lineTypeとangleの関係がおかしい' };
+}
+
+function deleteAdjacentLine(
+  cell: Cell,
+  angle: LineAngle
+): [LineTypeStraight | LineTypeTerminal | LineTypeCurve | null, Track] | { error: string } {
+  // angle方向のtrackを削除する
+  const tracksToBeDeleted = cell.lineType!.tracks.filter((track) => {
+    const r = Math.atan2(track.end.y - track.begin.y, track.end.x - track.begin.x);
+    const trackAngle = ((r * 180) / Math.PI + 180) % 360;
+    return Math.abs(trackAngle - angle) < 1 || Math.abs(trackAngle - angle) > 359;
+  });
+
+  console.log({ tracksToBeDeleted });
+
+  if (tracksToBeDeleted.length === 0) {
+    return { error: '削除するtrackがない' };
+  }
+
+  if (tracksToBeDeleted.length !== 1) {
+    throw new Error('trackの数がおかしい');
+  }
+
+  const trackToBeDeleted = tracksToBeDeleted[0];
+
+  const tempResult = (() => {
+    switch (cell.lineType?.lineClass) {
+      case 'Straight':
+        return deleteStraightLine(cell, angle);
+      case 'Curve':
+        return deleteCurveLine(cell, angle);
+      case 'Branch':
+        return deleteBranchLine(cell, angle);
+      case 'Terminal':
+        if (cell.lineType.angle !== angle) {
+          return { error: 'terminalの角度が違う' };
+        }
+        return null;
+      default:
+        return { error: '線路がない' };
+    }
+  })();
+
+  if (tempResult === null) {
+    return [null, trackToBeDeleted];
+  }
+
+  if ('error' in tempResult) {
+    return tempResult;
+  }
+
+  const trackAfterDeleted = cell.lineType!.tracks.filter((track) => track.trackId !== trackToBeDeleted.trackId);
+  updateSwitchByDeletingTrack(cell.lineType!.switch, trackToBeDeleted);
+
+  return [
+    {
+      ...tempResult,
+      tracks: trackAfterDeleted,
+    },
+    trackToBeDeleted,
+  ];
+}
+
+function updateSwitchByDeletingTrack(Switch: Switch, trackToBeDeleted: Track): void {
+  Switch.beginTracks = Switch.beginTracks.filter((track) => track.trackId !== trackToBeDeleted.trackId);
+  Switch.endTracks = Switch.endTracks.filter((track) => track.trackId !== trackToBeDeleted.trackId);
+  Switch.switchPatterns = Switch.switchPatterns.filter((pattern) => {
+    return pattern[0].trackId !== trackToBeDeleted.trackId && pattern[1].trackId !== trackToBeDeleted.trackId;
+  });
+  if (Switch.switchPatterns.length >= 2) {
+    Switch.straightPatternIndex = getStraightPatternIndex(Switch);
+  } else {
+    Switch.straightPatternIndex = null;
+  }
+
+  validateSwitch(Switch);
+}
+
+// TODO: 他も実装したい
+export function validateAppState(appStates: AppStates) {
+  const tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? [])).flat(2);
+  const tracksInSwitches = tracks
+    .map((track) =>
+      track.nextSwitch.beginTracks
+        .concat(track.nextSwitch.endTracks)
+        .concat(track.prevSwitch.beginTracks.concat(track.prevSwitch.endTracks))
+    )
+    .flat(2);
+
+  // tracksとtracksInSwitchesで不一致がないかチェック
+  const trackIdSet = new Set(tracks.map((track) => track.trackId));
+  const trackIdSetInSwitches = new Set(tracksInSwitches.map((track) => track.trackId));
+  if (trackIdSet.size !== trackIdSetInSwitches.size) {
+    throw new Error('tracksとtracksInSwitchesで不一致');
+  }
+  for (const trackId of trackIdSet) {
+    if (!trackIdSetInSwitches.has(trackId)) {
+      throw new Error('tracksとtracksInSwitchesで不一致');
+    }
+  }
+}
+
+// cell1とcell2の間の線路を削除する（破壊的変更はしない）
+export function deleteLine(
+  cell1: Cell,
+  cell2: Cell
+):
+  | CreateLineError
+  | [
+      LineTypeStraight | LineTypeCurve | LineTypeTerminal | null,
+      LineTypeStraight | LineTypeCurve | LineTypeTerminal | null
+    ] {
+  if (cell1.lineType == null || cell2.lineType == null) {
+    return { error: '線路がない' };
+  }
+
+  if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
+    return { error: '同じセル' };
+  }
+
+  if (Math.abs(cell1.position.x - cell2.position.x) > 1 || Math.abs(cell1.position.y - cell2.position.y) > 1) {
+    return { error: '複数セル' };
+  }
+
+  const angle = getAngleBetweenCells(cell1, cell2);
+  if (angle === 'Error') {
+    return { error: '始点と終点が直線上にない' };
+  }
+
+  const result1 = deleteAdjacentLine(cell1, angle);
+  const result2 = deleteAdjacentLine(cell2, ((angle + 180) % 360) as LineAngle);
+
+  if (result1 !== null && 'error' in result1) {
+    return result1;
+  }
+  if (result2 !== null && 'error' in result2) {
+    return result2;
+  }
+
+  const [newLineType1, deletedTrack1] = result1;
+  const [newLineType2, deletedTrack2] = result2;
+
+  if (newLineType1 !== null) {
+    newLineType1.tracks = newLineType1.tracks.filter((track) => track.trackId !== deletedTrack2.trackId);
+    updateSwitchByDeletingTrack(newLineType1.switch, deletedTrack2);
+  }
+  if (newLineType2 !== null) {
+    newLineType2.tracks = newLineType2.tracks.filter((track) => track.trackId !== deletedTrack1.trackId);
+    updateSwitchByDeletingTrack(newLineType2.switch, deletedTrack1);
+  }
+
+  return [newLineType1, newLineType2];
+}
+
+export function deleteStation(map: GameMap, station: Station): CreateLineError | true {
+  const platformCells = map
+    .map((row) =>
+      row.filter((cell) =>
+        cell.lineType?.tracks.some((track) =>
+          station.platforms.some((p) => p.platformId === track.track.platform?.platformId)
+        )
+      )
+    )
+    .filter((row) => row.length > 0);
+
+  if (platformCells.length === 0) {
+    return { error: '駅がない' };
+  }
+
+  if (platformCells.length !== 2) {
+    return { error: '駅が2列ではない' };
+  }
+
+  let results: [Cell, LineTypeStraight | LineTypeCurve | LineTypeTerminal | null][] = [];
+  for (let i = 0; i < platformCells[0].length; i++) {
+    const result = deleteLine(platformCells[0][i], platformCells[1][i]);
+    if ('error' in result) {
+      return result;
+    }
+    results.push([platformCells[0][i], result[0]]);
+    results.push([platformCells[1][i], result[1]]);
+  }
+
+  for (const [oldCell, newLineType] of results) {
+    map[oldCell.position.x][oldCell.position.y].lineType = newLineType;
+  }
+
+  return true;
 }

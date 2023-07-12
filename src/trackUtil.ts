@@ -105,6 +105,7 @@ export function createNewTrack(
   const _nextSwitch = explicitNextSwitch ?? (nextTracks.length === 0 ? undefined : nextTracks[0].prevSwitch);
   const _prevSwitch = explicitPrevSwitch ?? (prevTracks.length === 0 ? undefined : prevTracks[0].nextSwitch);
   const newTrack = createBothTrack({
+    trackId: undefined,
     begin: _begin,
     end: _end,
     nextSwitch: _nextSwitch,
@@ -145,6 +146,23 @@ export function createNewTrack(
   );
 
   return [newTrack[0], newTrack[1], newTrack[2]];
+}
+
+export function validateSwitch(Switch: Switch) {
+  Switch.switchPatterns.forEach(([track1, track2]) =>
+    assert(
+      Switch.endTracks.filter((t) => t.trackId === track1.trackId).length === 1 &&
+        Switch.beginTracks.filter((t) => t.trackId === track2.trackId).length === 1
+    )
+  );
+
+  assert(
+    Switch.straightPatternIndex === null ||
+      (Switch.straightPatternIndex[0] >= 0 &&
+        Switch.straightPatternIndex[0] < Switch.switchPatterns.length &&
+        Switch.straightPatternIndex[1] >= 0 &&
+        Switch.straightPatternIndex[1] < Switch.switchPatterns.length)
+  );
 }
 
 export function createBothTrack(trackBase: TrackWip): [Track, Track, Switch[]] {

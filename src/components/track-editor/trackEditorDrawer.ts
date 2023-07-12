@@ -252,8 +252,9 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
   const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
 
   for (const track of tracks) {
-    // ctx.strokeStyle = 'gray';
-    // drawLine(ctx, addVector(track._begin, { x: 10, y: 10 }), addVector(track._end, { x: 10, y: 10 }));
+    ctx.strokeStyle = 'gray';
+    drawLine(ctx, mapContext, addVector(track.begin, { x: 1, y: 5 }), addVector(track.end, { x: 1, y: 5 }));
+
     // 駅はtrackに対応するが、それは2セルにまたがるので、調整が必要。。。
     if (track.track.platform) {
       ctx.strokeStyle = 'red';

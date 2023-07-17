@@ -70,14 +70,14 @@ export interface TrainType {
   trainTypeColor: string;
 }
 
-export type Operation =
+export type StationOperation =
   | {
       operationType: 'Connection';
     }
   | {
       operationType: 'InOut';
       operationTime: number;
-      operationCode: string;
+      operationCode: string | undefined;
     };
 
 export interface Train {
@@ -86,8 +86,8 @@ export interface Train {
   trainName: string;
   trainType?: TrainType;
   diaTimes: DiaTime[];
-  firstOperation?: Operation;
-  lastOperation?: Operation;
+  firstStationOperation?: StationOperation;
+  lastStationOperation?: StationOperation;
 }
 
 export type TimetableDirection = 'Outbound' | 'Inbound';
@@ -140,7 +140,14 @@ export interface SwitchTimetableItem {
   branchDirection: BranchDirection;
 }
 
+export interface Operation {
+  operationId: string;
+  operationCode: string;
+  trains: Train[];
+}
+
 export interface DetailedTimetable {
   platformTTItems: PlatformTimetableItem[];
   switchTTItems: SwitchTimetableItem[];
+  operations: Operation[];
 }

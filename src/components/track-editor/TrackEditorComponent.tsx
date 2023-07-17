@@ -56,7 +56,7 @@ function saveMapData(appStates: AppStates) {
     'placedTrains',
     JSON.stringify(
       appStates.trainMove.placedTrains.map((t) => ({
-        trainId: t.trainId,
+        trainId: t.placedTrainId,
         train: t.train,
         speed: t.speed,
         trackId: t.track.trackId,
@@ -290,6 +290,7 @@ export function TrackEditorComponent({
       <button
         onClick={() => {
           stopInterval();
+          appStates.trainMove.placedTrains = [];
           appStates.trainMove.resetGlobalTime();
           startTop(1000);
         }}

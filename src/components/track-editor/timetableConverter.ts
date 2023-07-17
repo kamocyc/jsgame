@@ -2,6 +2,7 @@ import { assert } from '../../common';
 import {
   DetailedTimetable,
   DiaTime,
+  Operation,
   Timetable as OutlinedTimetable,
   Platform,
   PlatformTimetableItem,
@@ -356,6 +357,9 @@ export function toDetailedTimetable(
     return null;
   }
 
+  // TODO: 経路的に駅を経由しないといけないのに時刻が入っていないのはおかしいのでエラーにすべきなはず。。でも処理がややこしい。。。
+  // というかまずは単に時刻が入っていないのをエラーにすべき気がする。。。
+
   // 方向をどうするか。。。設置時？基本的にはダイヤ変換時に設定する。ホームトラック終端の上下 > （上下が同じなら）左右方向の区別とする。トラックが移動や回転された場合は再設定が必要になるが、その場合はどちらにしても再設定がいる。
   const platformTTItems = ([] as PlatformTimetableItem[]).concat(
     toPlatformTTItems(allTrackStations, tracks, timetable.inboundTrains),
@@ -373,8 +377,80 @@ export function toDetailedTimetable(
     switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
 
+  const operations = createOperations(timetable);
   return {
     platformTTItems: platformTTItems,
     switchTTItems: switchTTItems,
+    operations: operations,
   };
+}
+
+export function createOperations(timetable: OutlinedTimetable): Operation[] {
+  const usedTrains = new Set<string>();
+  const operations: Operation[] = [];
+
+  const trains = timetable.inboundTrains.concat(timetable.outboundTrains);
+  // TODO: とりあえず効率は悪いが毎回全件探索する。改善したい
+
+  function getNextTrain(train: Train): Train | null {
+    // 番線が同じで時刻が前後関係にあって、最短の列車を選ぶ。
+    if (train.lastStationOperation?.operationType !== 'Connection') return null;
+    if (train.diaTimes.length === 0) return null;
+
+    const lastDiaTime = train.diaTimes[train.diaTimes.length - 1];
+    if (lastDiaTime.platform == null) return null;
+    if (lastDiaTime.arrivalTime == null) return null;
+
+    const candidateTrains = trains
+      .filter((t) => {
+        if (t.firstStationOperation == null || t.diaTimes.length === 0) return false;
+
+        return (
+          t.firstStationOperation.operationType === 'Connection' &&
+          t.diaTimes[0].platform?.platformId === lastDiaTime.platform?.platformId &&
+          t.diaTimes[0].departureTime != null &&
+          t.diaTimes[0].departureTime > lastDiaTime.arrivalTime!
+        );
+      })
+      .sort((a, b) => {
+        const aDepartureTime = a.diaTimes[0].departureTime!;
+        const bDepartureTime = b.diaTimes[0].departureTime!;
+        if (aDepartureTime < bDepartureTime) return -1;
+        if (aDepartureTime > bDepartureTime) return 1;
+        return 0;
+      });
+
+    if (candidateTrains.length === 0) return null;
+
+    // TODO: 別の列車の途中駅である場合がある。。その場合は運用がつながらない。そのチェックをしたい
+
+    return candidateTrains[0];
+  }
+
+  for (const train of trains) {
+    if (usedTrains.has(train.trainId)) {
+      continue;
+    }
+
+    if (train.firstStationOperation?.operationType === 'InOut') {
+      const operation: Operation = {
+        operationId: generateId(),
+        operationCode: train.firstStationOperation.operationCode ?? '',
+        trains: [],
+      };
+
+      let currentTrain: null | Train = train;
+      while (currentTrain != null) {
+        operation.trains.push(currentTrain);
+        usedTrains.add(currentTrain.trainId);
+        currentTrain = getNextTrain(currentTrain);
+      }
+
+      operations.push(operation);
+    }
+  }
+
+  console.log(operations);
+
+  return operations;
 }

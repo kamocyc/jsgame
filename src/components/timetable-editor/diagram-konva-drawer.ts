@@ -1,6 +1,9 @@
 import Konva from 'konva';
+import { Shape, ShapeConfig } from 'konva/lib/Shape';
 import { Stage } from 'konva/lib/Stage';
 import { DiaTime, Station, Train, generateId } from '../../model';
+import { fillMissingTimes } from '../../oudParser';
+import { toStringFromSeconds } from './common-component';
 import { getDefaultPlatform } from './timetable-util';
 
 export interface DiagramProps {
@@ -17,6 +20,14 @@ let editMode: 'Edit' | 'Create' = 'Edit';
 // 線を伸ばしている途中の線
 let drawingLine: Konva.Line | null = null;
 let drawingLineTimes: { diaStation: Station; time: number }[] = [];
+
+const selection: {
+  shape: Shape<ShapeConfig> | null;
+  lineGroup: Konva.Group;
+} = {
+  shape: null,
+  lineGroup: new Konva.Group(),
+};
 
 function drawTimeGrid(layer: Konva.Layer, layerHeight: number, secondWidth: number) {
   const timeGrid = new Konva.Group();
@@ -42,6 +53,26 @@ function drawTimeGrid(layer: Konva.Layer, layerHeight: number, secondWidth: numb
     });
     timeGrid.add(hourLine);
 
+    function drawMinuteLine(i: number) {
+      // 2分ごとの線を引く
+      for (let j = 1; j < 6; j++) {
+        const line = new Konva.Line({
+          points: [
+            (offset + i * 60 * 10 + j * 2 * 60) * secondWidth,
+            0,
+            (offset + i * 60 * 10 + j * 2 * 60) * secondWidth,
+            layerHeight,
+          ],
+          stroke: 'lightgray',
+          strokeWidth: 1,
+          dash: [2, 2],
+        });
+        timeGrid.add(line);
+      }
+    }
+
+    drawMinuteLine(0);
+
     if (offset < 24 * 60 * 60) {
       // 10分ごとの線を引く
       for (let i = 1; i < 6; i++) {
@@ -51,6 +82,8 @@ function drawTimeGrid(layer: Konva.Layer, layerHeight: number, secondWidth: numb
           strokeWidth: 1,
         });
         timeGrid.add(line);
+
+        drawMinuteLine(i);
       }
     }
 
@@ -62,12 +95,12 @@ function positionToTime(position: number, secondWidth: number) {
   return Math.round(position / secondWidth);
 }
 
-function commitDrawingLine(props: DiagramProps) {
+function commitDrawingLine(props: DiagramProps): Train | null {
   if (drawingLine === null) {
-    return;
+    return null;
   }
 
-  drawingLine?.stroke('black');
+  drawingLine.destroy();
   drawingLine = null;
 
   if (drawingLineTimes.length >= 2) {
@@ -79,28 +112,39 @@ function commitDrawingLine(props: DiagramProps) {
       (diaStation) => diaStation.stationId === drawingLineTimes[1].diaStation.stationId
     );
     const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
-    const train = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
+    const trains = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
 
-    train.push({
+    const diaTimes = drawingLineTimes.map(
+      (drawingLineTime) =>
+        ({
+          station: drawingLineTime.diaStation,
+          departureTime: drawingLineTime.time,
+          arrivalTime: null,
+          diaTimeId: generateId(),
+          isPassing: false,
+          platform: getDefaultPlatform(drawingLineTime.diaStation, direction),
+        } as DiaTime)
+    );
+
+    trains.push({
       trainId: generateId(),
       trainName: '',
       trainType: undefined,
-      diaTimes: drawingLineTimes.map(
-        (drawingLineTime) =>
-          ({
-            station: drawingLineTime.diaStation,
-            departureTime: drawingLineTime.time,
-            arrivalTime: null,
-            diaTimeId: generateId(),
-            isPassing: false,
-            platform: getDefaultPlatform(drawingLineTime.diaStation, direction),
-          } as DiaTime)
-      ),
+      diaTimes: diaTimes,
       trainCode: '',
     });
+
+    fillMissingTimes(trains, props.diaStations);
+
     props.setUpdate();
+
+    drawingLineTimes = [];
+
+    return trains[trains.length - 1];
   }
+
   drawingLineTimes = [];
+  return null;
 }
 
 function getPointerPosition(stage: Stage) {
@@ -108,29 +152,16 @@ function getPointerPosition(stage: Stage) {
   return { x: (vec.x - stage.x()) / stage.scaleX(), y: (vec.y - stage.y()) / stage.scaleY() };
 }
 
-function drawStations(
+function drawStationLines(
   layer: Konva.Layer,
   stationPositions: (Station & { diagramPosition: number })[],
   secondWidth: number,
   props: DiagramProps
 ) {
-  const stations = new Konva.Group();
-  layer.add(stations);
+  const station = new Konva.Group();
+  layer.add(station);
 
   for (const stationPosition of stationPositions) {
-    const station = new Konva.Group();
-    stations.add(station);
-
-    const stationText = new Konva.Text({
-      x: 0,
-      y: stationPosition.diagramPosition,
-      text: stationPosition.stationName,
-      fontSize: 20,
-      fontFamily: 'Calibri',
-      fill: 'black',
-    });
-    station.add(stationText);
-
     const stationLine = new Konva.Line({
       points: [0, stationPosition.diagramPosition, virtualCanvasWidth, stationPosition.diagramPosition],
       stroke: 'black',
@@ -139,12 +170,29 @@ function drawStations(
     });
     station.add(stationLine);
 
+    stationLine.on('mousemove', function (e) {
+      if (drawingLine !== null) {
+        const mousePosition = getPointerPosition(e.target.getStage()!);
+        const points = drawingLine.points();
+        points.splice(drawingLineTimes.length * 2);
+        points.push(mousePosition.x, stationPosition.diagramPosition);
+        drawingLine.points(points);
+      }
+    });
+
     stationLine.on('click', function (e) {
+      destroySelection();
+
       if (e.evt.button === 2) {
         // 右クリック
-        commitDrawingLine(props);
+        const train = commitDrawingLine(props);
+
+        if (train !== null) {
+          drawTrain(layer, stationPositions, secondWidth, train);
+        }
         return;
       }
+
       if (drawingLine === null) {
         // クリックしたマウスカーソルを基にした位置を返す
         const mousePosition = getPointerPosition(e.target.getStage()!);
@@ -153,7 +201,7 @@ function drawStations(
           points: [mousePosition.x, stationPosition.diagramPosition],
           stroke: 'red',
           strokeWidth: 1,
-          hitStrokeWidth: hitStrokeWidth,
+          hitFunc: function (context, shape) {},
         });
         layer.add(drawingLine);
 
@@ -210,16 +258,42 @@ function drawStations(
   }
 }
 
-function drawTrain(
+function drawStations(
   layer: Konva.Layer,
   stationPositions: (Station & { diagramPosition: number })[],
-  secondWidth: number,
-  train: Train
+  canvasWidth: number
 ) {
-  const trainGroup = new Konva.Group();
-  layer.add(trainGroup);
+  const stations = new Konva.Group();
+  layer.add(stations);
 
-  const positionDiaTimeMap = train.diaTimes.flatMap((diaTime) => {
+  for (const stationPosition of stationPositions) {
+    const station = new Konva.Group();
+    stations.add(station);
+
+    const stationText = new Konva.Text({
+      x: 0,
+      y: stationPosition.diagramPosition - 20,
+      text: stationPosition.stationName,
+      fontSize: 20,
+      fontFamily: 'Calibri',
+      fill: 'black',
+    });
+    station.add(stationText);
+
+    const stationLine = new Konva.Line({
+      points: [0, stationPosition.diagramPosition, canvasWidth, stationPosition.diagramPosition],
+      stroke: 'black',
+      strokeWidth: 1,
+      hitStrokeWidth: hitStrokeWidth,
+    });
+    station.add(stationLine);
+  }
+}
+
+type StationPosition = Station & { diagramPosition: number };
+
+function createPositionDiaTimeMap(diaTimes: DiaTime[], secondWidth: number, stationPositions: StationPosition[]) {
+  const positionDiaTimeMap = diaTimes.flatMap((diaTime) => {
     const stationPosition = stationPositions.find((station) => station.stationId === diaTime.station.stationId);
     if (!stationPosition) {
       throw new Error(`station ${diaTime.station.stationId} not found`);
@@ -240,54 +314,180 @@ function drawTrain(
       ];
     }
   });
+  return positionDiaTimeMap;
+}
 
-  const positions = positionDiaTimeMap.map(([_, __, position]) => position).flat();
+function clickTrainLine(
+  trainLine: Konva.Line,
+  diaTimes: DiaTime[],
+  secondWidth: number,
+  layer: Konva.Layer,
+  stationPositions: StationPosition[]
+) {
+  destroySelection();
+
+  selection.shape = trainLine;
+  selection.shape.stroke('red');
+  selection.shape.draggable(true);
+
+  const trainClickedGroup = new Konva.Group();
+  layer.add(trainClickedGroup);
+  selection.lineGroup = trainClickedGroup;
+
+  const positionDiaTimeMap = createPositionDiaTimeMap(diaTimes, secondWidth, stationPositions);
+
+  for (const [diaTime, arrivalOrDeparture, position] of positionDiaTimeMap) {
+    const square = new Konva.Rect({
+      x: position[0] - 5,
+      y: position[1] - 5,
+      width: 10,
+      height: 10,
+      fill: 'blue',
+      stroke: 'black',
+      strokeWidth: 0,
+      draggable: true,
+      id: `timePoint-${diaTime.diaTimeId}-${arrivalOrDeparture}`,
+    });
+    trainClickedGroup.add(square);
+
+    const timeLabel = new Konva.Text({
+      x: position[0] - 5,
+      y: position[1] - 20,
+      text:
+        arrivalOrDeparture === 'arrivalTime'
+          ? toStringFromSeconds(diaTime.arrivalTime!)
+          : toStringFromSeconds(diaTime.departureTime!),
+      fontSize: 20,
+      fill: 'black',
+      id: `timeLabel-${diaTime.diaTimeId}-${arrivalOrDeparture}`,
+      hitFunc: function (context, shape) {},
+    });
+    trainClickedGroup.add(timeLabel);
+
+    square.on('dragmove', function (e) {
+      // const x = Math.round(e.target.x() / secondWidth) * secondWidth;
+      // e.target.x(x);
+      e.target.y(position[1] - 5);
+
+      const [diaTimeId, arrivalOrDeparture] = e.target.id().split('-').slice(1);
+      const diaTime = diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId)!;
+
+      const time = Math.round((e.target.x() + 5) / secondWidth);
+      if (arrivalOrDeparture === 'arrivalTime') {
+        diaTime.arrivalTime = time;
+      }
+      if (arrivalOrDeparture === 'departureTime') {
+        diaTime.departureTime = time;
+      }
+      timeLabel.text(toStringFromSeconds(time));
+      timeLabel.x(e.target.x());
+
+      const points = trainLine.points();
+      const index = createPositionDiaTimeMap(diaTimes, secondWidth, stationPositions).findIndex(
+        ([diaTime_, arrivalOrDeparture_]) =>
+          diaTime_.diaTimeId === diaTimeId && arrivalOrDeparture_ === arrivalOrDeparture
+      );
+      points[index * 2] = e.target.x() + 5;
+      trainLine.points(points);
+
+      e.cancelBubble = true;
+    });
+  }
+}
+
+// 列車線（スジ）を描画
+function drawTrain(
+  layer: Konva.Layer,
+  stationPositions: (Station & { diagramPosition: number })[],
+  secondWidth: number,
+  train: Train
+) {
+  const trainGroup = new Konva.Group();
+  layer.add(trainGroup);
+
+  const positions = createPositionDiaTimeMap(train.diaTimes, secondWidth, stationPositions)
+    .map(([_, __, position]) => position)
+    .flat();
   const line = new Konva.Line({
     points: positions,
     stroke: train.trainType?.trainTypeColor ?? 'black',
     strokeWidth: 1,
     hitStrokeWidth: 10,
-    draggable: true,
   });
   trainGroup.add(line);
 
+  line.on('click', function (e) {
+    if (e.target === line) {
+      console.log(train.diaTimes);
+      clickTrainLine(line, train.diaTimes, secondWidth, layer, stationPositions);
+    }
+    e.cancelBubble = true;
+  });
+
   line.on('dragmove', function (e) {
-    // 横方向にのみ動く
-    const x = Math.round(e.target.x() / secondWidth) * secondWidth;
-    e.target.x(x);
-    e.target.y(0);
+    if (e.target === selection.shape) {
+      // 横方向にのみ動く
+      const x = Math.round(e.target.x() / secondWidth) * secondWidth;
+      e.target.x(x);
+      e.target.y(0);
 
-    let diaTimeIndex = 0;
-    for (const [diaTime_, timeType, _] of positionDiaTimeMap) {
-      const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
+      const positionDiaTimeMap = createPositionDiaTimeMap(train.diaTimes, secondWidth, stationPositions);
 
-      if (timeType === 'arrivalTime') {
-        diaTime.arrivalTime = Math.round(
-          (e.target.attrs.points[diaTimeIndex] + e.target.absolutePosition().x) / secondWidth
-        );
+      let diaTimeIndex = 0;
+      for (const [diaTime_, timeType, _] of positionDiaTimeMap) {
+        const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
+        const time = Math.round((e.target.attrs.points[diaTimeIndex] + e.target.x()) / secondWidth);
+
+        if (timeType === 'arrivalTime') {
+          diaTime.arrivalTime = time;
+        }
+        if (timeType === 'departureTime') {
+          diaTime.departureTime = time;
+        }
+
+        const timeLabel = layer.findOne(`#timeLabel-${diaTime.diaTimeId}-${timeType}`) as Konva.Text;
+        timeLabel.text(toStringFromSeconds(time));
+        timeLabel.x(e.target.attrs.points[diaTimeIndex] + e.target.x() - 5);
+
+        const timePoint = layer.findOne(`#timePoint-${diaTime.diaTimeId}-${timeType}`) as Konva.Rect;
+        timePoint.x(e.target.attrs.points[diaTimeIndex] + e.target.x() - 5);
+
+        diaTimeIndex += 2;
       }
-      if (timeType === 'departureTime') {
-        diaTime.departureTime = Math.round(
-          (e.target.attrs.points[diaTimeIndex] + e.target.absolutePosition().x) / secondWidth
-        );
-      }
+    }
 
-      diaTimeIndex += 2;
+    e.cancelBubble = true;
+  });
+
+  line.on('dragend', function (e) {
+    if (e.target === selection.shape) {
+      destroySelection();
+      e.target.destroy();
+
+      const line = drawTrain(layer, stationPositions, secondWidth, train);
+      clickTrainLine(line, train.diaTimes, secondWidth, layer, stationPositions);
     }
   });
+
+  return line;
 }
 
-let canvasHeight = 600;
-let canvasWidth = 600; // dummy width (will be set by initializeKonva)
-let virtualCanvasHeight = 2000;
-let virtualCanvasWidth = 2000;
+const canvasHeight = 600;
+const canvasWidth = 600; // dummy width (will be set by initializeKonva)
+const virtualCanvasHeight = 2000;
+const virtualCanvasWidth = 10000;
+export const stagePosition = {
+  x: 0,
+  y: 0,
+  zoom: 0.8,
+};
 
-export function initializeKonva(container: HTMLDivElement, props: DiagramProps) {
+export function initializeStationKonva(container: HTMLDivElement, canvasWidth: number, props: DiagramProps): Stage {
   const stage = new Konva.Stage({
     container: container,
-    width: canvasWidth,
+    width: canvasWidth * 2,
     height: canvasHeight,
-    draggable: true,
+    // draggable: true,
   });
 
   const layer = new Konva.Layer();
@@ -298,10 +498,40 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
     diagramPosition: index * 50 + 50,
   }));
 
+  drawStations(layer, stationPositions, canvasWidth * 2);
+
+  return stage;
+}
+
+export function initializeKonva(container: HTMLDivElement, props: DiagramProps, stationStage: Stage) {
+  const stage = new Konva.Stage({
+    container: container,
+    width: canvasWidth,
+    height: canvasHeight,
+    draggable: true,
+    id: 'mainStage',
+  });
+
+  const layer = new Konva.Layer();
+  stage.add(layer);
+
+  stage.x(stagePosition.x);
+  stage.y(stagePosition.y);
+  stage.scale({ x: stagePosition.zoom, y: stagePosition.zoom });
+
+  stationStage.x(0);
+  stationStage.y(stagePosition.y);
+  stationStage.scale({ x: stagePosition.zoom, y: stagePosition.zoom });
+
+  const stationPositions = props.diaStations.map((station, index) => ({
+    ...station,
+    diagramPosition: index * 50 + 50,
+  }));
+
   const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
 
   drawTimeGrid(layer, stationPositions[stationPositions.length - 1].diagramPosition + 50, secondWidth);
-  drawStations(layer, stationPositions, secondWidth, props);
+  drawStationLines(layer, stationPositions, secondWidth, props);
 
   for (const train of props.inboundDiaTrains) {
     drawTrain(layer, stationPositions, secondWidth, train);
@@ -318,32 +548,46 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
 
   fitStageIntoParentContainer();
 
-  stage.scaleX(0.8);
-  stage.scaleY(0.8);
-
   // TODO:邪魔なのでいったんコメントアウト
-  // // zooming on scroll
-  // stage.on('wheel', function (e) {
-  //   e.evt.preventDefault();
+  // zooming on scroll
+  stage.on('wheel', function (e) {
+    e.evt.preventDefault();
 
-  //   const scaleBy = 1.05;
-  //   const stage = e.target.getStage();
-  //   if (stage == null || stage.getPointerPosition() == null) return;
+    const scaleBy = 1.05;
+    const stage = e.target.getStage();
+    if (stage == null || stage.getPointerPosition() == null) return;
 
-  //   const oldScale = stage.scaleX();
-  //   const mousePointTo = {
-  //     x: stage.getPointerPosition()!.x / oldScale - stage.x() / oldScale,
-  //     y: stage.getPointerPosition()!.y / oldScale - stage.y() / oldScale,
-  //   };
+    const oldScale = stage.scaleX();
+    const mousePointTo = {
+      x: stage.getPointerPosition()!.x / oldScale - stage.x() / oldScale,
+      y: stage.getPointerPosition()!.y / oldScale - stage.y() / oldScale,
+    };
 
-  //   const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    let newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    if (newScale < 0.5) {
+      newScale = 0.5;
+    }
+    if (newScale > 2.5) {
+      newScale = 2.5;
+    }
 
-  //   stage.scale({ x: newScale, y: newScale });
-  //   stage.x(-(mousePointTo.x - stage.getPointerPosition()!.x / newScale) * newScale);
-  //   stage.y(-(mousePointTo.y - stage.getPointerPosition()!.y / newScale) * newScale);
+    const newX = -(mousePointTo.x - stage.getPointerPosition()!.x / newScale) * newScale;
+    const newY = -(mousePointTo.y - stage.getPointerPosition()!.y / newScale) * newScale;
 
-  //   adjustStagePosition(stage as Stage);
-  // });
+    stage.scale({ x: newScale, y: newScale });
+    stage.x(newX);
+    stage.y(newY);
+
+    stationStage.scale({ x: newScale, y: newScale });
+    stationStage.x(0);
+    stationStage.y(newY);
+
+    adjustStagePosition(stage as Stage, stationStage);
+
+    stagePosition.x = stage.x();
+    stagePosition.y = stage.y();
+    stagePosition.zoom = stage.scaleX();
+  });
 
   // ウィンドウリサイズ時にサイズを合わせる
   window.addEventListener('resize', fitStageIntoParentContainer);
@@ -352,11 +596,35 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps) 
   // stageのドラッグ範囲をcanvas内に制限する
   stage.on('dragmove', function (e) {
     const stage = e.target;
-    adjustStagePosition(stage as Stage);
+    if (stage.id() !== 'mainStage') return;
+
+    stationStage.y(stage.y());
+    adjustStagePosition(stage as Stage, stationStage);
+
+    stagePosition.x = stage.x();
+    stagePosition.y = stage.y();
+    stagePosition.zoom = stage.scaleX();
+  });
+
+  stage.on('click', function (e) {
+    destroySelection();
   });
 }
 
-function adjustStagePosition(stage: Stage) {
+function destroySelection() {
+  if (selection.shape !== null) {
+    selection.shape.draggable(false);
+    selection.shape.stroke('black');
+    selection.shape = null;
+
+    selection.lineGroup.destroyChildren();
+    selection.lineGroup.destroy();
+
+    console.log('deselect');
+  }
+}
+
+function adjustStagePosition(stage: Stage, stationStage: Stage) {
   if (!stage.container) return;
 
   const container = stage.container();
@@ -379,8 +647,10 @@ function adjustStagePosition(stage: Stage) {
 
   if (stageY > 0) {
     stage.y(0);
+    stationStage.y(0);
   }
   if (stageBottom < containerHeight) {
     stage.y(containerHeight - virtualCanvasHeight * scale);
+    stationStage.y(containerHeight - virtualCanvasHeight * scale);
   }
 }

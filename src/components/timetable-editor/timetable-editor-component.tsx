@@ -3,7 +3,7 @@ import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadFile } from '../../file';
 import { AppStates } from '../../mapEditorModel';
 import { SettingData, Station, TimetableData, TimetableDirection, Train, TrainType } from '../../model';
-import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
+import { createOperations, toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { TrainMove2 } from '../track-editor/trainMove2';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
@@ -164,6 +164,8 @@ export function TimetableEditorComponent({
         />
         <button
           onClick={() => {
+            createOperations(timetableData.timetable);
+
             const timetable = toDetailedTimetable(
               timetableData.timetable.stations,
               timetableData.timetable,

@@ -1,4 +1,4 @@
-import { DiaTime, Operation, Platform, Station, Timetable, Train, TrainType, generateId } from './model';
+import { DiaTime, Platform, Station, StationOperation, Timetable, Train, TrainType, generateId } from './model';
 
 // oud形式をjson形式に変換する
 function oudToJson(oudBuf: string): any {
@@ -159,8 +159,8 @@ function convertEkis(ekis: any[]): Station[] {
     }
 
     // 上下主本線
-    (station as any).defaultOutboundDiaPlatformId = station.platforms[Number(eki['DownMain'])].platformId;
-    (station as any).defaultInboundDiaPlatformId = station.platforms[Number(eki['UpMain'])].platformId;
+    station.defaultOutboundPlatformId = station.platforms[Number(eki['DownMain'])].platformId;
+    station.defaultInboundPlatformId = station.platforms[Number(eki['UpMain'])].platformId;
 
     return station;
   });
@@ -169,8 +169,8 @@ function convertEkis(ekis: any[]): Station[] {
 // 始発駅作業、終着駅作業の変換
 // 仕様全体は大きいので、とりあえず必要な部分だけ解釈する http://oudiasecond.seesaa.net/article/467843165.html
 function convertOperations(ressha: any): {
-  firstOperation?: Operation;
-  lastOperation?: Operation;
+  firstStationOperation?: StationOperation;
+  lastStationOperation?: StationOperation;
 } {
   const operations: {
     beforeOrAfter: string;
@@ -199,26 +199,36 @@ function convertOperations(ressha: any): {
     (operation) => operation.ekiNumber === lastOperationEkiNumber && operation.beforeOrAfter === 'A'
   );
 
-  const convertOperationSub = ({ data }: { data: string }): Operation => {
-    const [operationType, remaining] = data.split('/');
-    if (operationType === '5') {
+  // ここらへんちゃんとチェックしたい
+  const convertOperationSub = ({ data }: { data: string }): StationOperation => {
+    const regex = /((?<optype5>5)\/.*)|(?<optype3>3)\/(?<time3>\d{3,6})?(\$(\w+)?\/(?<opcode3>\w+)?)?/;
+    const match = data.match(regex);
+    if (match == null || !match.groups) {
+      throw new Error(`Invalid operation data: ${data}`);
+    }
+
+    const { optype5, optype3, time3, opcode3 } = match.groups;
+    if (optype5 != null) {
       return {
         operationType: 'Connection',
       };
     }
 
-    const [operationTime, operationCode] = remaining.split('$');
-    const jikoku = parseJikoku(operationTime);
+    if (optype3 == null || time3 == null) {
+      throw new Error(`Invalid operation data: ${data}`);
+    }
+
+    const jikoku = parseJikoku(time3);
     return {
       operationType: 'InOut',
       operationTime: jikoku !== undefined ? timeToSeconds(jikoku) : 0,
-      operationCode,
+      operationCode: opcode3,
     };
   };
 
   return {
-    firstOperation: firstOperationRaw != null ? convertOperationSub(firstOperationRaw) : undefined,
-    lastOperation: lastOperationRaw != null ? convertOperationSub(lastOperationRaw) : undefined,
+    firstStationOperation: firstOperationRaw != null ? convertOperationSub(firstOperationRaw) : undefined,
+    lastStationOperation: lastOperationRaw != null ? convertOperationSub(lastOperationRaw) : undefined,
   };
 }
 
@@ -252,7 +262,7 @@ function convertRessyas(ressyas: any[], stations: Station[], trainTypes: TrainTy
 
     const trainType = ressya['Syubetsu'] !== undefined ? trainTypes[Number(ressya['Syubetsu'])] : undefined;
     const trainName = (ressya['Ressyamei'] ?? '') + (ressya['Gousuu'] != null ? ' ' + ressya['Gousuu'] : '');
-    const { firstOperation, lastOperation } = convertOperations(ressya);
+    const { firstStationOperation, lastStationOperation } = convertOperations(ressya);
 
     return {
       trainId: generateId(),
@@ -261,8 +271,8 @@ function convertRessyas(ressyas: any[], stations: Station[], trainTypes: TrainTy
       diaTimes: diaTimes,
       houkou: houkou,
       trainCode: (ressya['Ressyabangou'] ?? '') as string,
-      firstOperation,
-      lastOperation,
+      firstStationOperation,
+      lastStationOperation,
       // trainMei: ressya['Ressyamei'],
       // trainGo: ressya['Gousuu'],
     };
@@ -282,7 +292,7 @@ function convertTrainTypes(ressyasyubetsus: any[]): TrainType[] {
 }
 
 // 足りない駅の時刻を補完する
-function fillMissingTimes(trains: DiaTrainExt[], stations: Station[]): void {
+export function fillMissingTimes(trains: Train[], stations: Station[]): void {
   for (const station of stations) {
     for (const train of trains) {
       const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === station.stationId);
@@ -314,6 +324,9 @@ export function getEkiJikokus(oudBuf: string): Timetable {
     trainTypes,
     inboundTrains: trains.filter((t) => t.houkou === 'Nobori'),
     outboundTrains: trains.filter((t) => t.houkou === 'Kudari'),
-    stations: stations,
+    stations: stations
+      .map((station, index) => [station, index] as const)
+      .sort((a, b) => b[1] - a[1])
+      .map(([station, _]) => station), // stationは逆順にする
   };
 }

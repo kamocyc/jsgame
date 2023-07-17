@@ -3,7 +3,7 @@ import { Ref, useEffect, useRef, useState } from 'preact/hooks';
 import { ContextData } from '../../model';
 import './timetable-editor.css';
 
-export function showGlobalTime(timeSeconds: number): string {
+export function toStringFromSeconds(timeSeconds: number): string {
   const m = Math.floor((timeSeconds / 60) % 60);
   return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);
 }
@@ -132,7 +132,7 @@ export function EditableTextComponent({
 export function TimeInputComponent({ time, setTime }: { time: number | null; setTime: (time: number | null) => void }) {
   return (
     <EditableTextComponent
-      value={time == null ? '・・' : showGlobalTime(time)}
+      value={time == null ? '・・' : toStringFromSeconds(time)}
       onChange={(value) => {
         if (value === '') {
           setTime(null);

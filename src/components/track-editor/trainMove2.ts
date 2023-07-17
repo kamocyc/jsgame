@@ -1,5 +1,5 @@
 import { assert } from '../../common.js';
-import { BranchDirection, DetailedTimetable, Train } from '../../model';
+import { BranchDirection, DetailedTimetable, Train, generateId } from '../../model';
 import { ArrivalAndDepartureStatus, Point, Switch, Track } from '../../model.js';
 import {
   getDistance,
@@ -44,33 +44,33 @@ class TrainOccupy {
   // readonly occupyingTrain: Map<number, Train> = new Map<number, Train>();
   readonly occupyingTracks: Map<string, Track[]> = new Map<string, Track[]>();
 
-  addTrain(train: PlacedTrain) {
-    this.occupyingTracks.set(train.trainId, [train.track]);
+  addTrain(placedTrain: PlacedTrain) {
+    this.occupyingTracks.set(placedTrain.placedTrainId, [placedTrain.track]);
   }
 
-  deleteTrain(train: PlacedTrain) {
-    this.occupyingTracks.delete(train.trainId);
+  deleteTrain(placedTrain: PlacedTrain) {
+    this.occupyingTracks.delete(placedTrain.placedTrainId);
   }
 
-  isOccupiedTrack(train: PlacedTrain, toOccupyTracks: Track[]): boolean {
+  isOccupiedTrack(placedTrain: PlacedTrain, toOccupyTracks: Track[]): boolean {
     const override = [];
     for (const [trainId, tracks] of this.occupyingTracks) {
-      if (trainId !== train.trainId) {
+      if (trainId !== placedTrain.placedTrainId) {
         override.push(...tracks.filter((t) => toOccupyTracks.filter((t2) => t2.trackId === t.trackId).length > 0));
       }
     }
 
     if (override.length > 0) {
-      console.warn({ train, override });
+      console.warn({ train: placedTrain, override });
     }
 
     return override.length > 0;
   }
 
-  updateOccupyingTrack(train: PlacedTrain, toOccupyTracks: Track[]) {
-    this.occupyingTracks.delete(train.trainId);
+  updateOccupyingTrack(placedTrain: PlacedTrain, toOccupyTracks: Track[]) {
+    this.occupyingTracks.delete(placedTrain.placedTrainId);
 
-    this.occupyingTracks.set(train.trainId, toOccupyTracks);
+    this.occupyingTracks.set(placedTrain.placedTrainId, toOccupyTracks);
   }
 }
 
@@ -124,8 +124,8 @@ export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track)
 }
 
 interface PlacedTrain {
-  trainId: string;
-  train: Train;
+  placedTrainId: string; // 車両ID（物理的な車両）
+  train: Train; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
   speed: number;
   track: Track;
   position: Point;
@@ -133,7 +133,7 @@ interface PlacedTrain {
   stationStatus: ArrivalAndDepartureStatus;
 }
 
-const TimeActionMode: 'Just' | 'After' = 'Just';
+const TimeActionMode: 'Just' | 'After' = 'After';
 
 export class TrainMove2 {
   placedTrains: PlacedTrain[] = [];
@@ -156,7 +156,7 @@ export class TrainMove2 {
     this.globalTime = minTimetableTime === Infinity ? 0 : minTimetableTime;
   }
 
-  private getNextTrack(track: Track, train: PlacedTrain): Track {
+  private getNextTrack(track: Track, placedTrain: PlacedTrain): Track {
     const currentSwitch = track.nextSwitch;
     const nextTracks = currentSwitch.switchPatterns.filter(([t, _]) => t.trackId === track.trackId).map(([_, t]) => t);
     if (nextTracks.length === 0) {
@@ -169,7 +169,7 @@ export class TrainMove2 {
     }
 
     const ttItems = this.timetable.switchTTItems.filter(
-      (t) => t.Switch.switchId === currentSwitch.switchId && t.train.trainId === train.trainId
+      (t) => t.Switch.switchId === currentSwitch.switchId && t.train.trainId === placedTrain.train.trainId
     );
     let branchDirection: BranchDirection;
     if (ttItems.length === 0) {
@@ -195,78 +195,140 @@ export class TrainMove2 {
     }
   }
 
-  private moveTrain(train: PlacedTrain): void {
+  private moveTrain(placedTrain: PlacedTrain): void {
     // 現在stationだったら出発条件を満たすまで停止する
     if (
-      train.track.track.platform !== null &&
-      train.stationStatus === 'Arrived' /* &&
+      placedTrain.track.track.platform !== null &&
+      placedTrain.stationStatus === 'Arrived' /* &&
       train.stationWaitTime < this.maxStationWaitTime */
     ) {
       const timetableItems = this.timetable.platformTTItems.filter(
-        (t) => t.platform.platformId === train.track.track.platform!.platformId && t.train.trainId === train.trainId
+        (t) =>
+          t.platform.platformId === placedTrain.track.track.platform!.platformId &&
+          t.train.trainId === placedTrain.train.trainId
       );
       if (timetableItems.length === 0) {
         // 時刻が設定されていないときは即座に発車
         console.warn('timetableItems.length === 0');
       } else {
-        const possibleTTItems = timetableItems.filter(
-          (tt) => tt.departureTime !== null && tt.departureTime > this.globalTime - this.globalTimeSpeed
-        );
-        if (possibleTTItems.length === 0) {
-          // 可能な時刻が無いときは、列車を削除する
-          this.placedTrains = this.placedTrains.filter((t) => t.trainId !== train.trainId);
-          return;
-        }
         if (TimeActionMode === 'Just') {
+          const possibleTTItems = timetableItems.filter(
+            (tt) => tt.departureTime !== null && tt.departureTime > this.globalTime - this.globalTimeSpeed
+          );
+          // if (possibleTTItems.length === 0) {
+          //   // 可能な時刻が無いときは、列車を削除する
+          //   this.placedTrains = this.placedTrains.filter((t) => t.trainId !== train.trainId);
+          //   return;
+          // }
+
           // ちょうど発車時間になったら出発する
           const departureItems = possibleTTItems.filter(
             (tt) => tt.departureTime !== null && tt.departureTime <= this.globalTime
           );
           if (departureItems.length === 0) {
             // 発車時間ではない
+            placedTrain.stationWaitTime++;
             return;
           }
 
           console.log('departureItems.length >= 1', departureItems);
-        } else {
+        } else if (TimeActionMode === 'After') {
           // TODO: 別のモードを実装
+          // 「過ぎていたら」を実装する、。「通ったフラグ」が欲しいが、同じ駅を通る前に列車番号を変えるようにするとかで無くてもなんとかなるのかな。
+
+          if (timetableItems.some((tt) => tt.departureTime !== null && tt.departureTime <= this.globalTime)) {
+            console.log('after departure time');
+            if (placedTrain.stationWaitTime === 0) {
+              // 1回以上は待つ
+              placedTrain.stationWaitTime++;
+              return;
+            }
+          } else {
+            // 列車の時刻がそこで最後である。
+            const timeIndex = timetableItems[0].train.diaTimes.findIndex(
+              (diaTime) =>
+                diaTime.platform?.platformId === placedTrain.track.track.platform!.platformId ||
+                (diaTime.platform?.station.stationName === placedTrain.track.track.platform!.station.stationName &&
+                  diaTime.platform?.platformName === placedTrain.track.track.platform!.platformName)
+            );
+            if (timeIndex === timetableItems[0].train.diaTimes.length - 1) {
+              // そもそも候補の時間がない => 別の運用に付け替える。列車を削除は物理的に無いので、できればやめたい。。
+              // TODO: 環状線がうまくいかないと思う。
+              // TODO: 一定時間後に運用を付け替えるほうが自然
+
+              let nextTrain: Train | null = null;
+              for (const operation of this.timetable.operations) {
+                const index = operation.trains.findIndex((train) => train.trainId === placedTrain.train.trainId);
+                if (index !== -1 && index !== operation.trains.length - 1) {
+                  nextTrain = operation.trains[index + 1];
+                  break;
+                }
+              }
+
+              if (nextTrain === null) {
+                // 次列車がない => とりあえず何もしないで放置
+                // console.log('nextTrain === null');
+                return;
+              }
+
+              const nextTrack = this.timetable.platformTTItems.find(
+                (ttItem) => ttItem.train.trainId === nextTrain!.trainId
+              )?.track;
+              if (nextTrack == null) {
+                throw new Error('ttItem.track == null');
+              }
+
+              placedTrain.train = nextTrain;
+              placedTrain.speed = 10;
+              placedTrain.stationWaitTime = 0;
+              placedTrain.stationStatus = 'NotArrived';
+              placedTrain.track = nextTrack;
+
+              return;
+            } else {
+              // 発車時間ではない
+              placedTrain.stationWaitTime++;
+              return;
+            }
+          }
         }
       }
       // 発車
-      train.stationStatus = 'Departed';
+      placedTrain.stationStatus = 'Departed';
     }
 
-    const { x: directionX, y: directionY } = getTrackDirection(train.track);
-    train.position.x += directionX * train.speed;
-    train.position.y += directionY * train.speed;
+    const { x: directionX, y: directionY } = getTrackDirection(placedTrain.track);
+    placedTrain.position.x += directionX * placedTrain.speed;
+    placedTrain.position.y += directionY * placedTrain.speed;
+    placedTrain.stationWaitTime = 0;
 
     while (true) {
       // trainがtrackの外に出たら、次の線路に移動する
-      if (isTrainOutTrack(train.position, train.track)) {
-        train.stationWaitTime = 0;
-        train.stationStatus = 'NotArrived';
+      if (isTrainOutTrack(placedTrain.position, placedTrain.track)) {
+        placedTrain.stationWaitTime = 0;
+        placedTrain.stationStatus = 'NotArrived';
 
-        let nextTrack = this.getNextTrack(train.track, train);
+        let nextTrack = this.getNextTrack(placedTrain.track, placedTrain);
 
         // trackの終点から行き過ぎた距離を求める
-        const distance = getDistance(train.track.end, train.position);
+        const distance = getDistance(placedTrain.track.end, placedTrain.position);
 
-        train.position.x = nextTrack.begin.x + distance * getTrackDirection(nextTrack).x;
-        train.position.y = nextTrack.begin.y + distance * getTrackDirection(nextTrack).y;
+        placedTrain.position.x = nextTrack.begin.x + distance * getTrackDirection(nextTrack).x;
+        placedTrain.position.y = nextTrack.begin.y + distance * getTrackDirection(nextTrack).y;
 
-        this.trainOccupy.updateOccupyingTrack(train, getOccupyingTracks(train.track));
-        train.track = nextTrack;
+        this.trainOccupy.updateOccupyingTrack(placedTrain, getOccupyingTracks(placedTrain.track));
+        placedTrain.track = nextTrack;
 
         // 線路内に入るまでループ
         continue;
       }
 
       // stationの停止位置か、それを過ぎた場合 => 停止位置に止めて停止状態にする
-      const stopPosition = shouldStopTrain(train);
+      const stopPosition = shouldStopTrain(placedTrain);
       if (stopPosition) {
-        train.position.x = stopPosition.x;
-        train.position.y = stopPosition.y;
-        train.stationStatus = 'Arrived';
+        placedTrain.position.x = stopPosition.x;
+        placedTrain.position.y = stopPosition.y;
+        placedTrain.stationStatus = 'Arrived';
         break;
       }
 
@@ -285,7 +347,7 @@ export class TrainMove2 {
     // まだ設置していない列車で、かつ、設置が必要な列車
     const ttItems = this.timetable.platformTTItems.filter(
       (ttItem) =>
-        !this.placedTrains.some((placedTrain) => placedTrain.trainId === ttItem.train.trainId) &&
+        !this.placedTrains.some((placedTrain) => placedTrain.train.trainId === ttItem.train.trainId) &&
         ((ttItem.arrivalTime !== null &&
           ttItem.departureTime !== null &&
           ttItem.arrivalTime <= this.globalTime &&
@@ -305,7 +367,7 @@ export class TrainMove2 {
       }
 
       this.placedTrains.push({
-        trainId: ttItem.train.trainId,
+        placedTrainId: generateId(),
         train: ttItem.train,
         speed: 10,
         stationWaitTime: 0,

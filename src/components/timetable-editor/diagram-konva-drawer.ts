@@ -1,8 +1,8 @@
 import Konva from 'konva';
-import { Shape, ShapeConfig } from 'konva/lib/Shape';
 import { Stage } from 'konva/lib/Stage';
-import { DiaTime, Station, Train, generateId } from '../../model';
+import { AppClipboard, DiaTime, Point, Station, Train, cloneTrain, generateId } from '../../model';
 import { fillMissingTimes } from '../../oudParser';
+import { Polygon, sat } from '../../sat';
 import { toStringFromSeconds } from './common-component';
 import { getDefaultPlatform } from './timetable-util';
 
@@ -11,22 +11,53 @@ export interface DiagramProps {
   setUpdate: () => void;
   inboundDiaTrains: Train[];
   outboundDiaTrains: Train[];
+  clipboard: AppClipboard;
+  setClipboard: (clipboard: AppClipboard) => void;
 }
 
 const hitStrokeWidth = 10;
 
 let editMode: 'Edit' | 'Create' = 'Edit';
 
-// 線を伸ばしている途中の線
-let drawingLine: Konva.Line | null = null;
-let drawingLineTimes: { diaStation: Station; time: number }[] = [];
+interface StationPosition {
+  station: Station;
+  diagramPosition: number;
+}
 
-const selection: {
-  shape: Shape<ShapeConfig> | null;
+interface TrainSelection {
+  shape: Konva.Line;
   lineGroup: Konva.Group;
-} = {
-  shape: null,
-  lineGroup: new Konva.Group(),
+  train: Train;
+}
+interface DiagramState {
+  // props: DiagramProps;
+  // stationCanvasWidth: number;
+  // stationCanvas: HTMLCanvasElement;
+  // mainCanvas: HTMLCanvasElement;
+  layer: Konva.Layer;
+  stationPositions: { station: Station; diagramPosition: number }[];
+  secondWidth: number;
+  // 線を伸ばしている途中の線
+  drawingLine: Konva.Line | null;
+  drawingLineTimes: { station: Station; time: number }[];
+  selections: TrainSelection[];
+  selectionGroup: Konva.Group;
+  dragStartPoint: Point | null;
+  dragRect: Konva.Rect | null;
+}
+
+const diagramState: DiagramState = {
+  drawingLine: null,
+  drawingLineTimes: [],
+  layer: null as any,
+  stationPositions: [],
+  secondWidth: 0,
+  selections: [],
+  selectionGroup: new Konva.Group({
+    draggable: true,
+  }),
+  dragStartPoint: null,
+  dragRect: null,
 };
 
 function drawTimeGrid(layer: Konva.Layer, layerHeight: number, secondWidth: number) {
@@ -96,33 +127,33 @@ function positionToTime(position: number, secondWidth: number) {
 }
 
 function commitDrawingLine(props: DiagramProps): Train | null {
-  if (drawingLine === null) {
+  if (diagramState.drawingLine === null) {
     return null;
   }
 
-  drawingLine.destroy();
-  drawingLine = null;
+  diagramState.drawingLine.destroy();
+  diagramState.drawingLine = null;
 
-  if (drawingLineTimes.length >= 2) {
+  if (diagramState.drawingLineTimes.length >= 2) {
     // 1番目のstationのindexと2番目のstationのindexを比較し、inbound / outboundを判定する
     const firstStationIndex = props.diaStations.findIndex(
-      (diaStation) => diaStation.stationId === drawingLineTimes[0].diaStation.stationId
+      (station) => station.stationId === diagramState.drawingLineTimes[0].station.stationId
     );
     const secondStationIndex = props.diaStations.findIndex(
-      (diaStation) => diaStation.stationId === drawingLineTimes[1].diaStation.stationId
+      (station) => station.stationId === diagramState.drawingLineTimes[1].station.stationId
     );
     const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
     const trains = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
 
-    const diaTimes = drawingLineTimes.map(
+    const diaTimes = diagramState.drawingLineTimes.map(
       (drawingLineTime) =>
         ({
-          station: drawingLineTime.diaStation,
+          station: drawingLineTime.station,
           departureTime: drawingLineTime.time,
           arrivalTime: null,
           diaTimeId: generateId(),
           isPassing: false,
-          platform: getDefaultPlatform(drawingLineTime.diaStation, direction),
+          platform: getDefaultPlatform(drawingLineTime.station, direction),
         } as DiaTime)
     );
 
@@ -132,18 +163,19 @@ function commitDrawingLine(props: DiagramProps): Train | null {
       trainType: undefined,
       diaTimes: diaTimes,
       trainCode: '',
+      direction: direction,
     });
 
     fillMissingTimes(trains, props.diaStations);
 
     props.setUpdate();
 
-    drawingLineTimes = [];
+    diagramState.drawingLineTimes = [];
 
     return trains[trains.length - 1];
   }
 
-  drawingLineTimes = [];
+  diagramState.drawingLineTimes = [];
   return null;
 }
 
@@ -154,7 +186,7 @@ function getPointerPosition(stage: Stage) {
 
 function drawStationLines(
   layer: Konva.Layer,
-  stationPositions: (Station & { diagramPosition: number })[],
+  stationPositions: StationPosition[],
   secondWidth: number,
   props: DiagramProps
 ) {
@@ -171,53 +203,55 @@ function drawStationLines(
     station.add(stationLine);
 
     stationLine.on('mousemove', function (e) {
-      if (drawingLine !== null) {
+      if (diagramState.drawingLine !== null) {
         const mousePosition = getPointerPosition(e.target.getStage()!);
-        const points = drawingLine.points();
-        points.splice(drawingLineTimes.length * 2);
+        const points = diagramState.drawingLine.points();
+        points.splice(diagramState.drawingLineTimes.length * 2);
         points.push(mousePosition.x, stationPosition.diagramPosition);
-        drawingLine.points(points);
+        diagramState.drawingLine.points(points);
       }
     });
 
     stationLine.on('click', function (e) {
-      destroySelection();
+      destroySelections(diagramState.selections);
 
       if (e.evt.button === 2) {
         // 右クリック
         const train = commitDrawingLine(props);
 
         if (train !== null) {
-          drawTrain(layer, stationPositions, secondWidth, train);
+          drawTrain(train);
         }
         return;
       }
 
-      if (drawingLine === null) {
+      if (diagramState.drawingLine === null) {
         // クリックしたマウスカーソルを基にした位置を返す
         const mousePosition = getPointerPosition(e.target.getStage()!);
 
-        drawingLine = new Konva.Line({
+        diagramState.drawingLine = new Konva.Line({
           points: [mousePosition.x, stationPosition.diagramPosition],
           stroke: 'red',
           strokeWidth: 1,
           hitFunc: function (context, shape) {},
         });
-        layer.add(drawingLine);
+        layer.add(diagramState.drawingLine);
 
-        drawingLineTimes.push({
-          diaStation: stationPosition,
+        diagramState.drawingLineTimes.push({
+          station: stationPosition.station,
           time: positionToTime(mousePosition.x, secondWidth),
         });
       } else {
         // 線に駅を追加する
 
         const mousePosition = getPointerPosition(e.target.getStage()!);
-        const points = drawingLine.points();
+        const points = diagramState.drawingLine.points();
 
         // 整合性チェック
         if (
-          drawingLineTimes.some((drawingLineTime) => drawingLineTime.diaStation.stationId === stationPosition.stationId)
+          diagramState.drawingLineTimes.some(
+            (drawingLineTime) => drawingLineTime.station.stationId === stationPosition.station.stationId
+          )
         ) {
           // 既に同じ駅が追加されている。 => 分けないとデータ構造上。。
           // TODO: 直前と同じなら、停車時間、発車時間
@@ -227,10 +261,10 @@ function drawStationLines(
 
         const newTime = positionToTime(mousePosition.x, secondWidth);
 
-        if (drawingLineTimes.length >= 2) {
-          const lastTime = drawingLineTimes[drawingLineTimes.length - 1].time;
+        if (diagramState.drawingLineTimes.length >= 2) {
+          const lastTime = diagramState.drawingLineTimes[diagramState.drawingLineTimes.length - 1].time;
 
-          if (drawingLineTimes[1].time < drawingLineTimes[0].time) {
+          if (diagramState.drawingLineTimes[1].time < diagramState.drawingLineTimes[0].time) {
             // 時間が少なくなる方向に線を引いている
             if (newTime > lastTime) {
               // 既に線に追加されている駅の時刻よりも遅い時刻を追加しようとしている
@@ -244,15 +278,15 @@ function drawStationLines(
           }
         }
 
-        drawingLineTimes.push({
-          diaStation: stationPosition,
+        diagramState.drawingLineTimes.push({
+          station: stationPosition.station,
           time: newTime,
         });
 
         points.push(mousePosition.x);
         points.push(stationPosition.diagramPosition);
 
-        drawingLine.points(points);
+        diagramState.drawingLine.points(points);
       }
     });
   }
@@ -290,11 +324,9 @@ function drawStations(
   }
 }
 
-type StationPosition = Station & { diagramPosition: number };
-
 function createPositionDiaTimeMap(diaTimes: DiaTime[], secondWidth: number, stationPositions: StationPosition[]) {
   const positionDiaTimeMap = diaTimes.flatMap((diaTime) => {
-    const stationPosition = stationPositions.find((station) => station.stationId === diaTime.station.stationId);
+    const stationPosition = stationPositions.find((station) => station.station.stationId === diaTime.station.stationId);
     if (!stationPosition) {
       throw new Error(`station ${diaTime.station.stationId} not found`);
     }
@@ -317,23 +349,25 @@ function createPositionDiaTimeMap(diaTimes: DiaTime[], secondWidth: number, stat
   return positionDiaTimeMap;
 }
 
-function clickTrainLine(
-  trainLine: Konva.Line,
-  diaTimes: DiaTime[],
-  secondWidth: number,
-  layer: Konva.Layer,
-  stationPositions: StationPosition[]
-) {
-  destroySelection();
+function addTrainSelection(trainLine: Konva.Line, train: Train) {
+  const { layer, secondWidth, stationPositions } = diagramState;
 
-  selection.shape = trainLine;
-  selection.shape.stroke('red');
-  selection.shape.draggable(true);
+  trainLine.stroke('red');
+  // trainLine.draggable(true);
 
   const trainClickedGroup = new Konva.Group();
-  layer.add(trainClickedGroup);
-  selection.lineGroup = trainClickedGroup;
+  diagramState.selectionGroup.add(trainClickedGroup);
+  diagramState.selectionGroup.add(trainLine);
 
+  const newSelection: TrainSelection = {
+    shape: trainLine,
+    lineGroup: trainClickedGroup,
+    train: train,
+  };
+
+  diagramState.selections.push(newSelection);
+
+  const diaTimes = train.diaTimes;
   const positionDiaTimeMap = createPositionDiaTimeMap(diaTimes, secondWidth, stationPositions);
 
   for (const [diaTime, arrivalOrDeparture, position] of positionDiaTimeMap) {
@@ -395,15 +429,45 @@ function clickTrainLine(
   }
 }
 
+function clickTrainLine(trainLine: Konva.Line, train: Train) {
+  destroySelections(diagramState.selections);
+  addTrainSelection(trainLine, train);
+}
+
+function processTrainDragMove(trainSelection: TrainSelection) {
+  const { secondWidth, stationPositions, layer, selectionGroup } = diagramState;
+
+  const { train, shape } = trainSelection;
+
+  const positionDiaTimeMap = createPositionDiaTimeMap(train.diaTimes, secondWidth, stationPositions);
+
+  const offsetX = shape.x() + selectionGroup.x();
+  let diaTimeIndex = 0;
+  for (const [diaTime_, timeType, _] of positionDiaTimeMap) {
+    const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
+    const time = Math.round((shape.points()[diaTimeIndex] + offsetX) / secondWidth);
+
+    if (timeType === 'arrivalTime') {
+      diaTime.arrivalTime = time;
+    }
+    if (timeType === 'departureTime') {
+      diaTime.departureTime = time;
+    }
+
+    const timeLabel = layer.findOne(`#timeLabel-${diaTime.diaTimeId}-${timeType}`) as Konva.Text;
+    timeLabel.text(toStringFromSeconds(time));
+    // timeLabel.x(shape.points()[diaTimeIndex] + offsetX - 5);
+
+    // const timePoint = layer.findOne(`#timePoint-${diaTime.diaTimeId}-${timeType}`) as Konva.Rect;
+    // timePoint.x(shape.points()[diaTimeIndex] + offsetX - 5);
+
+    diaTimeIndex += 2;
+  }
+}
+
 // 列車線（スジ）を描画
-function drawTrain(
-  layer: Konva.Layer,
-  stationPositions: (Station & { diagramPosition: number })[],
-  secondWidth: number,
-  train: Train
-) {
-  const trainGroup = new Konva.Group();
-  layer.add(trainGroup);
+function drawTrain(train: Train) {
+  const { layer, secondWidth, stationPositions } = diagramState;
 
   const positions = createPositionDiaTimeMap(train.diaTimes, secondWidth, stationPositions)
     .map(([_, __, position]) => position)
@@ -413,60 +477,21 @@ function drawTrain(
     stroke: train.trainType?.trainTypeColor ?? 'black',
     strokeWidth: 1,
     hitStrokeWidth: 10,
+    name: `trainLine`,
+    id: `trainLine-${train.trainId}`,
   });
-  trainGroup.add(line);
+  layer.add(line);
 
   line.on('click', function (e) {
     if (e.target === line) {
       console.log(train.diaTimes);
-      clickTrainLine(line, train.diaTimes, secondWidth, layer, stationPositions);
-    }
-    e.cancelBubble = true;
-  });
-
-  line.on('dragmove', function (e) {
-    if (e.target === selection.shape) {
-      // 横方向にのみ動く
-      const x = Math.round(e.target.x() / secondWidth) * secondWidth;
-      e.target.x(x);
-      e.target.y(0);
-
-      const positionDiaTimeMap = createPositionDiaTimeMap(train.diaTimes, secondWidth, stationPositions);
-
-      let diaTimeIndex = 0;
-      for (const [diaTime_, timeType, _] of positionDiaTimeMap) {
-        const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
-        const time = Math.round((e.target.attrs.points[diaTimeIndex] + e.target.x()) / secondWidth);
-
-        if (timeType === 'arrivalTime') {
-          diaTime.arrivalTime = time;
-        }
-        if (timeType === 'departureTime') {
-          diaTime.departureTime = time;
-        }
-
-        const timeLabel = layer.findOne(`#timeLabel-${diaTime.diaTimeId}-${timeType}`) as Konva.Text;
-        timeLabel.text(toStringFromSeconds(time));
-        timeLabel.x(e.target.attrs.points[diaTimeIndex] + e.target.x() - 5);
-
-        const timePoint = layer.findOne(`#timePoint-${diaTime.diaTimeId}-${timeType}`) as Konva.Rect;
-        timePoint.x(e.target.attrs.points[diaTimeIndex] + e.target.x() - 5);
-
-        diaTimeIndex += 2;
+      if (e.evt.ctrlKey) {
+        addTrainSelection(line, train);
+      } else {
+        clickTrainLine(line, train);
       }
     }
-
     e.cancelBubble = true;
-  });
-
-  line.on('dragend', function (e) {
-    if (e.target === selection.shape) {
-      destroySelection();
-      e.target.destroy();
-
-      const line = drawTrain(layer, stationPositions, secondWidth, train);
-      clickTrainLine(line, train.diaTimes, secondWidth, layer, stationPositions);
-    }
   });
 
   return line;
@@ -485,7 +510,7 @@ export const stagePosition = {
 export function initializeStationKonva(container: HTMLDivElement, canvasWidth: number, props: DiagramProps): Stage {
   const stage = new Konva.Stage({
     container: container,
-    width: canvasWidth * 2,
+    width: canvasWidth,
     height: canvasHeight,
     // draggable: true,
   });
@@ -503,16 +528,69 @@ export function initializeStationKonva(container: HTMLDivElement, canvasWidth: n
   return stage;
 }
 
+function areOverlapped(rect: Konva.Rect, trainLine: Konva.Line) {
+  // rectの頂点の配列
+  const width = rect.width() !== 0 ? rect.width() : 0.001;
+  const height = rect.height() !== 0 ? rect.height() : 0.001;
+
+  const rectPoints = [
+    { x: rect.x(), y: rect.y() },
+    { x: rect.x() + width, y: rect.y() },
+    { x: rect.x() + width, y: rect.y() + height },
+    { x: rect.x(), y: rect.y() + height },
+  ];
+  const rectPolygon = new Polygon(rectPoints);
+
+  const segments = [];
+  let previousPoint = { x: trainLine.points()[0] + trainLine.x(), y: trainLine.points()[1] + trainLine.y() };
+  for (let i = 2; i < trainLine.points().length; i += 2) {
+    const currentPoint = { x: trainLine.points()[i] + trainLine.x(), y: trainLine.points()[i + 1] + trainLine.y() };
+    segments.push([previousPoint, currentPoint]);
+    previousPoint = currentPoint;
+  }
+
+  for (const segment of segments) {
+    const overlapped = sat(rectPolygon, new Polygon(segment));
+    if (overlapped) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getOverlappedTrainLines(rect: Konva.Rect) {
+  const { layer } = diagramState;
+  const trainLines: Konva.Line[] = layer.find('.trainLine');
+  const overlappedTrainLines = trainLines.filter((trainLine) => areOverlapped(rect, trainLine as Konva.Line));
+  return overlappedTrainLines;
+}
+
 export function initializeKonva(container: HTMLDivElement, props: DiagramProps, stationStage: Stage) {
+  const minTime = Math.min(
+    ...(props.inboundDiaTrains
+      .map((train) => train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat())
+      .concat(
+        props.outboundDiaTrains.map((train) =>
+          train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat()
+        )
+      )
+      .flat()
+      .filter((t) => t != null) as number[])
+  );
+
+  diagramState.secondWidth = virtualCanvasWidth / 24 / 60 / 60;
+  stagePosition.x = Math.min(0, -(minTime - 10 * 60) * diagramState.secondWidth * stagePosition.zoom);
+
   const stage = new Konva.Stage({
     container: container,
     width: canvasWidth,
     height: canvasHeight,
-    draggable: true,
     id: 'mainStage',
   });
 
-  const layer = new Konva.Layer();
+  diagramState.layer = new Konva.Layer();
+  const layer = diagramState.layer;
   stage.add(layer);
 
   stage.x(stagePosition.x);
@@ -523,21 +601,20 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps, 
   stationStage.y(stagePosition.y);
   stationStage.scale({ x: stagePosition.zoom, y: stagePosition.zoom });
 
-  const stationPositions = props.diaStations.map((station, index) => ({
-    ...station,
+  diagramState.stationPositions = props.diaStations.map((station, index) => ({
+    station,
     diagramPosition: index * 50 + 50,
   }));
+  const stationPositions = diagramState.stationPositions;
 
-  const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
-
-  drawTimeGrid(layer, stationPositions[stationPositions.length - 1].diagramPosition + 50, secondWidth);
-  drawStationLines(layer, stationPositions, secondWidth, props);
+  drawTimeGrid(layer, stationPositions[stationPositions.length - 1].diagramPosition + 50, diagramState.secondWidth);
+  drawStationLines(layer, stationPositions, diagramState.secondWidth, props);
 
   for (const train of props.inboundDiaTrains) {
-    drawTrain(layer, stationPositions, secondWidth, train);
+    drawTrain(train);
   }
   for (const train of props.outboundDiaTrains) {
-    drawTrain(layer, stationPositions, secondWidth, train);
+    drawTrain(train);
   }
 
   function fitStageIntoParentContainer() {
@@ -592,8 +669,72 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps, 
   // ウィンドウリサイズ時にサイズを合わせる
   window.addEventListener('resize', fitStageIntoParentContainer);
 
-  // TODO: zoomが考慮できていないので直す
-  // stageのドラッグ範囲をcanvas内に制限する
+  stage.on('mousedown', function (e) {
+    if (e.evt.button === 2) {
+      stage.startDrag();
+    } else if (e.evt.button === 0) {
+      diagramState.dragStartPoint = getPointerPosition(stage);
+      diagramState.dragRect = new Konva.Rect({
+        x: diagramState.dragStartPoint.x,
+        y: diagramState.dragStartPoint.y,
+        width: 0,
+        height: 0,
+        stroke: 'black',
+        strokeWidth: 1,
+        dash: [4, 4],
+      });
+
+      diagramState.layer.add(diagramState.dragRect);
+    }
+  });
+
+  stage.on('mousemove', function (e) {
+    if (diagramState.dragStartPoint == null) return;
+
+    const stage_ = e.target;
+    if (stage_.id() !== 'mainStage') return;
+
+    const dragEndPoint = getPointerPosition(stage);
+
+    // 四角を描画
+    const rect = diagramState.dragRect!;
+    rect.width(dragEndPoint.x - diagramState.dragStartPoint.x);
+    rect.height(dragEndPoint.y - diagramState.dragStartPoint.y);
+  });
+
+  stage.on('click', function (e) {
+    if (e.evt.button === 2) {
+      // 右クリック
+      const train = commitDrawingLine(props);
+
+      if (train !== null) {
+        drawTrain(train);
+      }
+      return;
+    }
+  });
+
+  stage.on('mouseup', function (e) {
+    if (diagramState.dragStartPoint == null || diagramState.dragRect == null) return;
+
+    destroySelections(diagramState.selections);
+
+    const overlappedTrainLines = getOverlappedTrainLines(diagramState.dragRect);
+
+    for (const trainLine of overlappedTrainLines) {
+      const trainId = trainLine.id().split('-')[1];
+      const train = props.inboundDiaTrains.concat(props.outboundDiaTrains).find((train) => train.trainId === trainId);
+      if (train == null) continue;
+
+      addTrainSelection(trainLine, train);
+      console.log(train);
+    }
+
+    diagramState.dragStartPoint = null;
+    diagramState.dragRect?.destroy();
+    diagramState.dragRect = null;
+  });
+
   stage.on('dragmove', function (e) {
     const stage = e.target;
     if (stage.id() !== 'mainStage') return;
@@ -607,21 +748,69 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps, 
   });
 
   stage.on('click', function (e) {
-    destroySelection();
+    destroySelections(diagramState.selections);
   });
+
+  diagramState.selectionGroup.on('dragmove', function (e) {
+    diagramState.dragRect = null;
+    diagramState.dragStartPoint = null;
+
+    // 横方向にのみ動く
+    const x = Math.round(e.target.x() / diagramState.secondWidth) * diagramState.secondWidth;
+    e.target.x(x);
+    e.target.y(0);
+
+    for (const selection of diagramState.selections) {
+      processTrainDragMove(selection);
+    }
+
+    // e.cancelBubble = true;
+  });
+
+  diagramState.selectionGroup.on('dragend', function (e) {
+    const prevSelections = [...diagramState.selections];
+    destroySelections(diagramState.selections);
+    const offsetX = diagramState.selectionGroup.x();
+    diagramState.selectionGroup.x(0);
+
+    for (const selection of prevSelections) {
+      selection.shape.x(selection.shape.x() + offsetX);
+      addTrainSelection(selection.shape, selection.train);
+    }
+  });
+
+  layer.add(diagramState.selectionGroup);
+
+  console.log(
+    sat(
+      new Polygon([
+        { x: 3246.71170582847, y: 77.22640900384812 },
+        { x: 3246.71170582847, y: 77.22640900384812 },
+        { x: 3246.71170582847, y: 77.22640900384812 },
+        { x: 3246.71170582847, y: 77.22640900384812 },
+      ]),
+      new Polygon([
+        { x: 2951.3888888888887, y: 150 },
+        { x: 2951.3888888888887, y: 150 },
+      ])
+    )
+  );
 }
 
-function destroySelection() {
-  if (selection.shape !== null) {
-    selection.shape.draggable(false);
-    selection.shape.stroke('black');
-    selection.shape = null;
+function destroySelection(selection: TrainSelection) {
+  selection.shape.draggable(false);
+  selection.shape.stroke('black');
+  selection.shape.remove();
+  diagramState.layer.add(selection.shape);
 
-    selection.lineGroup.destroyChildren();
-    selection.lineGroup.destroy();
+  selection.lineGroup.destroy();
+}
 
-    console.log('deselect');
+function destroySelections(selections: TrainSelection[]) {
+  for (const selection of selections) {
+    destroySelection(selection);
   }
+  selections.splice(0, selections.length);
 }
 
 function adjustStagePosition(stage: Stage, stationStage: Stage) {
@@ -653,4 +842,58 @@ function adjustStagePosition(stage: Stage, stationStage: Stage) {
     stage.y(containerHeight - virtualCanvasHeight * scale);
     stationStage.y(containerHeight - virtualCanvasHeight * scale);
   }
+}
+
+export function copyTrains(props: DiagramProps) {
+  const trains = [];
+  for (const selection of diagramState.selections) {
+    trains.push(cloneTrain(selection.train));
+  }
+
+  props.setClipboard({
+    trains: trains,
+    originalTrains: diagramState.selections.map((s) => s.train),
+  });
+}
+
+export function deleteTrains(props: DiagramProps) {
+  for (const selection of diagramState.selections) {
+    const train = selection.train;
+    if (train.direction === 'Inbound') {
+      // 破壊的に削除する
+      const index = props.inboundDiaTrains.findIndex((t) => t.trainId === train.trainId);
+      if (index >= 0) props.inboundDiaTrains.splice(index, 1);
+    } else {
+      const index = props.outboundDiaTrains.findIndex((t) => t.trainId === train.trainId);
+      if (index >= 0) props.outboundDiaTrains.splice(index, 1);
+    }
+    destroySelection(selection);
+    selection.shape.destroy();
+  }
+
+  diagramState.selections.splice(0, diagramState.selections.length);
+
+  props.setUpdate();
+}
+
+export function pasteTrains(props: DiagramProps) {
+  destroySelections(diagramState.selections);
+
+  for (const train of props.clipboard.trains) {
+    // 重なると見えないので2分だけずらす
+    for (const diaTime of train.diaTimes) {
+      if (diaTime.arrivalTime != null) diaTime.arrivalTime += 2 * 60;
+      if (diaTime.departureTime != null) diaTime.departureTime += 2 * 60;
+    }
+    if (train.direction === 'Inbound') {
+      props.inboundDiaTrains.push(train);
+    } else {
+      props.outboundDiaTrains.push(train);
+    }
+    const line = drawTrain(train);
+    addTrainSelection(line, train);
+  }
+
+  props.setUpdate();
+  copyTrains(props);
 }

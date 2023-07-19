@@ -273,6 +273,7 @@ function convertRessyas(ressyas: any[], stations: Station[], trainTypes: TrainTy
       trainCode: (ressya['Ressyabangou'] ?? '') as string,
       firstStationOperation,
       lastStationOperation,
+      direction: ressya['Houkou'] === 'Kudari' ? 'Outbound' : 'Inbound',
       // trainMei: ressya['Ressyamei'],
       // trainGo: ressya['Gousuu'],
     };

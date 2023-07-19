@@ -78,13 +78,13 @@ function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
   const moveTrain = trainMove.placedTrains.find((train) => train.train.trainId === selectedTrain.trainId);
   if (moveTrain === undefined) {
     trainMove.placedTrains.push({
-      trainId: selectedTrain.trainId,
       train: selectedTrain,
       speed: 10,
       stationWaitTime: 0,
       stationStatus: 'NotArrived',
       track: cell.lineType?.tracks[0],
       position: position,
+      placedTrainId: generateId(),
     });
   } else {
     moveTrain.track = cell.lineType?.tracks[0];
@@ -452,7 +452,7 @@ export function CanvasComponent({
     <>
       <canvas
         id='canvas'
-        width='610'
+        width='1010'
         height='310'
         onMouseDown={(e) => {
           onmousedown(
@@ -491,7 +491,7 @@ export function CanvasComponent({
         }}
       ></canvas>
       <EditorContainer
-        timetable={appStates.timetable}
+        timetable={appStates.detailedTimetable}
         update={update}
         trains={appStates.trains}
         Switch={Switch}

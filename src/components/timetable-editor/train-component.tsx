@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import {
-  Clipboard,
+  AppClipboard,
   ContextData,
   DiaTime,
   Platform,
@@ -8,6 +8,7 @@ import {
   TimetableDirection,
   Train,
   TrainType,
+  cloneTrain,
   generateId,
 } from '../../model';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
@@ -27,8 +28,8 @@ function TrainContextMenuComponent({
   contextData: ContextData;
 
   setContextData: (contextData: ContextData) => void;
-  clipboard: Clipboard;
-  setClipboard: (clipboard: Clipboard) => void;
+  clipboard: AppClipboard;
+  setClipboard: (clipboard: AppClipboard) => void;
   selectedDiaTrain: Train | null;
 }) {
   return (
@@ -51,10 +52,10 @@ function TrainContextMenuComponent({
           label: '列車をコピー',
           onClick: () => {
             const index = trains.findIndex((train) => train.trainId === selectedDiaTrain?.trainId);
-            if (index >= 0) {
-              const newDiaTrain = JSON.parse(JSON.stringify(selectedDiaTrain)) as Train;
+            if (selectedDiaTrain != null && index >= 0) {
+              const newDiaTrain: Train = cloneTrain(selectedDiaTrain);
               newDiaTrain.trainId = generateId();
-              setClipboard({ train: newDiaTrain });
+              setClipboard({ trains: [newDiaTrain], originalTrains: [selectedDiaTrain] });
             }
             setContextData({ ...contextData, visible: false });
           },
@@ -62,14 +63,15 @@ function TrainContextMenuComponent({
         {
           label: '列車を貼り付け',
           onClick: () => {
-            const newDiaTrain = clipboard.train;
-            if (newDiaTrain) {
+            if (clipboard.trains.length > 0) {
+              const newDiaTrains = clipboard.trains;
+
               // 現在のdiaTrainの直前に挿入
               const index = trains.findIndex((train) => train.trainId === selectedDiaTrain?.trainId);
               if (index >= 0) {
-                trains.splice(index, 0, newDiaTrain);
+                trains.splice(index, 0, ...newDiaTrains);
               } else {
-                trains.push(newDiaTrain);
+                trains.push(...newDiaTrains);
               }
               setDiaTrains([...trains]);
               setContextData({ ...contextData, visible: false });
@@ -185,20 +187,21 @@ export function TrainListComponent({
   timetableDirection,
   setDiaTrains,
   trainTypes,
+  clipboard,
+  setClipboard,
 }: {
   trains: Train[];
   diaStations: Station[];
   timetableDirection: TimetableDirection;
   setDiaTrains: (trains: Train[]) => void;
   trainTypes: TrainType[];
+  clipboard: AppClipboard;
+  setClipboard: (clipboard: AppClipboard) => void;
 }) {
   const [contextData, setContextData] = useState<ContextData>({
     visible: false,
     posX: 0,
     posY: 0,
-  });
-  const [clipboard, setClipboard] = useState<Clipboard>({
-    train: null,
   });
   const [selectedDiaTrain, setSelectedDiaTrain] = useState<Train | null>(null);
 
@@ -302,6 +305,7 @@ export function TrainListComponent({
                 platform: getDefaultPlatform(diaStation, timetableDirection),
               })),
               trainCode: '',
+              direction: timetableDirection,
             });
             setDiaTrains([...trains]);
           }}

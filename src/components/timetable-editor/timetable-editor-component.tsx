@@ -1,8 +1,7 @@
-import { StateUpdater, useEffect, useState } from 'preact/hooks';
-import { JSON_decycle, JSON_retrocycle } from '../../cycle';
+import { StateUpdater, useState } from 'preact/hooks';
 import { loadFile } from '../../file';
 import { AppStates } from '../../mapEditorModel';
-import { SettingData, Station, TimetableData, TimetableDirection, Train, TrainType } from '../../model';
+import { AppClipboard, SettingData, Station, TimetableData, TimetableDirection, Train, TrainType } from '../../model';
 import { createOperations, toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { TrainMove2 } from '../track-editor/trainMove2';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
@@ -28,15 +27,6 @@ export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Stat
   );
 }
 
-function saveTimetable(timetable: TimetableData) {
-  localStorage.setItem('timetableEditorData', JSON.stringify(JSON_decycle(timetable)));
-}
-
-function loadTimetableData(): TimetableData {
-  const timetableString = localStorage.getItem('timetableEditorData');
-  return timetableString ? JSON_retrocycle(JSON.parse(timetableString)) : getInitialTimetable();
-}
-
 export function TimetableEditorTableComponent({
   diaStations,
   setDiaStations,
@@ -46,6 +36,8 @@ export function TimetableEditorTableComponent({
   timetableDirection,
   trainTypes,
   setSettingData,
+  clipboard,
+  setClipboard,
 }: {
   diaStations: Station[];
   setDiaStations: (diaStations: Station[]) => void;
@@ -55,6 +47,8 @@ export function TimetableEditorTableComponent({
   timetableDirection: 'Inbound' | 'Outbound';
   trainTypes: TrainType[];
   setSettingData: (settingData: SettingData) => void;
+  clipboard: AppClipboard;
+  setClipboard: (clipboard: AppClipboard) => void;
 }) {
   return (
     <div style={{ display: 'flex' }}>
@@ -79,6 +73,8 @@ export function TimetableEditorTableComponent({
           },
           timetableDirection: timetableDirection,
           trainTypes,
+          clipboard,
+          setClipboard,
         }}
       />
     </div>
@@ -106,10 +102,11 @@ export function TimetableEditorComponent({
       trainTypeColor: '#ff0000',
     },
   ]);
+  const [clipboard, setClipboard] = useState<AppClipboard>({
+    trains: [],
+    originalTrains: [],
+  });
 
-  useEffect(() => {
-    setTimetableData(loadTimetableData());
-  }, []);
   const [settingData, setSettingData] = useState<SettingData | null>(null);
 
   const setDiaStations = (diaStations: Station[]) => {
@@ -121,7 +118,6 @@ export function TimetableEditorComponent({
       },
     };
     setTimetableData(timetableData_);
-    saveTimetable(timetableData_);
   };
 
   const setDiaTrains = (trains: Train[]) => {
@@ -142,7 +138,6 @@ export function TimetableEditorComponent({
             },
           };
     setTimetableData(timetableData_);
-    saveTimetable(timetableData_);
   };
 
   return (
@@ -187,7 +182,7 @@ export function TimetableEditorComponent({
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: new TrainMove2(timetable),
-              timetable: timetable,
+              detailedTimetable: timetable,
               trains: trains,
             }));
           }}
@@ -232,6 +227,8 @@ export function TimetableEditorComponent({
                       timetableDirection,
                       trainTypes,
                       setSettingData,
+                      clipboard,
+                      setClipboard,
                     }}
                   />
                 ),
@@ -250,6 +247,8 @@ export function TimetableEditorComponent({
                       timetableDirection,
                       trainTypes,
                       setSettingData,
+                      clipboard,
+                      setClipboard,
                     }}
                   />
                 ),
@@ -281,6 +280,8 @@ export function TimetableEditorComponent({
                     setUpdate={() => {
                       setTimetableData({ ...timetableData });
                     }}
+                    clipboard={clipboard}
+                    setClipboard={setClipboard}
                   />
                 ),
               },

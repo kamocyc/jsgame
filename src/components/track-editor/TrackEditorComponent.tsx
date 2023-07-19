@@ -3,6 +3,7 @@ import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import { AppStates, Cell, EditMode, createMapContext } from '../../mapEditorModel';
 import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
+import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
 import { drawEditor } from './trackEditorDrawer';
@@ -44,43 +45,16 @@ interface SerializedPlacedTrain {
   stationStatus: 'Arrived' | 'Departed' | 'NotArrived';
 }
 
-function saveMapData(appStates: AppStates) {
-  if (appStates.timetable == null) {
-    return;
-  }
-  const trainsJson = JSON.stringify(appStates.trains);
-  localStorage.setItem('map', JSON.stringify(JSON_decycle(appStates.map)));
-  localStorage.setItem('trains', trainsJson);
-  localStorage.setItem('timetable', JSON.stringify(JSON_decycle(appStates.timetable)));
-  localStorage.setItem(
-    'placedTrains',
-    JSON.stringify(
-      appStates.trainMove.placedTrains.map((t) => ({
-        trainId: t.placedTrainId,
-        train: t.train,
-        speed: t.speed,
-        trackId: t.track.trackId,
-        position: t.position,
-        stationWaitTime: t.stationWaitTime,
-        stationStatus: t.stationStatus,
-      }))
-    )
-  );
-  console.log('保存しました');
+function saveEditorDataLocalStorage(appStates: AppStates) {
+  const buf = toStringEditorData(appStates);
+  localStorage.setItem('mapData', buf);
 }
 
-function saveMapDataFile(appStates: AppStates) {
-  if (appStates.timetable == null) {
-    return;
-  }
-  const obj = {
-    map: appStates.map,
-    trains: appStates.trains,
-    timetable: appStates.timetable,
-  };
+function saveEditorDataFile(appStates: AppStates) {
+  const buf = toStringEditorData(appStates);
 
   const link = document.createElement('a');
-  const content = JSON.stringify(JSON_decycle(obj));
+  const content = buf;
   const file = new Blob([content], { type: 'application/json' });
   link.href = URL.createObjectURL(file);
   link.download = 'data.json';
@@ -88,7 +62,21 @@ function saveMapDataFile(appStates: AppStates) {
   URL.revokeObjectURL(link.href);
 }
 
-function loadMapDataFile(buf: string, setAppStates: StateUpdater<AppStates>) {
+function toStringEditorData(appStates: AppStates) {
+  // if (appStates.detailedTimetable == null) {
+  //   return;
+  // }
+  const obj = {
+    map: appStates.map,
+    trains: appStates.trains,
+    timetable: appStates.detailedTimetable,
+    timetableData: appStates.timetableData,
+  };
+
+  return JSON.stringify(JSON_decycle(obj));
+}
+
+function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const obj = JSON_retrocycle(JSON.parse(buf));
 
   const mapData = (obj['map'] ?? []) as Cell[][];
@@ -100,6 +88,7 @@ function loadMapDataFile(buf: string, setAppStates: StateUpdater<AppStates>) {
   }
   const trainsJson = obj['trains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
+  const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable() };
 
   const trainMove = new TrainMove2(timetable);
   const switches = mapData.flatMap(
@@ -122,54 +111,21 @@ function loadMapDataFile(buf: string, setAppStates: StateUpdater<AppStates>) {
     switches: switches,
     tracks: tracks,
     trainMove: trainMove,
-    timetable: timetable,
+    detailedTimetable: timetable,
     stations: stations,
     mapWidth: mapWidth,
     mapHeight: mapHeight,
+    timetableData: timetableData,
     mapContext: createMapContext(mapWidth, mapHeight),
   }));
 }
 
-function loadMapData(setAppStates: StateUpdater<AppStates>) {
-  const mapData = JSON_retrocycle(JSON.parse(localStorage.getItem('map') ?? '[]')) as Cell[][];
-  const mapWidth = mapData.length;
-  const mapHeight = mapData[0].length;
-  if (mapData.some((row) => row.length !== mapHeight)) {
-    alert('マップデータが不正です');
+function loadEditorDataLocalStorage(setAppStates: StateUpdater<AppStates>) {
+  const data = localStorage.getItem('editorData');
+  if (data == null) {
     return;
   }
-  const trainsJson = localStorage.getItem('trains') ?? '[]';
-  const timetable = JSON_retrocycle(
-    JSON.parse(localStorage.getItem('timetable') ?? '{"stationTTItems": [], "switchTTItems": []}')
-  ) as DetailedTimetable;
-
-  const trainMove = new TrainMove2(timetable);
-  const switches = mapData.flatMap(
-    (row) =>
-      row
-        .map((cell) => (cell.lineType?.lineClass === 'Branch' ? cell.lineType.switch : null))
-        .filter((x) => x != null) as Switch[]
-  );
-  const tracks = mapData.flatMap((row) =>
-    row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
-  );
-
-  const stations = mapData.flatMap((row) =>
-    row.flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station)).filter((x) => x != null)
-  ) as Station[];
-
-  setAppStates((appStates) => ({
-    ...appStates,
-    map: mapData,
-    switches: switches,
-    tracks: tracks,
-    trainMove: trainMove,
-    timetable: timetable,
-    stations: stations,
-    mapWidth: mapWidth,
-    mapHeight: mapHeight,
-    mapContext: createMapContext(mapWidth, mapHeight),
-  }));
+  loadEditorDataBuf(data, setAppStates);
 }
 
 export function TrackEditorComponent({
@@ -193,7 +149,7 @@ export function TrackEditorComponent({
   };
 
   useEffect(() => {
-    // loadMapData(setAppStates);
+    loadEditorDataLocalStorage(setAppStates);
   }, []);
 
   useEffect(() => {
@@ -263,9 +219,9 @@ export function TrackEditorComponent({
             setEditorMode={setEditMode}
           />
         </div>
-        <button onClick={() => saveMapData(appStates)}>保存</button>
-        <button onClick={() => loadMapData(setAppStates)}>読み込み</button>
-        <button onClick={() => saveMapDataFile(appStates)}>保存（ファイル）</button>
+        <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
+        <button onClick={() => loadEditorDataLocalStorage(setAppStates)}>読み込み</button>
+        <button onClick={() => saveEditorDataFile(appStates)}>保存（ファイル）</button>
         読み込み（ファイル）:
         <input
           type='file'
@@ -275,7 +231,7 @@ export function TrackEditorComponent({
             if (buf == null) {
               return;
             }
-            loadMapDataFile(buf, setAppStates);
+            loadEditorDataBuf(buf, setAppStates);
           }}
         />
       </div>

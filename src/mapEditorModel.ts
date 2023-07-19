@@ -1,5 +1,5 @@
 import { TrainMove2 } from './components/track-editor/trainMove2';
-import { DetailedTimetable, Point, Station, Switch, Track, Train } from './model';
+import { DetailedTimetable, Point, Station, Switch, TimetableData, Track, Train } from './model';
 
 export const CellWidth = 30;
 export const CellHeight = 30;
@@ -110,7 +110,8 @@ export function createMapContext(mapWidth: number, mapHeight: number): MapContex
 
 export interface AppStates {
   editMode: EditMode;
-  timetable: DetailedTimetable;
+  detailedTimetable: DetailedTimetable;
+  timetableData: TimetableData;
   trains: Train[];
   switches: Switch[]; // 今は使っていない
   stations: Station[];

@@ -72,6 +72,7 @@ export function getInitialTimetable(): TimetableData {
           },
         ],
         trainCode: '',
+        direction: 'Inbound',
       },
     ],
     outboundTrains: [
@@ -97,6 +98,7 @@ export function getInitialTimetable(): TimetableData {
           },
         ],
         trainCode: '',
+        direction: 'Outbound',
       },
     ],
     stations: diaStations,

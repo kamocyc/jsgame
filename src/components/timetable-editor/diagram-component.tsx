@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'preact/hooks';
-import { DiagramProps, initializeKonva, initializeStationKonva } from './diagram-konva-drawer';
+import {
+  DiagramProps,
+  copyTrains,
+  deleteTrains,
+  initializeKonva,
+  initializeStationKonva,
+  pasteTrains,
+} from './diagram-konva-drawer';
 
 export function KonvaCanvas(props: DiagramProps) {
   const stationCanvasWidth = 100;
@@ -21,7 +28,29 @@ export function KonvaCanvas(props: DiagramProps) {
   return (
     <div ref={containerRef} style={{ display: 'flex' }}>
       <div id='stationsCanvas' style={{ width: stationCanvasWidth + 'px' }}></div>
-      <div id='mainCanvas'></div>
+      <div
+        id='mainCanvas'
+        onContextMenu={(e) => {
+          e.preventDefault();
+        }}
+        // Ctrl+Cを取得する
+        onKeyDown={(e) => {
+          if (e.ctrlKey && e.key === 'c') {
+            copyTrains(props);
+          }
+          // delete keyを取得
+          if (e.key === 'Delete') {
+            deleteTrains(props);
+          }
+        }}
+        // Ctrl+Vを取得する
+        onKeyUp={(e) => {
+          if (e.ctrlKey && e.key === 'v') {
+            pasteTrains(props);
+          }
+        }}
+        tabIndex={-1}
+      ></div>
     </div>
   );
 }

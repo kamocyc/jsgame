@@ -113,6 +113,7 @@ export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable 
         diaTimes: inboundDiaTimes,
         trainName: 'Inbound',
         trainCode: '',
+        direction: 'Inbound',
       },
     ],
     outboundTrains: [
@@ -121,6 +122,7 @@ export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable 
         diaTimes: outboundDiaTimes,
         trainName: 'Outbound',
         trainCode: '',
+        direction: 'Outbound',
       },
     ],
     trainTypes: [],

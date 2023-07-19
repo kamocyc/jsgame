@@ -80,6 +80,8 @@ export type StationOperation =
       operationCode: string | undefined;
     };
 
+export type TimetableDirection = 'Outbound' | 'Inbound';
+
 export interface Train {
   trainId: string;
   trainCode: string; // 列車番号
@@ -88,9 +90,21 @@ export interface Train {
   diaTimes: DiaTime[];
   firstStationOperation?: StationOperation;
   lastStationOperation?: StationOperation;
+  direction: TimetableDirection | null;
 }
 
-export type TimetableDirection = 'Outbound' | 'Inbound';
+export function cloneTrain(train: Train): Train {
+  return {
+    trainId: generateId(),
+    trainCode: train.trainCode,
+    trainName: train.trainName,
+    trainType: train.trainType,
+    diaTimes: train.diaTimes.map((diaTime) => ({ ...diaTime, diaTimeId: generateId() })),
+    firstStationOperation: train.firstStationOperation,
+    lastStationOperation: train.lastStationOperation,
+    direction: train.direction,
+  };
+}
 
 export interface Timetable {
   inboundTrains: Train[];
@@ -104,8 +118,9 @@ export interface TimetableData {
   timetable: Timetable;
 }
 
-export interface Clipboard {
-  train: Train | null;
+export interface AppClipboard {
+  trains: Train[];
+  originalTrains: Train[];
 }
 
 export interface ContextData {

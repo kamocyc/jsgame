@@ -74,7 +74,7 @@ function toStringEditorData(appStates: AppStates) {
     timetableData: appStates.timetableData,
   };
 
-  return JSON.stringify(JSON_decycle(obj));
+  return JSON.stringify(JSON_decycle(obj), null, 2);
 }
 
 function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {

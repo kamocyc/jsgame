@@ -47,6 +47,20 @@ export function createNewStation(stationName: string): Station {
   return newStation;
 }
 
+export function getInitialTrainTypes(): TrainType[] {
+  return [
+    {
+      trainTypeId: '1',
+      trainTypeName: '普通',
+      trainTypeColor: '#000000',
+    },
+    {
+      trainTypeId: '2',
+      trainTypeName: '急行',
+      trainTypeColor: '#ff0000',
+    },
+  ];
+}
 export function getInitialTimetable(): TimetableData {
   const diaStations: Station[] = [createNewStation('東京'), createNewStation('横浜')];
 
@@ -104,25 +118,10 @@ export function getInitialTimetable(): TimetableData {
       },
     ],
     stations: diaStations,
-    trainTypes: [],
+    trainTypes: getInitialTrainTypes(),
   };
 
   return { timetable };
-}
-
-export function getInitialTrainTypes(): TrainType[] {
-  return [
-    {
-      trainTypeId: '1',
-      trainTypeName: '普通',
-      trainTypeColor: '#000000',
-    },
-    {
-      trainTypeId: '2',
-      trainTypeName: '急行',
-      trainTypeColor: '#ff0000',
-    },
-  ];
 }
 
 export function reverseTimetableDirection(timetable: OutlinedTimetable): OutlinedTimetable {

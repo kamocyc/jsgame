@@ -1,3 +1,4 @@
+import { JSON_retrocycle } from './cycle';
 import { OutlinedTimetable } from './model';
 import { getEkiJikokus } from './oudParser';
 
@@ -33,10 +34,17 @@ export async function loadFile(event: Event): Promise<null | OutlinedTimetable> 
           const diagram = getEkiJikokus(reader.result as string);
           resolve(diagram);
         } else {
-          // diaFreakの対応はとりあえず後回し
-          // const diagram = getDiaFreaks(reader.result as string);
-          // resolve(diagram);
-          console.warn('diaFreaks形式は未対応です');
+          const rawData = JSON_retrocycle(JSON.parse(reader.result as string));
+          if ('timetableData' in rawData) {
+            // 独自形式
+            console.log(rawData.timetableData.timetable);
+            resolve(rawData.timetableData.timetable as OutlinedTimetable);
+          } else {
+            // diaFreakの対応はとりあえず後回し
+            // const diagram = getDiaFreaks(reader.result as string);
+            // resolve(diagram);
+            console.warn('diaFreaks形式は未対応です');
+          }
         }
       },
       false
@@ -48,7 +56,7 @@ export async function loadFile(event: Event): Promise<null | OutlinedTimetable> 
         fileType = 'oud';
         reader.readAsText(file, 'Shift_JIS');
       } else if (/.*\.json$/.test(file.name)) {
-        // json形式 (diafreaks)
+        // json形式 (独自 or diafreaks)
         fileType = 'diafreaks';
         reader.readAsText(file, 'utf-8');
       } else {

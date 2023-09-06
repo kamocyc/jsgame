@@ -204,6 +204,7 @@ export function StationListComponent({
           onClick={() => {
             const newStation = createNewStation('-');
             diaStations.push(newStation);
+
             trains.forEach((train) => {
               train.diaTimes.push({
                 diaTimeId: generateId(),
@@ -214,8 +215,9 @@ export function StationListComponent({
                 platform: getDefaultPlatform(newStation, timetableDirection),
               });
             });
+
             otherDirectionDiaTrains.forEach((train) => {
-              train.diaTimes.push({
+              train.diaTimes.unshift({
                 diaTimeId: generateId(),
                 arrivalTime: null,
                 departureTime: null,

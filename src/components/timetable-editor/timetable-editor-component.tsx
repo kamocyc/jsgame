@@ -1,4 +1,5 @@
 import { StateUpdater, useState } from 'preact/hooks';
+import { JSON_decycle } from '../../cycle';
 import { loadFile } from '../../file';
 import { AppStates } from '../../mapEditorModel';
 import {
@@ -6,6 +7,7 @@ import {
   OutlinedTimetable,
   SettingData,
   Station,
+  TimetableData,
   TimetableDirection,
   Train,
   TrainType,
@@ -17,7 +19,7 @@ import { DiagramPageComponent } from './diagram-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
-import { getInitialTimetable, getInitialTrainTypes, reverseTimetableDirection } from './timetable-util';
+import { getInitialTimetable, reverseTimetableDirection } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 
@@ -89,6 +91,26 @@ export function TimetableEditorTableComponent({
   );
 }
 
+function saveTimetableDataFile(appStates: AppStates) {
+  const buf = toStringTimeTableData(appStates);
+
+  const link = document.createElement('a');
+  const content = buf;
+  const file = new Blob([content], { type: 'application/json' });
+  link.href = URL.createObjectURL(file);
+  link.download = 'timetable_data.json';
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function toStringTimeTableData(appStates: AppStates) {
+  const obj = {
+    timetableData: appStates.timetableData,
+  };
+
+  return JSON.stringify(JSON_decycle(obj), null, 2);
+}
+
 export function TimetableEditorComponent({
   appStates,
   setAppStates,
@@ -97,7 +119,6 @@ export function TimetableEditorComponent({
   setAppStates: StateUpdater<AppStates>;
 }) {
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
-  const [trainTypes, setTrainTypes] = useState<TrainType[]>(getInitialTrainTypes());
   const [clipboard, setClipboard] = useState<AppClipboard>({
     trains: [],
     originalTrains: [],
@@ -113,12 +134,26 @@ export function TimetableEditorComponent({
     }));
   };
 
-  const setDiaStations = (diaStations: Station[]) => {
-    const timetableData = {
+  const setDiaStations = (stations: Station[]) => {
+    const timetableData: TimetableData = {
       ...appStates.timetableData,
       timetable: {
         ...appStates.timetableData.timetable,
-        diaStations: diaStations,
+        stations: stations,
+      },
+    };
+    setAppStates((appStates) => ({
+      ...appStates,
+      timetableData: timetableData,
+    }));
+  };
+
+  const setTrainTypes = (trainTypes: TrainType[]) => {
+    const timetableData: TimetableData = {
+      ...appStates.timetableData,
+      timetable: {
+        ...appStates.timetableData.timetable,
+        trainTypes: trainTypes,
       },
     };
     setAppStates((appStates) => ({
@@ -128,20 +163,20 @@ export function TimetableEditorComponent({
   };
 
   const setDiaTrains = (trains: Train[]) => {
-    const timetableData =
+    const timetableData: TimetableData =
       timetableDirection === 'Inbound'
         ? {
             ...appStates.timetableData,
             timetable: {
               ...appStates.timetableData.timetable,
-              inboundDiaTrains: trains,
+              inboundTrains: trains,
             },
           }
         : {
             ...appStates.timetableData,
             timetable: {
               ...appStates.timetableData.timetable,
-              outboundDiaTrains: trains,
+              outboundTrains: trains,
             },
           };
 
@@ -154,20 +189,36 @@ export function TimetableEditorComponent({
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div>
-        <input
-          type='file'
-          id='file-selector'
-          accept='.oud, .oud2, .json'
-          onChange={async (event) => {
-            const diagram = await loadFile(event);
-            if (diagram != null) {
-              setTimetableData({
-                timetable: diagram,
-              });
-              setTrainTypes(diagram.trainTypes);
-            }
+        <button
+          onClick={() => {
+            saveTimetableDataFile(appStates);
           }}
-        />
+        >
+          保存
+        </button>
+        <div
+          style={{
+            display: 'inline-block',
+            borderStyle: 'solid',
+            borderWidth: '1px',
+            padding: '2px',
+          }}
+        >
+          読み込み
+          <input
+            type='file'
+            id='file-selector'
+            accept='.oud, .oud2, .json'
+            onChange={async (event) => {
+              const diagram = await loadFile(event);
+              if (diagram != null) {
+                setTimetableData({
+                  timetable: diagram,
+                });
+              }
+            }}
+          />
+        </div>
         <button
           onClick={() => {
             createOperations(timetableData.timetable);
@@ -254,7 +305,7 @@ export function TimetableEditorComponent({
                       otherDirectionDiaTrains: timetableData.timetable.outboundTrains,
                       setDiaTrains: setDiaTrains,
                       timetableDirection,
-                      trainTypes,
+                      trainTypes: appStates.timetableData.timetable.trainTypes,
                       setSettingData,
                       clipboard,
                       setClipboard,
@@ -274,7 +325,7 @@ export function TimetableEditorComponent({
                       otherDirectionDiaTrains: timetableData.timetable.inboundTrains,
                       setDiaTrains: setDiaTrains,
                       timetableDirection,
-                      trainTypes,
+                      trainTypes: appStates.timetableData.timetable.trainTypes,
                       setSettingData,
                       clipboard,
                       setClipboard,
@@ -285,7 +336,12 @@ export function TimetableEditorComponent({
               {
                 tabId: 3,
                 tabText: '種別の設定',
-                component: () => <TrainTypeSettingComponent trainTypes={trainTypes} setTrainTypes={setTrainTypes} />,
+                component: () => (
+                  <TrainTypeSettingComponent
+                    trainTypes={appStates.timetableData.timetable.trainTypes}
+                    setTrainTypes={setTrainTypes}
+                  />
+                ),
               },
               {
                 tabId: 4,

@@ -1,4 +1,4 @@
-import { StateUpdater, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { TrainType, generateId } from '../../model';
 import { SettingColumnComponent } from './common-component';
 
@@ -53,7 +53,7 @@ export function TrainTypeSettingComponent({
   setTrainTypes,
 }: {
   trainTypes: TrainType[];
-  setTrainTypes: StateUpdater<TrainType[]>;
+  setTrainTypes: (trainTypes: TrainType[]) => void;
 }) {
   const [settingData, setSettingData] = useState<TrainTypeSettingData | null>(null);
 
@@ -81,7 +81,7 @@ export function TrainTypeSettingComponent({
               <div>
                 <button
                   onClick={() => {
-                    setTrainTypes((trainTypes) => trainTypes.filter((t) => t.trainTypeId !== trainType.trainTypeId));
+                    setTrainTypes(trainTypes.filter((t) => t.trainTypeId !== trainType.trainTypeId));
                   }}
                 >
                   削除
@@ -93,7 +93,7 @@ export function TrainTypeSettingComponent({
         <div>
           <button
             onClick={() => {
-              setTrainTypes((trainTypes) => [
+              setTrainTypes([
                 ...trainTypes,
                 { trainTypeId: generateId(), trainTypeName: '-', trainTypeColor: '#000000' },
               ]);
@@ -113,7 +113,7 @@ export function TrainTypeSettingComponent({
             <TrainTypeDetailComponent
               trainType={trainTypes.find((t) => t.trainTypeId === settingData.trainTypeId)!}
               setTrainType={(trainType) => {
-                setTrainTypes((trainTypes) =>
+                setTrainTypes(
                   trainTypes.map((t) => {
                     if (t.trainTypeId === trainType.trainTypeId) {
                       t.trainTypeColor = trainType.trainTypeColor;

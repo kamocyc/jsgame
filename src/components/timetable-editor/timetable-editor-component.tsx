@@ -17,7 +17,7 @@ import { DiagramPageComponent } from './diagram-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
-import { reverseTimetableDirection } from './timetable-util';
+import { getInitialTimetable, getInitialTrainTypes, reverseTimetableDirection } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 
@@ -97,18 +97,7 @@ export function TimetableEditorComponent({
   setAppStates: StateUpdater<AppStates>;
 }) {
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
-  const [trainTypes, setTrainTypes] = useState<TrainType[]>([
-    {
-      trainTypeId: '1',
-      trainTypeName: '普通',
-      trainTypeColor: '#000000',
-    },
-    {
-      trainTypeId: '2',
-      trainTypeName: '急行',
-      trainTypeColor: '#ff0000',
-    },
-  ]);
+  const [trainTypes, setTrainTypes] = useState<TrainType[]>(getInitialTrainTypes());
   const [clipboard, setClipboard] = useState<AppClipboard>({
     trains: [],
     originalTrains: [],
@@ -240,14 +229,7 @@ export function TimetableEditorComponent({
               return;
             }
 
-            setTimetableData({
-              timetable: {
-                stations: [],
-                trainTypes: [],
-                inboundTrains: [],
-                outboundTrains: [],
-              },
-            });
+            setTimetableData(getInitialTimetable());
           }}
         >
           全てクリア

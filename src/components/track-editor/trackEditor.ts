@@ -576,7 +576,6 @@ function deleteCurveLine(cell: Cell, angle: LineAngle): LineTypeTerminal | { err
 }
 
 function deleteBranchLine(cell: Cell, angle: LineAngle): LineTypeStraight | LineTypeCurve | { error: string } {
-  // TODO: 実装する
   const lineType = cell.lineType as LineTypeBranch;
 
   if (lineType.branchType === 'Horizontal_TopLeft') {
@@ -941,7 +940,7 @@ export function validateAppState(appStates: AppStates) {
 }
 
 // cell1とcell2の間の線路を削除する（破壊的変更はしない）
-export function deleteLine(
+export function deleteLineSub(
   cell1: Cell,
   cell2: Cell
 ):
@@ -951,20 +950,20 @@ export function deleteLine(
       LineTypeStraight | LineTypeCurve | LineTypeTerminal | null
     ] {
   if (cell1.lineType == null || cell2.lineType == null) {
-    return { error: '線路がない' };
+    return { error: '線路がないsub' };
   }
 
   if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
-    return { error: '同じセル' };
+    return { error: '同じセルsub' };
   }
 
   if (Math.abs(cell1.position.x - cell2.position.x) > 1 || Math.abs(cell1.position.y - cell2.position.y) > 1) {
-    return { error: '複数セル' };
+    return { error: '複数セルsub' };
   }
 
   const angle = getAngleBetweenCells(cell1, cell2);
   if (angle === 'Error') {
-    return { error: '始点と終点が直線上にない' };
+    return { error: '始点と終点が直線上にないsub' };
   }
 
   const result1 = deleteAdjacentLine(cell1, angle);
@@ -992,6 +991,50 @@ export function deleteLine(
   return [newLineType1, newLineType2];
 }
 
+// cell1とcell2の間の線路を削除する（mapに対して破壊的変更をする）
+export function deleteLine(map: GameMap, cell1: Cell, cell2: Cell): CreateLineError | { ok: true } {
+  if (cell1.lineType == null || cell2.lineType == null) {
+    return { error: '線路がない' };
+  }
+
+  if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
+    return { error: '同じセル' };
+  }
+
+  const angle = getAngleBetweenCells(cell1, cell2);
+  if (angle === 'Error') {
+    return { error: '始点と終点が直線上にない' };
+  }
+
+  let x = cell1.position.x;
+  let y = cell1.position.y;
+  let ix = cell2.position.x < cell1.position.x ? -1 : cell2.position.x === cell1.position.x ? 0 : 1;
+  let iy = cell2.position.y < cell1.position.y ? -1 : cell2.position.y === cell1.position.y ? 0 : 1;
+  const mapUpdateData: [number, number, null | LineTypeStraight | LineTypeTerminal | LineTypeCurve | LineTypeBranch][] =
+    [];
+  let prevCell = map[x][y];
+
+  // 始点から終点まで線路を作る
+  while (true) {
+    const result = deleteLineSub(prevCell, map[x + ix][y + iy]);
+    if ('error' in result) {
+      return { error: result.error };
+    }
+    const [newLineType1, newLineType2] = result;
+    mapUpdateData.push([x, y, newLineType1], [x + ix, y + iy, newLineType2]);
+    prevCell = { ...map[x + ix][y + iy], lineType: newLineType2 };
+    x += ix;
+    y += iy;
+    if (x === cell2.position.x && y === cell2.position.y) {
+      // 終点にエラー無く到達したら、mapを更新して終了
+      for (const [x, y, lineType] of mapUpdateData) {
+        map[x][y].lineType = lineType;
+      }
+      return { ok: true };
+    }
+  }
+}
+
 export function deleteStation(map: GameMap, station: Station): CreateLineError | true {
   const platformCells = map
     .map((row) =>
@@ -1013,7 +1056,7 @@ export function deleteStation(map: GameMap, station: Station): CreateLineError |
 
   let results: [Cell, LineTypeStraight | LineTypeCurve | LineTypeTerminal | null][] = [];
   for (let i = 0; i < platformCells[0].length; i++) {
-    const result = deleteLine(platformCells[0][i], platformCells[1][i]);
+    const result = deleteLineSub(platformCells[0][i], platformCells[1][i]);
     if ('error' in result) {
       return result;
     }
@@ -1026,4 +1069,8 @@ export function deleteStation(map: GameMap, station: Station): CreateLineError |
   }
 
   return true;
+}
+
+export function getAllTracks(map: GameMap): Track[] {
+  return map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
 }

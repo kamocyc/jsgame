@@ -3,6 +3,7 @@ import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import { AppStates, Cell, EditMode, createMapContext } from '../../mapEditorModel';
 import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
+import { getInitialAppStates } from '../AppComponent';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
@@ -57,7 +58,7 @@ function saveEditorDataFile(appStates: AppStates) {
   const content = buf;
   const file = new Blob([content], { type: 'application/json' });
   link.href = URL.createObjectURL(file);
-  link.download = 'data.json';
+  link.download = 'map_data.json';
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -79,9 +80,13 @@ function toStringEditorData(appStates: AppStates) {
 function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const obj = JSON_retrocycle(JSON.parse(buf));
 
-  const mapData = (obj['map'] ?? []) as Cell[][];
+  if (obj['map'] === undefined) {
+    alert('マップデータが不正です');
+    return;
+  }
+  const mapData = obj['map'] as Cell[][];
   const mapWidth = mapData.length;
-  const mapHeight = mapData[0].length;
+  const mapHeight = mapData[0]?.length;
   if (mapData.some((row) => row.length !== mapHeight)) {
     alert('マップデータが不正です');
     return;
@@ -141,6 +146,7 @@ export function TrackEditorComponent({
   const [_, setUpdate_] = useState<never[]>([]);
   const update = () => {
     setUpdate_([]);
+    setAppStates((s) => ({ ...s }));
     drawEditor(appStates);
   };
 
@@ -185,14 +191,8 @@ export function TrackEditorComponent({
           />
           <ModeOptionRadioComponent
             mode='Delete'
-            text='線路を削除'
+            text='削除'
             checked={appStates.editMode === 'Delete'}
-            setEditorMode={setEditMode}
-          />
-          <ModeOptionRadioComponent
-            mode='StationDelete'
-            text='駅を削除'
-            checked={appStates.editMode === 'StationDelete'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
@@ -222,18 +222,34 @@ export function TrackEditorComponent({
         <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
         <button onClick={() => loadEditorDataLocalStorage(setAppStates)}>読み込み</button>
         <button onClick={() => saveEditorDataFile(appStates)}>保存（ファイル）</button>
-        読み込み（ファイル）:
-        <input
-          type='file'
-          accept='.json'
-          onChange={async (event) => {
-            const buf = await loadUtf8File(event);
-            if (buf == null) {
-              return;
-            }
-            loadEditorDataBuf(buf, setAppStates);
+        <div
+          style={{
+            border: '1px solid black',
+            display: 'inline-block',
+            padding: '2px',
           }}
-        />
+        >
+          読み込み（ファイル）:
+          <input
+            type='file'
+            accept='.json'
+            onChange={async (event) => {
+              const buf = await loadUtf8File(event);
+              if (buf == null) {
+                return;
+              }
+              loadEditorDataBuf(buf, setAppStates);
+            }}
+          />
+        </div>
+        <button
+          onClick={() => {
+            setAppStates(getInitialAppStates());
+            drawEditor(appStates);
+          }}
+        >
+          クリア
+        </button>
       </div>
       <button
         id='button-slow-speed'
@@ -248,13 +264,13 @@ export function TrackEditorComponent({
           stopInterval();
           appStates.trainMove.placedTrains = [];
           appStates.trainMove.resetGlobalTime();
-          startTop(1000);
+          startTop(100);
         }}
       >
         最初から開始
       </button>
       <br />
-      <button
+      {/* <button
         id='button-slow-speed-2'
         onClick={() => {
           stopInterval();
@@ -263,7 +279,7 @@ export function TrackEditorComponent({
       >
         早くする
       </button>
-      <br />
+      <br /> */}
       <button id='button-speed-slow'>＜＜</button>
       <button id='button-speed-fast'>＞＞</button>
       <div id='speed-text'></div>

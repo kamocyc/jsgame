@@ -5,6 +5,7 @@ import { Polygon, sat } from '../sat';
 import { SplitViewComponent } from './timetable-editor/common-component';
 import { TimetableEditorComponent } from './timetable-editor/timetable-editor-component';
 import { getInitialTimetable } from './timetable-editor/timetable-util';
+import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { TrainMove2 } from './track-editor/trainMove2';
 
@@ -70,8 +71,8 @@ function TestComponent() {
   return <canvas width='1000' height='300' id='test-canvas'></canvas>;
 }
 
-export function App() {
-  const [appStates, setAppStates] = useState<AppStates>(() => ({
+export function getInitialAppStates(): AppStates {
+  return {
     editMode: 'Create',
     detailedTimetable: timetable,
     timetableData: getInitialTimetable(),
@@ -99,24 +100,32 @@ export function App() {
     switches: [],
     stations: [],
     tracks: [],
-  }));
+    message: null,
+  };
+}
+
+export function App() {
+  const [appStates, setAppStates] = useState<AppStates>(() => getInitialAppStates());
 
   return (
-    <SplitViewComponent
-      splitViews={[
-        {
-          splitViewId: 1,
-          component: () => <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} />,
-        },
-        {
-          splitViewId: 2,
-          component: () => <TimetableEditorComponent appStates={appStates} setAppStates={setAppStates} />,
-        },
-        // {
-        //   splitViewId: 3,
-        //   component: () => <TestComponent />,
-        // },
-      ]}
-    />
+    <>
+      <ToastComponent message={appStates.message} />
+      <SplitViewComponent
+        splitViews={[
+          {
+            splitViewId: 1,
+            component: () => <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} />,
+          },
+          {
+            splitViewId: 2,
+            component: () => <TimetableEditorComponent appStates={appStates} setAppStates={setAppStates} />,
+          },
+          // {
+          //   splitViewId: 3,
+          //   component: () => <TestComponent />,
+          // },
+        ]}
+      />
+    </>
   );
 }

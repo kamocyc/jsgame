@@ -6,6 +6,7 @@ import {
   TimetableData,
   TimetableDirection,
   Train,
+  TrainType,
   generateId,
 } from '../../model';
 import './timetable-editor.css';
@@ -107,6 +108,21 @@ export function getInitialTimetable(): TimetableData {
   };
 
   return { timetable };
+}
+
+export function getInitialTrainTypes(): TrainType[] {
+  return [
+    {
+      trainTypeId: '1',
+      trainTypeName: '普通',
+      trainTypeColor: '#000000',
+    },
+    {
+      trainTypeId: '2',
+      trainTypeName: '急行',
+      trainTypeColor: '#ff0000',
+    },
+  ];
 }
 
 export function reverseTimetableDirection(timetable: OutlinedTimetable): OutlinedTimetable {

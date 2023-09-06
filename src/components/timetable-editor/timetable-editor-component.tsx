@@ -1,7 +1,15 @@
 import { StateUpdater, useState } from 'preact/hooks';
 import { loadFile } from '../../file';
 import { AppStates } from '../../mapEditorModel';
-import { AppClipboard, SettingData, Station, TimetableData, TimetableDirection, Train, TrainType } from '../../model';
+import {
+  AppClipboard,
+  OutlinedTimetable,
+  SettingData,
+  Station,
+  TimetableDirection,
+  Train,
+  TrainType,
+} from '../../model';
 import { createOperations, toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { TrainMove2 } from '../track-editor/trainMove2';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
@@ -9,7 +17,7 @@ import { DiagramPageComponent } from './diagram-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
-import { getInitialTimetable } from './timetable-util';
+import { reverseTimetableDirection } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 
@@ -88,7 +96,6 @@ export function TimetableEditorComponent({
   appStates: AppStates;
   setAppStates: StateUpdater<AppStates>;
 }) {
-  const [timetableData, setTimetableData] = useState<TimetableData>(getInitialTimetable());
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
   const [trainTypes, setTrainTypes] = useState<TrainType[]>([
     {
@@ -106,38 +113,53 @@ export function TimetableEditorComponent({
     trains: [],
     originalTrains: [],
   });
-
   const [settingData, setSettingData] = useState<SettingData | null>(null);
 
+  const timetableData = appStates.timetableData;
+
+  const setTimetableData = (timetableData: { timetable: OutlinedTimetable }) => {
+    setAppStates((appStates) => ({
+      ...appStates,
+      timetableData: timetableData,
+    }));
+  };
+
   const setDiaStations = (diaStations: Station[]) => {
-    const timetableData_ = {
-      ...timetableData,
+    const timetableData = {
+      ...appStates.timetableData,
       timetable: {
-        ...timetableData.timetable,
+        ...appStates.timetableData.timetable,
         diaStations: diaStations,
       },
     };
-    setTimetableData(timetableData_);
+    setAppStates((appStates) => ({
+      ...appStates,
+      timetableData: timetableData,
+    }));
   };
 
   const setDiaTrains = (trains: Train[]) => {
-    const timetableData_ =
+    const timetableData =
       timetableDirection === 'Inbound'
         ? {
-            ...timetableData,
+            ...appStates.timetableData,
             timetable: {
-              ...timetableData.timetable,
+              ...appStates.timetableData.timetable,
               inboundDiaTrains: trains,
             },
           }
         : {
-            ...timetableData,
+            ...appStates.timetableData,
             timetable: {
-              ...timetableData.timetable,
+              ...appStates.timetableData.timetable,
               outboundDiaTrains: trains,
             },
           };
-    setTimetableData(timetableData_);
+
+    setAppStates((appStates) => ({
+      ...appStates,
+      timetableData: timetableData,
+    }));
   };
 
   return (
@@ -197,13 +219,38 @@ export function TimetableEditorComponent({
             }
 
             console.log(timetable);
-            setTimetableData((timetableData) => ({
-              ...timetableData,
+            setTimetableData({
               timetable: timetable,
-            }));
+            });
           }}
         >
           ⇓概要ダイヤに反映
+        </button>
+        <button
+          onClick={() => {
+            const newTimetable = reverseTimetableDirection(appStates.timetableData.timetable);
+            setTimetableData({ timetable: newTimetable });
+          }}
+        >
+          上り下りを反転
+        </button>
+        <button
+          onClick={() => {
+            if (!confirm('全てクリアしますか？')) {
+              return;
+            }
+
+            setTimetableData({
+              timetable: {
+                stations: [],
+                trainTypes: [],
+                inboundTrains: [],
+                outboundTrains: [],
+              },
+            });
+          }}
+        >
+          全てクリア
         </button>
       </div>
       <div style={{ display: 'flex' }}>

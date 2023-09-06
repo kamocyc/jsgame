@@ -106,7 +106,7 @@ export function cloneTrain(train: Train): Train {
   };
 }
 
-export interface Timetable {
+export interface OutlinedTimetable {
   inboundTrains: Train[];
   outboundTrains: Train[];
   stations: Station[];
@@ -115,7 +115,7 @@ export interface Timetable {
 
 // Timetableを含む全てのデータ
 export interface TimetableData {
-  timetable: Timetable;
+  timetable: OutlinedTimetable;
 }
 
 export interface AppClipboard {

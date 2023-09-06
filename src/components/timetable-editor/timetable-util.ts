@@ -1,10 +1,11 @@
 import {
   DefaultStationDistance,
+  OutlinedTimetable,
   Platform,
   Station,
-  Timetable,
   TimetableData,
   TimetableDirection,
+  Train,
   generateId,
 } from '../../model';
 import './timetable-editor.css';
@@ -48,7 +49,7 @@ export function createNewStation(stationName: string): Station {
 export function getInitialTimetable(): TimetableData {
   const diaStations: Station[] = [createNewStation('東京'), createNewStation('横浜')];
 
-  const timetable: Timetable = {
+  const timetable: OutlinedTimetable = {
     inboundTrains: [
       {
         trainId: generateId(),
@@ -106,4 +107,27 @@ export function getInitialTimetable(): TimetableData {
   };
 
   return { timetable };
+}
+
+export function reverseTimetableDirection(timetable: OutlinedTimetable): OutlinedTimetable {
+  const inboundTrains: Train[] = [];
+  const outboundTrains: Train[] = [];
+  for (const train of timetable.inboundTrains) {
+    outboundTrains.push({
+      ...train,
+      direction: 'Outbound',
+    });
+  }
+  for (const train of timetable.outboundTrains) {
+    inboundTrains.push({
+      ...train,
+      direction: 'Inbound',
+    });
+  }
+  return {
+    inboundTrains,
+    outboundTrains,
+    stations: timetable.stations.slice().reverse(),
+    trainTypes: timetable.trainTypes,
+  };
 }

@@ -135,11 +135,13 @@ interface PlacedTrain {
 
 const TimeActionMode: 'Just' | 'After' = 'After';
 
+export const defaultGlobalTimeSpeed = 5; // 1サイクルで進む秒数
+
 export class TrainMove2 {
   placedTrains: PlacedTrain[] = [];
   timetable: DetailedTimetable;
   readonly trainOccupy = new TrainOccupy();
-  readonly globalTimeSpeed = 10; // 1サイクルで進む秒数
+  readonly globalTimeSpeed = defaultGlobalTimeSpeed;
   readonly maxStationWaitTime = Number.MAX_VALUE;
 
   globalTime = 0;

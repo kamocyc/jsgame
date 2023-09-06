@@ -152,9 +152,13 @@ function placeStation(
   }
 
   // stationを完成させる
-  newStation.defaultOutboundPlatformId = newPlatforms[0].platformId;
-  newStation.defaultInboundPlatformId =
-    newPlatforms.length >= 2 ? newPlatforms[1].platformId : newPlatforms[0].platformId;
+  if (newPlatforms.length === 1) {
+    newStation.defaultOutboundPlatformId = newPlatforms[0].platformId;
+    newStation.defaultInboundPlatformId = newPlatforms[0].platformId;
+  } else {
+    newStation.defaultOutboundPlatformId = newPlatforms[newPlatforms.length / 2 - 1].platformId;
+    newStation.defaultInboundPlatformId = newPlatforms[newPlatforms.length / 2].platformId;
+  }
 
   return [newTracks, newSwitches, newStation];
 }

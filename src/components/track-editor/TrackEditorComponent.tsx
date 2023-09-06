@@ -47,7 +47,7 @@ interface SerializedPlacedTrain {
 
 function saveEditorDataLocalStorage(appStates: AppStates) {
   const buf = toStringEditorData(appStates);
-  localStorage.setItem('mapData', buf);
+  localStorage.setItem('editorData', buf);
 }
 
 function saveEditorDataFile(appStates: AppStates) {

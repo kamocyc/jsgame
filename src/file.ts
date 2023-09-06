@@ -1,4 +1,4 @@
-import { Timetable } from './model';
+import { OutlinedTimetable } from './model';
 import { getEkiJikokus } from './oudParser';
 
 export async function loadUtf8File(event: Event): Promise<string | null> {
@@ -20,7 +20,7 @@ export async function loadUtf8File(event: Event): Promise<string | null> {
 
 type FileType = 'oud' | 'diafreaks';
 
-export async function loadFile(event: Event): Promise<null | Timetable> {
+export async function loadFile(event: Event): Promise<null | OutlinedTimetable> {
   return new Promise((resolve) => {
     const file = (event.target as HTMLInputElement).files![0];
     const reader = new FileReader();

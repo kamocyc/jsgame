@@ -3,7 +3,7 @@ import {
   DetailedTimetable,
   DiaTime,
   Operation,
-  Timetable as OutlinedTimetable,
+  OutlinedTimetable,
   Platform,
   PlatformTimetableItem,
   Station,
@@ -13,7 +13,7 @@ import {
   generateId,
 } from '../../model';
 import { abstractSearch, getDistance, getNextTracks } from '../../trackUtil';
-import { getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove2';
+import { defaultGlobalTimeSpeed, getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove2';
 
 function getStationDistances(platforms: (readonly [Track, Platform])[], stations: Station[]) {
   // 距離を計算する
@@ -51,11 +51,15 @@ function getStationDistances(platforms: (readonly [Track, Platform])[], stations
   return [...stationDistances.values()];
 }
 
-function getInitialDiaTimes(stationDistances: [Station, number][], direction: 'Inbound' | 'Outbound') {
+function getInitialDiaTimes(
+  stationDistances: [Station, number][],
+  direction: 'Inbound' | 'Outbound',
+  offsetTime: number
+) {
   const trainSpeedPixelPerFrame = 10;
-  const timeSpeedSecondPerFrame = 10;
+  const timeSpeedSecondPerFrame = defaultGlobalTimeSpeed;
   const cellLengthPixelPerCell = 30 * 1.5;
-  const coefficient = (trainSpeedPixelPerFrame / timeSpeedSecondPerFrame) * cellLengthPixelPerCell;
+  const coefficient = (cellLengthPixelPerCell * timeSpeedSecondPerFrame) / trainSpeedPixelPerFrame;
   const waitTimePerStation = 15;
 
   const diaTimes: DiaTime[] = [];
@@ -64,9 +68,11 @@ function getInitialDiaTimes(stationDistances: [Station, number][], direction: 'I
     const [station, distance] = stationDistances[i];
     diaTimes.push({
       diaTimeId: generateId(),
-      arrivalTime: i === 0 ? null : distance * coefficient + accumulatedWaitTime,
+      arrivalTime: i === 0 ? null : Math.round(distance * coefficient) + accumulatedWaitTime + offsetTime,
       departureTime:
-        i === stationDistances.length - 1 ? null : distance * coefficient + accumulatedWaitTime + waitTimePerStation,
+        i === stationDistances.length - 1
+          ? null
+          : Math.round(distance * coefficient) + accumulatedWaitTime + waitTimePerStation + offsetTime,
       isPassing: false,
       station: station,
       platform: station.platforms.filter(
@@ -84,22 +90,24 @@ function getInitialDiaTimes(stationDistances: [Station, number][], direction: 'I
 export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable | null {
   const platforms = tracks.filter((t) => t.track.platform != null).map((t) => [t, t.track.platform!] as const);
   const stations = platforms.map(([t, p]) => p.station);
-  // 重複を削除。ただし、順番は保持する
   const uniqueStations = stations.filter((x, i, self) => self.indexOf(x) === i);
   if (uniqueStations.length === 0) {
     return null;
   }
   const stationDistances = getStationDistances(platforms, uniqueStations);
 
+  const offsetTime = 7 * 60 * 60;
+
   const [inboundDiaTimes, outboundDiaTimes] = (() => {
     if (stationDistances === null) {
       return [[], []];
     }
 
-    const inboundDiaTimes = getInitialDiaTimes(stationDistances, 'Inbound');
+    const inboundDiaTimes = getInitialDiaTimes(stationDistances, 'Inbound', offsetTime);
     const outboundDiaTimes = getInitialDiaTimes(
       [...stationDistances].reverse().map(([s, d]) => [s, stationDistances[stationDistances.length - 1][1] - d]),
-      'Outbound'
+      'Outbound',
+      offsetTime
     );
 
     return [inboundDiaTimes, outboundDiaTimes];
@@ -129,29 +137,33 @@ export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable 
   };
 }
 
-function getFirstTrackBetweenPlatforms(tracks: Track[], platform1: Platform, platform2: Platform): Track {
-  const track1 = getTrackOfPlatform(tracks, platform1);
-  const track2 = getTrackOfPlatform(tracks, platform2);
-  if (!track1 || !track2) {
-    throw new Error('Track not found');
-  }
+// function getFirstTrackBetweenPlatforms(tracks: Track[], platform1: Platform, platform2: Platform): Track {
+//   const track1 = getTrackOfPlatform(tracks, platform1);
+//   const track2 = getTrackOfPlatform(tracks, platform2);
+//   if (!track1 || !track2) {
+//     throw new Error('Track not found');
+//   }
 
-  // 最短経路を探索する
-  const result = searchTrackPath(track1, track2);
+//   // 最短経路を探索する
+//   const result = searchTrackPath(track1, track2);
 
-  if (!result) {
-    throw new Error('Route not found');
-  }
+//   if (!result) {
+//     throw new Error('Route not found');
+//   }
 
-  assert(result.length >= 2, 'Route not found');
-  assert(result[0].trackId === track1.trackId, 'result[0].trackId !== track1.trackId');
+//   assert(result.length >= 2, 'Route not found');
+//   assert(result[0].trackId === track1.trackId, 'result[0].trackId !== track1.trackId');
 
-  // 経路の最初のtrackだけはreverseになることがあるので、修正
-  if (!getNextTracks(result[0]).some((track) => track.trackId === result[1].trackId)) {
-    result[0] = result[0].reverseTrack;
-  }
+//   // 経路の最初のtrackだけはreverseになることがあるので、修正
+//   if (!getNextTracks(result[0]).some((track) => track.trackId === result[1].trackId)) {
+//     result[0] = result[0].reverseTrack;
+//   }
 
-  return result[0];
+//   return result[0];
+// }
+
+function toStringFromPlatform(platform: Platform) {
+  return platform.station.stationName + ' ' + platform.platformName;
 }
 
 function toPlatformTTItems(allTrackStations: Station[], tracks: Track[], trains: Train[]): PlatformTimetableItem[] {
@@ -174,15 +186,28 @@ function toPlatformTTItems(allTrackStations: Station[], tracks: Track[], trains:
         }
         const track1 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!);
         const track2 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex + 1].platform!);
-        if (!track1 || !track2) {
-          throw new Error('Track not found');
+        if (!track1) {
+          throw new Error(
+            'track1 が見つかりませんでした (' + toStringFromPlatform(train.diaTimes[diaTimeIndex].platform!) + ')'
+          );
+        }
+        if (!track2) {
+          throw new Error(
+            'track2 が見つかりませんでした (' + toStringFromPlatform(train.diaTimes[diaTimeIndex + 1].platform!) + ')'
+          );
         }
 
         // 最短経路を探索する
         const result = searchTrackPath(track1, track2);
 
         if (!result) {
-          throw new Error('Route not found');
+          throw new Error(
+            '経路が見つかりませんでした (' +
+              toStringFromPlatform(train.diaTimes[diaTimeIndex].platform!) +
+              ' -> ' +
+              toStringFromPlatform(train.diaTimes[diaTimeIndex + 1].platform!) +
+              ')'
+          );
         }
 
         assert(result.length >= 2, 'Route not found');

@@ -1,4 +1,4 @@
-import { DiaTime, Platform, Station, StationOperation, Timetable, Train, TrainType, generateId } from './model';
+import { DiaTime, OutlinedTimetable, Platform, Station, StationOperation, Train, TrainType, generateId } from './model';
 
 // oud形式をjson形式に変換する
 function oudToJson(oudBuf: string): any {
@@ -311,7 +311,7 @@ export function fillMissingTimes(trains: Train[], stations: Station[]): void {
   }
 }
 
-export function getEkiJikokus(oudBuf: string): Timetable {
+export function getEkiJikokus(oudBuf: string): OutlinedTimetable {
   const oudJson = oudToJson(oudBuf);
   const rosen = oudJson['Rosen'][0];
   const stations = convertEkis(rosen['Eki']);

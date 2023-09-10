@@ -72,10 +72,13 @@ export interface TrainType {
 
 export type StationOperation =
   | {
+      // 前列車との接続
       operationType: 'Connection';
     }
   | {
+      // 入出区
       operationType: 'InOut';
+      // とりあえず未使用
       operationTime: number;
       operationCode: string | undefined;
     };

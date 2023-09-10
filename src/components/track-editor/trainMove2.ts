@@ -246,7 +246,7 @@ export class TrainMove2 {
               return;
             }
           } else {
-            // 列車の時刻がそこで最後である。
+            // 列車の時刻がそこで最後であるときをチェック
             const timeIndex = timetableItems[0].train.diaTimes.findIndex(
               (diaTime) =>
                 diaTime.platform?.platformId === placedTrain.track.track.platform!.platformId ||
@@ -339,6 +339,8 @@ export class TrainMove2 {
     }
   }
 
+  // 衝突判定をしたい
+
   toStringGlobalTime(): string {
     const m = Math.floor((this.globalTime / 60) % 60);
     return Math.floor(this.globalTime / 60 / 60) + ':' + (m < 10 ? '0' + m : '' + m);
@@ -354,12 +356,12 @@ export class TrainMove2 {
           ttItem.departureTime !== null &&
           ttItem.arrivalTime <= this.globalTime &&
           ttItem.departureTime >
-            this.globalTime - this.globalTimeSpeed - 15 - 60) /* 始発駅で到着時間が設定されていた場合*/ ||
+            this.globalTime - this.globalTimeSpeed - 15 - 20) /* 始発駅で到着時間が設定されていた場合*/ ||
           (ttItem.departureTime !== null &&
             ttItem.departureTime - 15 /* 到着時間が設定されていない場合は、15秒前には到着しているようにする */ <=
               this.globalTime &&
             ttItem.departureTime >
-              this.globalTime - this.globalTimeSpeed - 15 - 60)) /* 既に到着時間を1分以上過ぎた場合はスキップ */
+              this.globalTime - this.globalTimeSpeed - 15 - 20)) /* 既に到着時間を20sec以上過ぎた場合はスキップ */
     );
 
     for (const ttItem of ttItems) {
@@ -368,15 +370,21 @@ export class TrainMove2 {
         throw new Error('ttItem.track === null');
       }
 
-      this.placedTrains.push({
-        placedTrainId: generateId(),
-        train: ttItem.train,
-        speed: 10,
-        stationWaitTime: 0,
-        stationStatus: 'NotArrived',
-        track: ttItem.track,
-        position: getMidPoint(ttItem.track.begin, ttItem.track.end),
-      });
+      if (
+        this.timetable.operations.filter(
+          (operation) => operation.trains.findIndex((train) => train.trainId === ttItem.train.trainId) > 0
+        ).length === 0
+      ) {
+        this.placedTrains.push({
+          placedTrainId: generateId(),
+          train: ttItem.train,
+          speed: 10,
+          stationWaitTime: 0,
+          stationStatus: 'NotArrived',
+          track: ttItem.track,
+          position: getMidPoint(ttItem.track.begin, ttItem.track.end),
+        });
+      }
     }
   }
 

@@ -12,7 +12,7 @@ import {
   Train,
   TrainType,
 } from '../../model';
-import { createOperations, toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
+import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { TrainMove2 } from '../track-editor/trainMove2';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
@@ -65,11 +65,15 @@ export function TimetableEditorTableComponent({
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div>列車番号</div>
         <div>列車種別</div>
+        <div>始発駅作業</div>
+        <div>終着駅作業</div>
         <StationListComponent
           {...{ diaStations, trains, otherDirectionDiaTrains, setDiaStations, timetableDirection, setSettingData }}
         />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '24px' }}></div>
+        <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
         <TrainListRowHeaderComponent diaStations={diaStations} />
@@ -221,8 +225,6 @@ export function TimetableEditorComponent({
         </div>
         <button
           onClick={() => {
-            createOperations(timetableData.timetable);
-
             const timetable = toDetailedTimetable(
               timetableData.timetable.stations,
               timetableData.timetable,
@@ -245,7 +247,7 @@ export function TimetableEditorComponent({
               ...appStates,
               trainMove: new TrainMove2(timetable),
               detailedTimetable: timetable,
-              trains: trains,
+              trains: trains, // これは使っているのか？
             }));
           }}
         >

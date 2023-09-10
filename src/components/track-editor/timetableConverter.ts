@@ -404,7 +404,7 @@ export function toDetailedTimetable(
     switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
 
-  const operations = createOperations(timetable);
+  const operations = createOperations(timetable.inboundTrains, timetable.outboundTrains);
   return {
     platformTTItems: platformTTItems,
     switchTTItems: switchTTItems,
@@ -412,11 +412,59 @@ export function toDetailedTimetable(
   };
 }
 
-export function createOperations(timetable: OutlinedTimetable): Operation[] {
+export function getReasonOfNotConnected(train1: Train, train2: Train): string[] {
+  const reasons: string[] = [];
+
+  {
+    const lastDiaTime1 = train1.diaTimes[train1.diaTimes.length - 1];
+    const firstDiaTime2 = train2.diaTimes[0];
+
+    if (
+      lastDiaTime1.arrivalTime == null ||
+      firstDiaTime2.departureTime == null ||
+      lastDiaTime1.arrivalTime > firstDiaTime2.departureTime
+    ) {
+      const tmp = train1;
+      train1 = train2;
+      train2 = tmp;
+    }
+  }
+
+  if (train1.diaTimes.length === 0 || train2.diaTimes.length === 0) {
+    reasons.push('時刻表がありません');
+  }
+
+  if (train1.lastStationOperation?.operationType === 'Connection') {
+    reasons.push('train1がconnectionです');
+  }
+
+  if (train2.firstStationOperation?.operationType !== 'Connection') {
+    reasons.push('train2がconnectionではありません');
+  }
+
+  const lastDiaTime1 = train1.diaTimes[train1.diaTimes.length - 1];
+  const firstDiaTime2 = train2.diaTimes[0];
+
+  if (lastDiaTime1.platform == null || firstDiaTime2.platform == null) {
+    reasons.push('番線が設定されていません');
+  } else if (lastDiaTime1.platform.platformId !== firstDiaTime2.platform.platformId) {
+    reasons.push('番線が異なります');
+  }
+
+  if (lastDiaTime1.arrivalTime == null || firstDiaTime2.departureTime == null) {
+    reasons.push('時刻が設定されていません');
+  } else if (lastDiaTime1.arrivalTime > firstDiaTime2.departureTime) {
+    reasons.push('時刻が前後しています');
+  }
+
+  return reasons;
+}
+
+export function createOperations(inboundTrains: Train[], outboundTrains: Train[]): Operation[] {
   const usedTrains = new Set<string>();
   const operations: Operation[] = [];
 
-  const trains = timetable.inboundTrains.concat(timetable.outboundTrains);
+  const trains = inboundTrains.concat(outboundTrains);
   // TODO: とりあえず効率は悪いが毎回全件探索する。改善したい
 
   function getNextTrain(train: Train): Train | null {
@@ -459,10 +507,10 @@ export function createOperations(timetable: OutlinedTimetable): Operation[] {
       continue;
     }
 
-    if (train.firstStationOperation?.operationType === 'InOut') {
+    if (train.firstStationOperation?.operationType !== 'Connection') {
       const operation: Operation = {
         operationId: generateId(),
-        operationCode: train.firstStationOperation.operationCode ?? '',
+        operationCode: train.firstStationOperation?.operationCode ?? generateId(),
         trains: [],
       };
 
@@ -477,7 +525,7 @@ export function createOperations(timetable: OutlinedTimetable): Operation[] {
     }
   }
 
-  console.log(operations);
+  console.log({ operations });
 
   return operations;
 }

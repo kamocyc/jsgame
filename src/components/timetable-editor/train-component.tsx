@@ -5,6 +5,7 @@ import {
   DiaTime,
   Platform,
   Station,
+  StationOperation,
   TimetableDirection,
   Train,
   TrainType,
@@ -181,6 +182,49 @@ function TrainListItemComponent({
   );
 }
 
+export function TrainOperationTypeComponent({
+  stationOperation,
+  setStationOperation,
+}: {
+  stationOperation: StationOperation | undefined;
+  setStationOperation: (stationOperation: StationOperation | undefined) => void;
+}) {
+  return (
+    <>
+      <select
+        onChange={(e) => {
+          const value = (e.target as HTMLSelectElement)?.value;
+          switch (value) {
+            case '':
+              setStationOperation(undefined);
+              break;
+            case 'InOut':
+              setStationOperation({
+                operationType: 'InOut',
+                operationCode: generateId(),
+                operationTime: 0,
+              });
+              break;
+            case 'Connection':
+              setStationOperation({
+                operationType: 'Connection',
+              });
+              break;
+            default:
+              break;
+          }
+        }}
+        value={stationOperation?.operationType ?? ''}
+        style={{ height: 22 + 'px', width: '56px' }}
+      >
+        <option value=''></option>
+        <option value='InOut'>入出区</option>
+        <option value='Connection'>前/次列車接続</option>
+      </select>
+    </>
+  );
+}
+
 export function TrainListComponent({
   trains,
   diaStations,
@@ -244,6 +288,7 @@ export function TrainListComponent({
       {trains.map((train) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ height: '24px', width: '56px' }}>
+            {/* 列車番号 */}
             <EditableTextComponent
               value={train.trainName ?? ''}
               onChange={(value) => {
@@ -260,6 +305,7 @@ export function TrainListComponent({
             />
           </div>
           <div style={{ height: '24px' }}>
+            {/* 列車種別 */}
             <select
               value={train.trainType?.trainTypeId}
               style={{ height: 22 + 'px', width: '56px' }}
@@ -283,7 +329,29 @@ export function TrainListComponent({
               ))}
             </select>
           </div>
+
+          <div style={{ height: '24px' }}>
+            {/* 始発駅作業 */}
+            <TrainOperationTypeComponent
+              stationOperation={train.firstStationOperation}
+              setStationOperation={(stationOperation) => {
+                train.firstStationOperation = stationOperation;
+                setDiaTrains([...trains]);
+              }}
+            />
+          </div>
+          <div style={{ height: '24px' }}>
+            {/* 終着駅作業 */}
+            <TrainOperationTypeComponent
+              stationOperation={train.lastStationOperation}
+              setStationOperation={(stationOperation) => {
+                train.lastStationOperation = stationOperation;
+                setDiaTrains([...trains]);
+              }}
+            />
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + train.trainId}>
+            {/* 時刻リスト */}
             {getDiaTimesOfStations(train, diaStations).map((diaTime) => (
               <TrainListItemComponent {...{ diaTime, trains, setDiaTrains }} />
             ))}

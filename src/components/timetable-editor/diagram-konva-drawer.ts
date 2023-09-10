@@ -1,8 +1,9 @@
 import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
-import { AppClipboard, DiaTime, Point, Station, Train, cloneTrain, generateId } from '../../model';
+import { AppClipboard, DiaTime, Operation, Point, Station, Train, cloneTrain, generateId } from '../../model';
 import { fillMissingTimes } from '../../oudParser';
 import { Polygon, sat } from '../../sat';
+import { createOperations, getReasonOfNotConnected } from '../track-editor/timetableConverter';
 import { toStringFromSeconds } from './common-component';
 import { getDefaultPlatform } from './timetable-util';
 
@@ -465,6 +466,50 @@ function processTrainDragMove(trainSelection: TrainSelection) {
   }
 }
 
+function drawOperations(operations: Operation[]) {
+  const { layer, secondWidth, stationPositions } = diagramState;
+
+  const operationGroup = new Konva.Group();
+  layer.add(operationGroup);
+
+  if (operations.length === 0) return;
+
+  for (const operation of operations) {
+    let prevTrain = operation.trains[0];
+    for (let trainIndex = 1; trainIndex < operation.trains.length; trainIndex++) {
+      let currTrain = operation.trains[trainIndex];
+
+      const prevTrainTimeData_ = createPositionDiaTimeMap(prevTrain.diaTimes, secondWidth, stationPositions);
+      const prevTrainTimeData = prevTrainTimeData_[prevTrainTimeData_.length - 1];
+      const currTrainTimeData = createPositionDiaTimeMap(currTrain.diaTimes, secondWidth, stationPositions)[0];
+
+      const stationIndex = stationPositions.findIndex(
+        (station) => station.station.stationId === currTrain.diaTimes[0].station.stationId
+      );
+      const isTop = stationIndex === 0;
+
+      const line = new Konva.Line({
+        points: [
+          prevTrainTimeData[2][0],
+          prevTrainTimeData[2][1],
+          prevTrainTimeData[2][0],
+          isTop ? prevTrainTimeData[2][1] - 10 : prevTrainTimeData[2][1] + 10,
+          currTrainTimeData[2][0],
+          isTop ? currTrainTimeData[2][1] - 10 : currTrainTimeData[2][1] + 10,
+          currTrainTimeData[2][0],
+          currTrainTimeData[2][1],
+        ],
+        stroke: 'orange',
+        strokeWidth: 1,
+        hitStrokeWidth: hitStrokeWidth,
+      });
+      operationGroup.add(line);
+
+      prevTrain = currTrain;
+    }
+  }
+}
+
 // 列車線（スジ）を描画
 function drawTrain(train: Train) {
   const { layer, secondWidth, stationPositions } = diagramState;
@@ -617,6 +662,9 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps, 
     drawTrain(train);
   }
 
+  const operations = createOperations(props.inboundDiaTrains, props.outboundDiaTrains);
+  drawOperations(operations);
+
   function fitStageIntoParentContainer() {
     const clientWidth = document.documentElement.clientWidth - 30; /* この値はなんとかして設定する */
     container.style.width = clientWidth + 'px';
@@ -728,6 +776,12 @@ export function initializeKonva(container: HTMLDivElement, props: DiagramProps, 
 
       addTrainSelection(trainLine, train);
       console.log(train);
+    }
+
+    if (diagramState.selections.length === 2) {
+      console.log({
+        reason: getReasonOfNotConnected(diagramState.selections[0].train, diagramState.selections[1].train),
+      });
     }
 
     diagramState.dragStartPoint = null;

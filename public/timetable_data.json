@@ -1,0 +1,333 @@
+{
+  "timetableData": {
+    "timetable": {
+      "inboundTrains": [
+        {
+          "trainId": "94314788",
+          "diaTimes": [
+            {
+              "diaTimeId": "94314781",
+              "arrivalTime": null,
+              "departureTime": 25215,
+              "isPassing": false,
+              "station": {
+                "stationId": "94314723",
+                "stationName": "奥沢",
+                "platforms": [
+                  {
+                    "platformId": "94314727",
+                    "platformName": "1",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][0][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "94314731",
+                    "platformName": "2",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][0][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  }
+                ],
+                "defaultOutboundPlatformId": "94314727",
+                "defaultInboundPlatformId": "94314731"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][0][\"station\"][\"platforms\"][0]"
+              }
+            },
+            {
+              "diaTimeId": "94314782",
+              "arrivalTime": 25305,
+              "departureTime": 25320,
+              "isPassing": false,
+              "station": {
+                "stationId": "94314694",
+                "stationName": "洗足",
+                "platforms": [
+                  {
+                    "platformId": "94314698",
+                    "platformName": "1",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][1][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "94314702",
+                    "platformName": "2",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][1][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  }
+                ],
+                "defaultOutboundPlatformId": "94314698",
+                "defaultInboundPlatformId": "94314702"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][1][\"station\"][\"platforms\"][0]"
+              }
+            },
+            {
+              "diaTimeId": "94314783",
+              "arrivalTime": 25388,
+              "departureTime": 25403,
+              "isPassing": false,
+              "station": {
+                "stationId": "93976251",
+                "stationName": "西小山",
+                "platforms": [
+                  {
+                    "platformId": "93976255",
+                    "platformName": "1",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][2][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "93976259",
+                    "platformName": "2",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][2][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  }
+                ],
+                "defaultOutboundPlatformId": "93976255",
+                "defaultInboundPlatformId": "93976259"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][2][\"station\"][\"platforms\"][0]"
+              }
+            },
+            {
+              "diaTimeId": "94314784",
+              "arrivalTime": 25515,
+              "departureTime": 25530,
+              "isPassing": false,
+              "station": {
+                "stationId": "89751595",
+                "stationName": "武蔵小山",
+                "platforms": [
+                  {
+                    "platformId": "89751599",
+                    "platformName": "1",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "89751603",
+                    "platformName": "2",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "89751607",
+                    "platformName": "3",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "89751611",
+                    "platformName": "4",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  }
+                ],
+                "defaultOutboundPlatformId": "89751607",
+                "defaultInboundPlatformId": "89751603"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"][\"platforms\"][1]"
+              }
+            },
+            {
+              "diaTimeId": "94314785",
+              "arrivalTime": 25620,
+              "departureTime": 25635,
+              "isPassing": false,
+              "station": {
+                "stationId": "89751526",
+                "stationName": "不動前",
+                "platforms": [
+                  {
+                    "platformId": "89751530",
+                    "platformName": "1",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][4][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "89751534",
+                    "platformName": "2",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][4][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  }
+                ],
+                "defaultOutboundPlatformId": "89751530",
+                "defaultInboundPlatformId": "89751534"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][4][\"station\"][\"platforms\"][0]"
+              }
+            },
+            {
+              "diaTimeId": "94314786",
+              "arrivalTime": 25725,
+              "departureTime": null,
+              "isPassing": false,
+              "station": {
+                "stationId": "89751457",
+                "stationName": "目黒",
+                "platforms": [
+                  {
+                    "platformId": "89751462",
+                    "platformName": "1",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][5][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  },
+                  {
+                    "platformId": "89751467",
+                    "platformName": "2",
+                    "station": {
+                      "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][5][\"station\"]"
+                    },
+                    "shouldDepart": null
+                  }
+                ],
+                "defaultOutboundPlatformId": "89751462",
+                "defaultInboundPlatformId": "89751467"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][5][\"station\"][\"platforms\"][0]"
+              }
+            }
+          ],
+          "trainName": "Outbound",
+          "trainCode": "",
+          "direction": "Inbound"
+        }
+      ],
+      "outboundTrains": [
+        {
+          "trainId": "94314787",
+          "diaTimes": [
+            {
+              "diaTimeId": "94314775",
+              "arrivalTime": null,
+              "departureTime": 25215,
+              "isPassing": false,
+              "station": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][5][\"station\"]"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][5][\"station\"][\"platforms\"][1]"
+              }
+            },
+            {
+              "diaTimeId": "94314776",
+              "arrivalTime": 25305,
+              "departureTime": 25320,
+              "isPassing": false,
+              "station": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][4][\"station\"]"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][4][\"station\"][\"platforms\"][1]"
+              }
+            },
+            {
+              "diaTimeId": "94314777",
+              "arrivalTime": 25410,
+              "departureTime": 25425,
+              "isPassing": false,
+              "station": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"]"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"][\"platforms\"][2]"
+              }
+            },
+            {
+              "diaTimeId": "94314778",
+              "arrivalTime": 25538,
+              "departureTime": 25553,
+              "isPassing": false,
+              "station": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][2][\"station\"]"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][2][\"station\"][\"platforms\"][1]"
+              }
+            },
+            {
+              "diaTimeId": "94314779",
+              "arrivalTime": 25620,
+              "departureTime": 25635,
+              "isPassing": false,
+              "station": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][1][\"station\"]"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][1][\"station\"][\"platforms\"][1]"
+              }
+            },
+            {
+              "diaTimeId": "94314780",
+              "arrivalTime": 25725,
+              "departureTime": null,
+              "isPassing": false,
+              "station": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][0][\"station\"]"
+              },
+              "platform": {
+                "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][0][\"station\"][\"platforms\"][1]"
+              }
+            }
+          ],
+          "trainName": "Inbound",
+          "trainCode": "",
+          "direction": "Outbound"
+        }
+      ],
+      "stations": [
+        {
+          "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][0][\"station\"]"
+        },
+        {
+          "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][1][\"station\"]"
+        },
+        {
+          "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][2][\"station\"]"
+        },
+        {
+          "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][3][\"station\"]"
+        },
+        {
+          "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][4][\"station\"]"
+        },
+        {
+          "$ref": "$[\"timetableData\"][\"timetable\"][\"inboundTrains\"][0][\"diaTimes\"][5][\"station\"]"
+        }
+      ],
+      "trainTypes": []
+    }
+  }
+}

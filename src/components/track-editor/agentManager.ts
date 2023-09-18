@@ -3,6 +3,7 @@ import { CellHeight, CellWidth, ExtendedGameMap, GameMap, timesVector } from '..
 import { DiaTime, OutlinedTimetable, Point, Station, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { ExtendedCellConstruct } from '../extendedMapModel';
+import { TrainMove2 } from './trainMove2';
 
 export type AgentStatus = 'Idle' | 'Move';
 
@@ -267,6 +268,13 @@ export function SearchPath(
   return [[...determinedIds.values()], path] as const;
 }
 
+function toPoint(cellPoint: CellPoint): Point {
+  return {
+    x: cellPoint.cx * CellWidth,
+    y: cellPoint.cy * CellHeight,
+  };
+}
+
 export class AgentManager {
   agents: Agent[];
 
@@ -274,7 +282,8 @@ export class AgentManager {
     private extendedMap: ExtendedGameMap,
     private stations: Station[],
     private gameMap: GameMap,
-    private timetable: OutlinedTimetable
+    private timetable: OutlinedTimetable,
+    private trainMove: TrainMove2
   ) {
     this.agents = [];
   }
@@ -319,20 +328,45 @@ export class AgentManager {
     } else if (agent.status === 'Move') {
       assert(agent.destination !== null, 'agent.destination is null');
 
-      // 目的地に向かって移動する
-      // セルの左下になっているけど中央とかいずれかに触れたらというほうがいいかも
-      const dx = timesVector(agent.destination.position, CellHeight).x - agent.position.x;
-      const dy = timesVector(agent.destination.position, CellHeight).y - agent.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance < 5) {
-        agent.position = timesVector(agent.destination.position, CellHeight);
+      if (agent.path.length === 0) {
+        // 目的地に到着したら
         agent.destination = null;
         agent.status = 'Idle';
-      } else {
-        agent.position = {
-          x: agent.position.x + (dx / distance) * 5,
-          y: agent.position.y + (dy / distance) * 5,
-        };
+        return;
+      }
+
+      const step = agent.path[0];
+      if (step.stepType === 'station') {
+        // 駅に到着した
+        const diaTime = step.path[1];
+        assert(diaTime.departureTime !== null, 'diaTime.departureTime is null');
+        if (currentTime >= diaTime.departureTime) {
+          // 時刻表の時間を過ぎていたら、対応するtrainを探す
+          // diaTime -> Train -> operations.train
+          const train = this.timetable.inboundTrains.find((train) =>
+            train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId)
+          );
+          assert(train !== undefined, 'train is undefined');
+          const placedTrain = this.trainMove.placedTrains.find((t) => t.train.trainId === train.trainId);
+          assert(placedTrain !== undefined, 'placedTrain is undefined');
+
+          agent.position = { ...placedTrain.position };
+        }
+      } else if (step.stepType === 'walk') {
+        // 歩いている途中
+        const destination = toPoint(step.destination);
+        const dx = destination.x - agent.position.x;
+        const dy = destination.y - agent.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < 5) {
+          agent.position = destination;
+          agent.path.shift();
+        } else {
+          agent.position = {
+            x: agent.position.x + (dx / distance) * 5,
+            y: agent.position.y + (dy / distance) * 5,
+          };
+        }
       }
     }
   }

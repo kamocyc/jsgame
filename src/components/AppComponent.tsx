@@ -92,6 +92,7 @@ export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
   const timetableData = getInitialTimetable();
+  const trainMove = new TrainMove2(timetable);
   return {
     editMode: 'Create',
     detailedTimetable: timetable,
@@ -117,8 +118,8 @@ export function getInitialAppStates(): AppStates {
     mapHeight: defaultMapHeight,
     mapContext: createMapContext(defaultMapWidth, defaultMapHeight),
     extendedMap: extendedMap,
-    trainMove: new TrainMove2(timetable),
-    agentManager: new AgentManager(extendedMap, [], gameMap, timetableData.timetable),
+    trainMove: trainMove,
+    agentManager: new AgentManager(extendedMap, [], gameMap, timetableData.timetable, trainMove),
     switches: [],
     stations: [],
     tracks: [],

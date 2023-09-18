@@ -1,3 +1,5 @@
+import { ExtendedCell } from './components/extendedMapModel';
+import { AgentManager } from './components/track-editor/agentManager';
 import { TrainMove2 } from './components/track-editor/trainMove2';
 import { DetailedTimetable, Point, Station, Switch, TimetableData, Track, Train } from './model';
 
@@ -72,6 +74,7 @@ export interface Cell {
 }
 
 export type GameMap = Cell[][];
+export type ExtendedGameMap = ExtendedCell[][];
 
 export function timesVector(vector: Point, times: number): Point {
   return {
@@ -88,7 +91,7 @@ export function addVector(vector: Point, add: Point): Point {
 
 export type EditorDialogMode = 'StationEditor' | 'SwitchEditor';
 
-export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info';
+export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info' | 'ExtendedMap' | 'Road';
 
 export interface MapContext {
   scale: number;
@@ -117,9 +120,11 @@ export interface AppStates {
   stations: Station[];
   tracks: Track[];
   map: GameMap;
+  extendedMap: ExtendedGameMap;
   mapWidth: number;
   mapHeight: number;
   mapContext: MapContext;
   trainMove: TrainMove2;
+  agentManager: AgentManager;
   message: string | null;
 }

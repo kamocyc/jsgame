@@ -1,12 +1,16 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
+import { removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import { AppStates, Cell, EditMode, createMapContext } from '../../mapEditorModel';
 import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
 import { getInitialAppStates } from '../AppComponent';
+import { ConstructType } from '../extendedMapModel';
+import { toStringFromSeconds } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
+import { SearchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
 
@@ -117,7 +121,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     tracks: tracks,
     trainMove: trainMove,
     detailedTimetable: timetable,
-    stations: stations,
+    stations: removeDuplicates(stations, (s1, s2) => s1.stationId === s2.stationId),
     mapWidth: mapWidth,
     mapHeight: mapHeight,
     timetableData: timetableData,
@@ -144,6 +148,8 @@ export function TrackEditorComponent({
   const [positionPercentage, setPositionPercentage] = useState<number>(0);
   const [numberOfPlatforms, setNumberOfPlatforms] = useState<number>(2);
   const [_, setUpdate_] = useState<never[]>([]);
+  const [constructType, setConstructType] = useState<ConstructType>('House');
+
   const update = () => {
     setUpdate_([]);
     setAppStates((s) => ({ ...s }));
@@ -172,6 +178,7 @@ export function TrackEditorComponent({
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
       appStates.trainMove.tick();
+      appStates.agentManager.tick();
       setPositionPercentage(appStates.trainMove.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
     }, interval);
@@ -180,7 +187,12 @@ export function TrackEditorComponent({
 
   return (
     <>
-      <CanvasComponent appStates={appStates} update={update} numberOfPlatforms={numberOfPlatforms} />
+      <CanvasComponent
+        appStates={appStates}
+        update={update}
+        numberOfPlatforms={numberOfPlatforms}
+        constructType={constructType}
+      />
       <div id='control-div'>
         <div className='dialog'>
           <ModeOptionRadioComponent
@@ -216,6 +228,37 @@ export function TrackEditorComponent({
             mode='Info'
             text='情報を表示'
             checked={appStates.editMode === 'Info'}
+            setEditorMode={setEditMode}
+          />
+          <div
+            style={{
+              border: '1px solid black',
+              display: 'inline-block',
+              padding: '2px',
+            }}
+          >
+            <ModeOptionRadioComponent
+              mode='ExtendedMap'
+              text='建物を作成'
+              checked={appStates.editMode === 'ExtendedMap'}
+              setEditorMode={setEditMode}
+            />
+            <select
+              value={constructType}
+              onChange={(event) => {
+                const value = (event.target as HTMLSelectElement).value;
+                setConstructType(value as ConstructType);
+              }}
+            >
+              <option value='House'>家</option>
+              <option value='Shop'>店</option>
+              <option value='Office'>職場</option>
+            </select>
+          </div>
+          <ModeOptionRadioComponent
+            mode='Road'
+            text='道路'
+            checked={appStates.editMode === 'Road'}
             setEditorMode={setEditMode}
           />
         </div>
@@ -268,6 +311,26 @@ export function TrackEditorComponent({
         }}
       >
         最初から開始
+      </button>
+      <button
+        onClick={() => {
+          (() => {
+            const station1 = appStates.stations[0];
+            const station2 = appStates.stations[3];
+            const startTime = 0;
+            const timetable = appStates.timetableData.timetable;
+            const result = SearchPath(station1, startTime, station2, timetable);
+            console.log({ result });
+            console.log(result[0].map(([station, time]) => station.stationName + ': ' + toStringFromSeconds(time)));
+          })();
+          stopInterval();
+          appStates.agentManager.clear();
+          appStates.agentManager.add({ x: 100, y: 400 });
+          appStates.agentManager.add({ x: 200, y: 400 });
+          startTop(100);
+        }}
+      >
+        agentManagerを開始
       </button>
       <br />
       {/* <button

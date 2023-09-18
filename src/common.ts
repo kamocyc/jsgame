@@ -67,3 +67,13 @@ export function createNewStationWithPlatform({
 
   return newPlatform;
 }
+
+export function removeDuplicates<T>(array: T[], compare: (a: T, b: T) => boolean): T[] {
+  const result: T[] = [];
+  for (const a of array) {
+    if (!result.some((b) => compare(a, b))) {
+      result.push(a);
+    }
+  }
+  return result;
+}

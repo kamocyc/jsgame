@@ -123,7 +123,7 @@ export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track)
   return candidatePatterns[0][1];
 }
 
-interface PlacedTrain {
+export interface PlacedTrain {
   placedTrainId: string; // 車両ID（物理的な車両）
   train: Train; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
   speed: number;

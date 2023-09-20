@@ -1,23 +1,29 @@
 import { assert } from '../../common';
-import { CellHeight, CellWidth, ExtendedGameMap, GameMap, timesVector } from '../../mapEditorModel';
-import { DiaTime, OutlinedTimetable, Point, Station, Track } from '../../model';
+import { CellHeight, CellWidth, ExtendedGameMap, GameMap } from '../../mapEditorModel';
+import { DiaTime, OutlinedTimetable, Point, Station } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
-import { ExtendedCellConstruct } from '../extendedMapModel';
-import { TrainMove2 } from './trainMove2';
+import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
+import { PlacedTrain, TrainMove2 } from './trainMove2';
 
 export type AgentStatus = 'Idle' | 'Move';
 
-interface CellPoint {
-  cx: number;
-  cy: number;
-}
+type StationPathStep = {
+  /**
+   * 次の駅
+   */
+  nextStation: Station;
+  /**
+   * 現在の駅の発車時刻などの情報
+   */
+  diaTime: DiaTime;
+};
 
-type StationPath = [Station, DiaTime][];
+type StationPath = StationPathStep[];
 
 type AgentPath = (
   | {
       stepType: 'station';
-      path: [Station, DiaTime];
+      stationPathStep: StationPathStep;
     }
   | {
       stepType: 'walk';
@@ -33,43 +39,62 @@ export interface Agent {
   status: AgentStatus;
   destination: ExtendedCellConstruct | null;
   path: AgentPath;
+  placedTrain: PlacedTrain | null;
 }
 
 function removeNull<T>(array: (T | null)[]): T[] {
   return array.filter((x) => x !== null) as T[];
 }
 
+type NextStationInfo = {
+  currentStationDiaTime: DiaTime;
+  nextStation: Station;
+  nextStationArrivalTime: number;
+};
+
+/**
+ * 時刻表上での次の駅と、到着時間（探索における距離）を取得する
+ * @param currentStation 始点駅
+ * @param timetable 時刻表
+ * @param currentTime 現在時刻。始点駅の発車時刻はこれ以降である必要がある
+ * @returns
+ */
 function getAdjacentStations(
   currentStation: Station,
   timetable: OutlinedTimetable,
   currentTime: number
-): (readonly [DiaTime, number])[] {
-  // 時刻表上での次の駅と到着時間を取得する
+): NextStationInfo[] {
   const nextStations = removeNull(
-    timetable.inboundTrains.map((train) => {
-      const nextStation = (() => {
+    timetable.inboundTrains.concat(timetable.outboundTrains).map((train) => {
+      const [currentStationDiaTime, nextStationDiaTime] = (() => {
         const i = train.diaTimes.findIndex((diaTime) => diaTime.station.stationId === currentStation.stationId);
         if (i === -1 || i >= train.diaTimes.length - 1) {
-          return null;
+          // 駅を通らない or 最後の駅
+          return [null, null];
         } else {
-          return train.diaTimes[i + 1];
+          return [train.diaTimes[i], train.diaTimes[i + 1]];
         }
       })();
 
-      // 次の駅がない場合はnullを返す
-      if (nextStation === null) {
+      // 次の駅が無い
+      if (currentStationDiaTime === null || nextStationDiaTime === null) {
         return null;
       }
 
-      const nextStationArrivalTime = nextStation.arrivalTime || nextStation.departureTime;
+      const nextStationArrivalTime = nextStationDiaTime.arrivalTime || nextStationDiaTime.departureTime;
       assert(nextStationArrivalTime !== null, 'nextStationArrivalTime is null');
 
-      // 次の駅の到着時間が現在時刻よりも前の場合はnullを返す
-      if (nextStationArrivalTime < currentTime) {
+      // 今の駅の発車時刻が過ぎている
+      assert(currentStationDiaTime.departureTime !== null, 'currentStationDiaTime is null');
+      if (currentStationDiaTime.departureTime < currentTime) {
         return null;
       }
 
-      return [nextStation, nextStationArrivalTime] as const;
+      return {
+        currentStationDiaTime,
+        nextStation: nextStationDiaTime.station,
+        nextStationArrivalTime,
+      };
     })
   );
 
@@ -80,12 +105,13 @@ function getStationPositions(stations: Station[], gameMap: GameMap) {
   const platforms = gameMap
     .map((row) =>
       row
-        .filter((cell) => cell.lineType !== null)
-        .map((cell) => (cell as any).tracks as Track[])
+        .map((cell) => cell.lineType)
+        .filter((lineType) => lineType !== null)
+        .map((lineType) => lineType!.tracks)
         .flat()
     )
     .flat()
-    .filter((track) => track.track.platform !== null);
+    .filter((track) => track?.track?.platform != null);
   const stations_ = stations.map((station) => {
     // ホームは横向きになっている。その一番上と下のセルを取得する
     const stationPlatforms = platforms.filter((p) => p.track.platform!.station.stationId === station.stationId);
@@ -127,10 +153,10 @@ export function createAgentPath(
     };
   }
 
-  function toCellPosition(position: Point): Point {
+  function toCellPosition(position: Point): CellPoint {
     return {
-      x: Math.floor(position.x / CellWidth),
-      y: Math.floor(position.y / CellHeight),
+      cx: Math.floor(position.x / CellWidth),
+      cy: Math.floor(position.y / CellHeight),
     };
   }
 
@@ -148,22 +174,65 @@ export function createAgentPath(
     return nearestStation;
   }
 
+  const agentCellPosition = toCellPosition(agent.position);
+  const agentDestinationCellPosition = agent.destination!.position;
+  // console.log({ agent });
+  // console.log({ agentCellPosition });
+  // console.log({ agentDestinationCellPosition });
+
+  function getWalkOnlyPath() {
+    const path: AgentPath = [
+      {
+        stepType: 'walk',
+        direction: agentCellPosition.cx < agentDestinationCellPosition.cx ? 'right' : 'left',
+        destination: {
+          cx: agentDestinationCellPosition.cx,
+          cy: agentCellPosition.cy,
+        },
+      },
+      {
+        stepType: 'walk',
+        direction: agentCellPosition.cy < agentDestinationCellPosition.cy ? 'down' : 'up',
+        destination: {
+          cx: agentDestinationCellPosition.cx,
+          cy: agentDestinationCellPosition.cy,
+        },
+      },
+    ];
+
+    return path;
+  }
+
+  // 徒歩のみの場合
+  if (stationPositions.length <= 2) {
+    return getWalkOnlyPath();
+  }
+
   const nearestStation = getNearestStation(agent.position);
-  const destinationNearestStation = getNearestStation(agent.destination!.position);
+  const destinationNearestStation = getNearestStation(toPixelPosition(agent.destination!.position));
+  const toC = toPixelPosition;
+
+  // 歩いたほうが近い場合は、徒歩のみのパスを返す
+  if (
+    getDistance(toC(agentCellPosition), toC(agentDestinationCellPosition)) <
+      getDistance(toC(agentCellPosition), nearestStation.bottomPosition) ||
+    getDistance(toC(agentCellPosition), toC(agentDestinationCellPosition)) <
+      getDistance(toC(agentCellPosition), nearestStation.topPosition) ||
+    getDistance(toC(agentCellPosition), toC(agentDestinationCellPosition)) <
+      getDistance(toC(agentDestinationCellPosition), destinationNearestStation.bottomPosition) ||
+    getDistance(toC(agentCellPosition), toC(agentDestinationCellPosition)) <
+      getDistance(toC(agentDestinationCellPosition), destinationNearestStation.topPosition)
+  ) {
+    return getWalkOnlyPath();
+  }
 
   // 横、縦の順で移動する。
   const nearestStationCellPosition = toCellPosition(nearestStation.topPosition);
   const destinationNearestStationCellPosition = toCellPosition(destinationNearestStation.topPosition);
-  console.log({ nearestStation });
-  console.log({ destinationNearestStation });
-  console.log({ nearestStationCellPosition });
-  console.log({ destinationNearestStationCellPosition });
-
-  console.log({ agent });
-  const agentCellPosition = toCellPosition(agent.position);
-  const agentDestinationCellPosition = toCellPosition(agent.destination!.position);
-  console.log({ agentCellPosition });
-  console.log({ agentDestinationCellPosition });
+  // console.log({ nearestStation });
+  // console.log({ destinationNearestStation });
+  // console.log({ nearestStationCellPosition });
+  // console.log({ destinationNearestStationCellPosition });
 
   const stationPath = SearchPath(nearestStation.station, currentTime, destinationNearestStation.station, timetable)[1];
   if (stationPath === null) {
@@ -173,38 +242,38 @@ export function createAgentPath(
   const path: AgentPath = [
     {
       stepType: 'walk',
-      direction: agentCellPosition.x < nearestStationCellPosition.x ? 'right' : 'left',
+      direction: agentCellPosition.cx < nearestStationCellPosition.cx ? 'right' : 'left',
       destination: {
-        cx: nearestStationCellPosition.x,
-        cy: agentCellPosition.y,
+        cx: nearestStationCellPosition.cx,
+        cy: agentCellPosition.cy,
       },
     },
     {
       stepType: 'walk',
-      direction: agentCellPosition.y < nearestStationCellPosition.y ? 'down' : 'up',
+      direction: agentCellPosition.cy < nearestStationCellPosition.cy ? 'down' : 'up',
       destination: {
-        cx: nearestStationCellPosition.x,
-        cy: nearestStationCellPosition.y,
+        cx: nearestStationCellPosition.cx,
+        cy: nearestStationCellPosition.cy,
       },
     },
-    ...stationPath.map((station) => ({
+    ...stationPath.map((stationPathStep) => ({
       stepType: 'station' as const,
-      path: station,
+      stationPathStep,
     })),
     {
       stepType: 'walk',
-      direction: destinationNearestStationCellPosition.y < agentDestinationCellPosition.y ? 'up' : 'down',
+      direction: destinationNearestStationCellPosition.cy < agentDestinationCellPosition.cy ? 'up' : 'down',
       destination: {
-        cx: destinationNearestStationCellPosition.x,
-        cy: agentDestinationCellPosition.y,
+        cx: destinationNearestStationCellPosition.cx,
+        cy: agentDestinationCellPosition.cy,
       },
     },
     {
       stepType: 'walk',
-      direction: destinationNearestStationCellPosition.x < agentDestinationCellPosition.x ? 'left' : 'right',
+      direction: destinationNearestStationCellPosition.cx < agentDestinationCellPosition.cx ? 'left' : 'right',
       destination: {
-        cx: agentDestinationCellPosition.x,
-        cy: agentDestinationCellPosition.y,
+        cx: agentDestinationCellPosition.cx,
+        cy: agentDestinationCellPosition.cy,
       },
     },
   ];
@@ -238,18 +307,21 @@ export function SearchPath(
     stationNodes = stationNodes.filter((node) => node.station.stationId !== nextDetermineNode.station.stationId);
 
     const adjacentStations = getAdjacentStations(nextDetermineNode.station, timetable, currentTime).filter(
-      (node_) => !determinedIds.has(node_[0].station.stationId)
+      (node_) => !determinedIds.has(node_.nextStation.stationId)
     );
 
     for (const adjacentStation of adjacentStations) {
-      const newDistance = adjacentStation[1];
+      const newDistance = adjacentStation.nextStationArrivalTime;
       const adjacentStationNode = stationNodes.find(
-        (node) => node.station.stationId === adjacentStation[0].station.stationId
+        (node) => node.station.stationId === adjacentStation.nextStation.stationId
       );
       assert(adjacentStationNode !== undefined, 'adjacentStationNode is undefined');
       if (newDistance < adjacentStationNode.distance) {
         adjacentStationNode.distance = newDistance;
-        previous[adjacentStationNode.station.stationId] = [nextDetermineNode.station, adjacentStation[0]];
+        previous[adjacentStationNode.station.stationId] = [
+          nextDetermineNode.station,
+          adjacentStation.currentStationDiaTime,
+        ];
       }
     }
   }
@@ -261,7 +333,10 @@ export function SearchPath(
     if (previousNode === undefined) {
       return [[...determinedIds.values()], null] as const;
     }
-    path.unshift([currentNode, previousNode[1]]);
+    path.unshift({
+      nextStation: currentNode,
+      diaTime: previousNode[1],
+    });
     currentNode = previousNode[0];
   }
 
@@ -300,6 +375,7 @@ export class AgentManager {
       status: 'Idle',
       destination: null,
       path: [],
+      placedTrain: null,
     });
   }
 
@@ -307,8 +383,7 @@ export class AgentManager {
     const candidates = this.extendedMap.flatMap((row) =>
       row.filter(
         (cell) =>
-          cell.type === 'Construct' &&
-          getDistance(timesVector(cell.position, CellHeight), agent.position) > CellHeight * 1.4
+          cell.type === 'Construct' && getDistance(toPixelPosition(cell.position), agent.position) > CellHeight * 1.4
       )
     ) as ExtendedCellConstruct[];
     return candidates[Math.floor(Math.random() * candidates.length)];
@@ -337,20 +412,36 @@ export class AgentManager {
 
       const step = agent.path[0];
       if (step.stepType === 'station') {
-        // 駅に到着した
-        const diaTime = step.path[1];
-        assert(diaTime.departureTime !== null, 'diaTime.departureTime is null');
-        if (currentTime >= diaTime.departureTime) {
-          // 時刻表の時間を過ぎていたら、対応するtrainを探す
-          // diaTime -> Train -> operations.train
-          const train = this.timetable.inboundTrains.find((train) =>
-            train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId)
-          );
-          assert(train !== undefined, 'train is undefined');
-          const placedTrain = this.trainMove.placedTrains.find((t) => t.train.trainId === train.trainId);
-          assert(placedTrain !== undefined, 'placedTrain is undefined');
+        // 駅に到着している
+        if (agent.placedTrain === null) {
+          const diaTime = step.stationPathStep.diaTime;
+          assert(diaTime.departureTime !== null, 'diaTime.departureTime is null');
+          if (currentTime >= diaTime.departureTime) {
+            // 時刻表の時間を過ぎたら、対応するtrainを探す
+            // diaTime -> Train -> operations.train
+            const train = this.timetable.inboundTrains
+              .concat(this.timetable.outboundTrains)
+              .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
+            assert(train !== undefined, 'train is undefined');
+            const placedTrain = this.trainMove.placedTrains.find((t) => t.train.trainId === train.trainId);
+            assert(placedTrain !== undefined, 'placedTrain is undefined');
 
-          agent.position = { ...placedTrain.position };
+            agent.placedTrain = placedTrain;
+          }
+        }
+
+        // 電車に乗っている途中
+        if (agent.placedTrain !== null) {
+          agent.position = { ...agent.placedTrain.position };
+
+          // 電車から降りる
+          if (
+            agent.placedTrain.stationStatus === 'Arrived' &&
+            agent.placedTrain.track.track.platform?.station.stationId === step.stationPathStep.nextStation.stationId
+          ) {
+            agent.placedTrain = null;
+            agent.path.shift();
+          }
         }
       } else if (step.stepType === 'walk') {
         // 歩いている途中
@@ -361,6 +452,16 @@ export class AgentManager {
         if (distance < 5) {
           agent.position = destination;
           agent.path.shift();
+
+          // 駅にちょうど到着した
+          if (
+            agent.path.length > 0 &&
+            agent.path[0].stepType === 'station' &&
+            currentTime >= (agent.path[0].stationPathStep.diaTime.departureTime ?? 0)
+          ) {
+            console.error('時間が過ぎている');
+            console.log({ agent });
+          }
         } else {
           agent.position = {
             x: agent.position.x + (dx / distance) * 5,

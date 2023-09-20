@@ -10,7 +10,7 @@ import { toStringFromSeconds } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
-import { SearchPath } from './agentManager';
+import { AgentManager, SearchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
 
@@ -110,9 +110,15 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
   );
 
-  const stations = mapData.flatMap((row) =>
-    row.flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station)).filter((x) => x != null)
-  ) as Station[];
+  const stations = removeDuplicates(
+    mapData.flatMap(
+      (row) =>
+        row
+          .flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station))
+          .filter((x) => x != null) as Station[]
+    ),
+    (s1, s2) => s1.stationId === s2.stationId
+  );
 
   setAppStates((appStates) => ({
     ...appStates,
@@ -121,7 +127,8 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     tracks: tracks,
     trainMove: trainMove,
     detailedTimetable: timetable,
-    stations: removeDuplicates(stations, (s1, s2) => s1.stationId === s2.stationId),
+    stations: stations,
+    agentManager: new AgentManager(appStates.extendedMap, stations, mapData, timetableData.timetable, trainMove),
     mapWidth: mapWidth,
     mapHeight: mapHeight,
     timetableData: timetableData,
@@ -178,7 +185,7 @@ export function TrackEditorComponent({
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
       appStates.trainMove.tick();
-      appStates.agentManager.tick();
+      appStates.agentManager.tick(appStates.trainMove.globalTime);
       setPositionPercentage(appStates.trainMove.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
     }, interval);
@@ -325,7 +332,7 @@ export function TrackEditorComponent({
           })();
           stopInterval();
           appStates.agentManager.clear();
-          appStates.agentManager.add({ x: 100, y: 400 });
+          // appStates.agentManager.add({ x: 100, y: 400 });
           appStates.agentManager.add({ x: 200, y: 400 });
           startTop(100);
         }}

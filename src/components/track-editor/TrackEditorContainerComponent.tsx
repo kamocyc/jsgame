@@ -321,6 +321,62 @@ function rry(y: number, mapContext: MapContext) {
   return y / mapContext.scale - mapContext.offsetY;
 }
 
+function deleteVariousThings(
+  mouseStartCell: Cell,
+  mouseEndCell: Cell,
+  appStates: AppStates,
+  setToast: (message: string) => void
+) {
+  const getPlatformId = (cell1: Cell, cell2: Cell): string | null => {
+    const platformId1 =
+      cell1.lineType?.tracks.map((track) => track.track.platform?.platformId).filter((x) => x != null) ?? [];
+    const platformId2 =
+      cell2.lineType?.tracks.map((track) => track.track.platform?.platformId).filter((x) => x != null) ?? [];
+    if (platformId1.length === 1 && platformId2.length === 1 && platformId1[0] === platformId2[0]) {
+      return platformId1[0] as string;
+    } else {
+      return null;
+    }
+  };
+  const platformId = getPlatformId(mouseStartCell, mouseEndCell);
+  if (platformId !== null) {
+    // 駅の削除
+    const station = appStates.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
+    const result = deleteStation(appStates.map, station);
+    if (result !== true && 'error' in result) {
+      setToast(result.error);
+    } else {
+      appStates.stations.splice(appStates.stations.indexOf(station), 1);
+      appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
+      validateAppState(appStates);
+    }
+    return;
+  }
+
+  if (mouseStartCell.lineType !== null || mouseEndCell.lineType !== null) {
+    // 線路の削除
+    const result = deleteLine(appStates.map, mouseStartCell, mouseEndCell);
+    if ('error' in result) {
+      setToast(result.error);
+    } else {
+      appStates.tracks = getAllTracks(appStates.map);
+      validateAppState(appStates);
+    }
+    return;
+  }
+
+  const extendedCell = appStates.extendedMap[mouseStartCell.position.x][mouseStartCell.position.y];
+  if (extendedCell.type === 'Construct') {
+    appStates.extendedMap[mouseStartCell.position.x][mouseStartCell.position.y] = {
+      position: { ...extendedCell.position },
+      type: 'None',
+    };
+    return;
+  }
+
+  setToast('何も削除できない');
+}
+
 function onmouseup(
   e: MouseEvent,
   appStates: AppStates,
@@ -360,39 +416,7 @@ function onmouseup(
         validateAppState(appStates);
       }
     } else if (mouseDragMode === 'Delete') {
-      const getPlatformId = (cell1: Cell, cell2: Cell): string | null => {
-        const platformId1 =
-          cell1.lineType?.tracks.map((track) => track.track.platform?.platformId).filter((x) => x != null) ?? [];
-        const platformId2 =
-          cell2.lineType?.tracks.map((track) => track.track.platform?.platformId).filter((x) => x != null) ?? [];
-        if (platformId1.length === 1 && platformId2.length === 1 && platformId1[0] === platformId2[0]) {
-          return platformId1[0] as string;
-        } else {
-          return null;
-        }
-      };
-      const platformId = getPlatformId(mouseStartCell, mouseEndCell);
-      if (platformId !== null) {
-        // 駅の削除
-        const station = appStates.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
-        const result = deleteStation(appStates.map, station);
-        if (result !== true && 'error' in result) {
-          setToast(result.error);
-        } else {
-          appStates.stations.splice(appStates.stations.indexOf(station), 1);
-          appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
-          validateAppState(appStates);
-        }
-      } else {
-        // 線路の削除
-        const result = deleteLine(appStates.map, mouseStartCell, mouseEndCell);
-        if ('error' in result) {
-          setToast(result.error);
-        } else {
-          appStates.tracks = getAllTracks(appStates.map);
-          validateAppState(appStates);
-        }
-      }
+      deleteVariousThings(mouseStartCell, mouseEndCell, appStates, setToast);
     } else if (mouseDragMode === 'Road') {
       const result = createRoad(appStates.extendedMap, mouseStartCell, mouseEndCell);
       if (result !== null && 'error' in result) {

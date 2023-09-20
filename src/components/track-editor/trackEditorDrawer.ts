@@ -15,6 +15,14 @@ import {
   timesVector,
 } from '../../mapEditorModel';
 import { Point, Station, Track } from '../../model';
+import { CellPoint } from '../extendedMapModel';
+
+function toCY(cellPoint: CellPoint): Point {
+  return {
+    x: cellPoint.cx,
+    y: cellPoint.cy,
+  };
+}
 
 function rx(x: number, mapContext: MapContext) {
   return (x + mapContext.offsetX) * mapContext.scale;
@@ -326,24 +334,24 @@ export function drawExtendedMap(
         const image = new Image();
         if (extendedCell.bottomRoad || extendedCell.topRoad) {
           image.src = './images/road_v.png';
-          drawCellImage(mapContext, ctx, image, position);
+          drawCellImage(mapContext, ctx, image, toCY(position));
         } else if (extendedCell.leftRoad || extendedCell.rightRoad) {
           image.src = './images/road_h.png';
-          drawCellImage(mapContext, ctx, image, position);
+          drawCellImage(mapContext, ctx, image, toCY(position));
         }
       } else if (extendedCell.type === 'Construct') {
         if (extendedCell.constructType === 'House') {
           const image = new Image();
           image.src = './images/house.png';
-          drawCellImage(mapContext, ctx, image, position);
+          drawCellImage(mapContext, ctx, image, toCY(position));
         } else if (extendedCell.constructType === 'Shop') {
           const image = new Image();
           image.src = './images/shop.png';
-          drawCellImage(mapContext, ctx, image, position);
+          drawCellImage(mapContext, ctx, image, toCY(position));
         } else if (extendedCell.constructType === 'Office') {
           const image = new Image();
           image.src = './images/office.png';
-          drawCellImage(mapContext, ctx, image, position);
+          drawCellImage(mapContext, ctx, image, toCY(position));
         }
       }
     }

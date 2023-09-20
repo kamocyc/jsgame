@@ -31,7 +31,7 @@ function initializeExtendedMap(mapWidth: number, mapHeight: number): ExtendedCel
     map.push([]);
     for (let y = 0; y < mapHeight; y++) {
       map[x].push({
-        position: { x, y },
+        position: { cx: x, cy: y },
         type: 'None',
       });
     }

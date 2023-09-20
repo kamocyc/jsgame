@@ -1,4 +1,5 @@
 import { assert } from '../../common.js';
+import { CellWidth } from '../../mapEditorModel.js';
 import { BranchDirection, DetailedTimetable, Train, generateId } from '../../model';
 import { ArrivalAndDepartureStatus, Point, Switch, Track } from '../../model.js';
 import {
@@ -310,7 +311,7 @@ export class TrainMove2 {
         placedTrain.stationWaitTime = 0;
         placedTrain.stationStatus = 'NotArrived';
 
-        let nextTrack = this.getNextTrack(placedTrain.track, placedTrain);
+        const nextTrack = this.getNextTrack(placedTrain.track, placedTrain);
 
         // trackの終点から行き過ぎた距離を求める
         const distance = getDistance(placedTrain.track.end, placedTrain.position);
@@ -339,11 +340,35 @@ export class TrainMove2 {
     }
   }
 
-  // 衝突判定をしたい
+  // 衝突判定
+  // 専有しているtrackをベースにしても良い気がする。（ただし、クロスの場合だけは交差している判定にすべきだが、交差していないので特別対応が必要）
+  // とはいっても、当たり判定ベースのほうが、融通が聞く？ちゃんとサイズを決めて、交差の判定をしないと
+  // セルの対角線の長さの4分の1未満ならたぶんOK
+  // 座標ベースのほうが実装簡単そうなのでいったん
+  // TODO: 複数が同時に衝突した場合は対応していない。
+  getCollidedTrains(): [PlacedTrain, PlacedTrain] | null {
+    const collisionDistance = CellWidth * Math.SQRT2 / 4;
+    function isColloded(train1: PlacedTrain, train2: PlacedTrain): boolean {
+      if (getDistance(train1.position, train2.position) < collisionDistance) {
+        return true;
+      }
+      return false;
+    }
+    
+    for (let i = 0; i < this.placedTrains.length; i++ ) {
+      for (let j = i + 1; j < this.placedTrains.length; j++) {
+        if (isColloded(this.placedTrains[i], this.placedTrains[j])) {
+          return [this.placedTrains[i], this.placedTrains[j]];
+        }
+      }
+    }
+    
+    return null;
+  }
 
   toStringGlobalTime(): string {
     const m = Math.floor((this.globalTime / 60) % 60);
-    return Math.floor(this.globalTime / 60 / 60) + ':' + (m < 10 ? '0' + m : '' + m);
+    return Math.floor(this.globalTime / 60 / 60).toString() + ':' + (m < 10 ? '0' + m.toString() : '' + m.toString());
   }
 
   // 必要な列車を配置する
@@ -395,6 +420,14 @@ export class TrainMove2 {
     const placedTrains = [...this.placedTrains]; // 一応中で破壊的にremoveするので、コピーを作る
     for (const train of placedTrains) {
       this.moveTrain(train);
+    }
+    
+    const collided = this.getCollidedTrains();
+    if (collided !== null) {
+      const [train1, train2] = collided;
+      console.log(`collide`)
+      console.log(train1)
+      console.log(train2)
     }
 
     this.globalTime += this.globalTimeSpeed;

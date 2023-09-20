@@ -21,12 +21,10 @@ import {
   Train,
   generateId,
 } from '../../model';
-import { getMidPoint } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
-import { TrainMove2 } from './trainMove2';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -78,32 +76,33 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
   }
 }
 
-function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
-  if (!cell.lineType?.tracks[0]) {
-    return false;
-  }
+// function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
+//   if (!cell.lineType?.tracks[0]) {
+//     return false;
+//   }
 
-  const track = cell.lineType?.tracks[0];
-  const position = getMidPoint(track.begin, track.end);
+//   const track = cell.lineType?.tracks[0];
+//   const position = getMidPoint(track.begin, track.end);
 
-  const moveTrain = trainMove.placedTrains.find((train) => train.train.trainId === selectedTrain.trainId);
-  if (moveTrain === undefined) {
-    trainMove.placedTrains.push({
-      train: selectedTrain,
-      speed: 10,
-      stationWaitTime: 0,
-      stationStatus: 'NotArrived',
-      track: cell.lineType?.tracks[0],
-      position: position,
-      placedTrainId: generateId(),
-    });
-  } else {
-    moveTrain.track = cell.lineType?.tracks[0];
-    moveTrain.position = position;
-  }
+//   const moveTrain = trainMove.placedTrains.find((train) => train.train.trainId === selectedTrain.trainId);
+//   if (moveTrain === undefined) {
+//     trainMove.placedTrains.push({
+//       train: selectedTrain,
+//       speed: 10,
+//       stationWaitTime: 0,
+//       stationStatus: 'NotArrived',
+//       track: cell.lineType?.tracks[0],
+//       position: position,
+//       placedTrainId: generateId(),
+//       operation: null,
+//     });
+//   } else {
+//     moveTrain.track = cell.lineType?.tracks[0];
+//     moveTrain.position = position;
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
 function placeStation(
   map: GameMap,
@@ -235,7 +234,8 @@ function onmousedown(
       showInfoPanel(appStates.map[mapPosition.x][mapPosition.y], setEditorDialogMode, setPlatform, setSwitch);
       return;
     } else if (appStates.editMode === 'PlaceTrain') {
-      placeTrain(appStates.map[mapPosition.x][mapPosition.y], appStates.trainMove, selectedTrain);
+      // placeTrain(appStates.map[mapPosition.x][mapPosition.y], appStates.trainMove, selectedTrain);
+      console.log('undefined');
       return;
     } else if (appStates.editMode === 'SetPlatform') {
       setMouseDragMode('SetPlatform');

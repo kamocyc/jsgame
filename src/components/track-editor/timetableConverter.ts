@@ -434,9 +434,9 @@ export function getReasonOfNotConnected(train1: Train, train2: Train): string[] 
     reasons.push('時刻表がありません');
   }
 
-  if (train1.lastStationOperation?.operationType === 'Connection') {
-    reasons.push('train1がconnectionです');
-  }
+  // if (train1.lastStationOperation?.operationType === 'Connection') {
+  //   reasons.push('train1がconnectionです');
+  // }
 
   if (train2.firstStationOperation?.operationType !== 'Connection') {
     reasons.push('train2がconnectionではありません');

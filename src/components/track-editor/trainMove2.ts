@@ -1,6 +1,6 @@
 import { assert } from '../../common.js';
 import { CellWidth } from '../../mapEditorModel.js';
-import { BranchDirection, DetailedTimetable, Train, generateId } from '../../model';
+import { BranchDirection, DetailedTimetable, Operation, Train, generateId } from '../../model';
 import { ArrivalAndDepartureStatus, Point, Switch, Track } from '../../model.js';
 import {
   getDistance,
@@ -127,6 +127,7 @@ export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track)
 export interface PlacedTrain {
   placedTrainId: string; // 車両ID（物理的な車両）
   train: Train; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
+  operation: Operation;
   speed: number;
   track: Track;
   position: Point;
@@ -211,8 +212,10 @@ export class TrainMove2 {
           t.train.trainId === placedTrain.train.trainId
       );
       if (timetableItems.length === 0) {
-        // 時刻が設定されていないときは即座に発車
+        // 時刻が設定されていないときは発車しない
         console.warn('timetableItems.length === 0');
+        placedTrain.stationWaitTime++;
+        return;
       } else {
         if (TimeActionMode === 'Just') {
           const possibleTTItems = timetableItems.filter(
@@ -247,7 +250,7 @@ export class TrainMove2 {
               return;
             }
           } else {
-            // 列車の時刻がそこで最後であるときをチェック
+            // 列車の時刻がそこで最後であるときの処理
             const timeIndex = timetableItems[0].train.diaTimes.findIndex(
               (diaTime) =>
                 diaTime.platform?.platformId === placedTrain.track.track.platform!.platformId ||
@@ -270,7 +273,7 @@ export class TrainMove2 {
 
               if (nextTrain === null) {
                 // 次列車がない => とりあえず何もしないで放置
-                // console.log('nextTrain === null');
+                console.warn('nextTrain === null');
                 return;
               }
 
@@ -347,22 +350,22 @@ export class TrainMove2 {
   // 座標ベースのほうが実装簡単そうなのでいったん
   // TODO: 複数が同時に衝突した場合は対応していない。
   getCollidedTrains(): [PlacedTrain, PlacedTrain] | null {
-    const collisionDistance = CellWidth * Math.SQRT2 / 4;
-    function isColloded(train1: PlacedTrain, train2: PlacedTrain): boolean {
+    const collisionDistance = (CellWidth * Math.SQRT2) / 4;
+    function isCollided(train1: PlacedTrain, train2: PlacedTrain): boolean {
       if (getDistance(train1.position, train2.position) < collisionDistance) {
         return true;
       }
       return false;
     }
-    
-    for (let i = 0; i < this.placedTrains.length; i++ ) {
+
+    for (let i = 0; i < this.placedTrains.length; i++) {
       for (let j = i + 1; j < this.placedTrains.length; j++) {
-        if (isColloded(this.placedTrains[i], this.placedTrains[j])) {
+        if (isCollided(this.placedTrains[i], this.placedTrains[j])) {
           return [this.placedTrains[i], this.placedTrains[j]];
         }
       }
     }
-    
+
     return null;
   }
 
@@ -374,42 +377,44 @@ export class TrainMove2 {
   // 必要な列車を配置する
   private placeTrainFromPlatformTimetable(): void {
     // まだ設置していない列車で、かつ、設置が必要な列車
-    const ttItems = this.timetable.platformTTItems.filter(
-      (ttItem) =>
-        !this.placedTrains.some((placedTrain) => placedTrain.train.trainId === ttItem.train.trainId) &&
-        ((ttItem.arrivalTime !== null &&
+    const operations = this.timetable.operations.filter((operation) => {
+      if (operation.trains.length === 0 || operation.trains[0].diaTimes.length === 0) return;
+      // 設置済みなら除外
+      if (this.placedTrains.some((placeTrain) => placeTrain.operation.operationId === operation.operationId)) return;
+
+      // 時間の条件
+      const ttItem = operation.trains[0].diaTimes[0];
+      return (
+        (ttItem.arrivalTime !== null &&
           ttItem.departureTime !== null &&
           ttItem.arrivalTime <= this.globalTime &&
           ttItem.departureTime >
             this.globalTime - this.globalTimeSpeed - 15 - 20) /* 始発駅で到着時間が設定されていた場合*/ ||
-          (ttItem.departureTime !== null &&
-            ttItem.departureTime - 15 /* 到着時間が設定されていない場合は、15秒前には到着しているようにする */ <=
-              this.globalTime &&
-            ttItem.departureTime >
-              this.globalTime - this.globalTimeSpeed - 15 - 20)) /* 既に到着時間を20sec以上過ぎた場合はスキップ */
-    );
+        (ttItem.departureTime !== null &&
+          ttItem.departureTime - 15 /* 到着時間が設定されていない場合は、15秒前には到着しているようにする */ <=
+            this.globalTime &&
+          ttItem.departureTime > this.globalTime - this.globalTimeSpeed - 15 - 20)
+      ); /* 既に到着時間を20sec以上過ぎた場合はスキップ */
+    });
 
-    for (const ttItem of ttItems) {
-      if (ttItem.track === null) {
-        // trackがnullのときは、ダイヤ上、終着であることを意味するべきであるので、nullになることはありえないはず
-        throw new Error('ttItem.track === null');
-      }
+    for (const operation of operations) {
+      const ttItem = this.timetable.platformTTItems.find(
+        (ttItem) => ttItem.train.trainId === operation.trains[0].trainId
+      );
+      assert(ttItem !== undefined, 'ttItem !== undefined');
+      // trackがnullのときは、ダイヤ上、終着であることを意味するべきであるので、nullになることはありえないはず
+      assert(ttItem.track !== null, 'ttItem.track !== null');
 
-      if (
-        this.timetable.operations.filter(
-          (operation) => operation.trains.findIndex((train) => train.trainId === ttItem.train.trainId) > 0
-        ).length === 0
-      ) {
-        this.placedTrains.push({
-          placedTrainId: generateId(),
-          train: ttItem.train,
-          speed: 10,
-          stationWaitTime: 0,
-          stationStatus: 'NotArrived',
-          track: ttItem.track,
-          position: getMidPoint(ttItem.track.begin, ttItem.track.end),
-        });
-      }
+      this.placedTrains.push({
+        placedTrainId: generateId(),
+        train: operation.trains[0],
+        speed: 10,
+        stationWaitTime: 0,
+        stationStatus: 'NotArrived',
+        track: ttItem.track,
+        position: getMidPoint(ttItem.track.begin, ttItem.track.end),
+        operation: operation,
+      });
     }
   }
 
@@ -421,13 +426,13 @@ export class TrainMove2 {
     for (const train of placedTrains) {
       this.moveTrain(train);
     }
-    
+
     const collided = this.getCollidedTrains();
     if (collided !== null) {
       const [train1, train2] = collided;
-      console.log(`collide`)
-      console.log(train1)
-      console.log(train2)
+      console.log(`collide`);
+      console.log(train1);
+      console.log(train2);
     }
 
     this.globalTime += this.globalTimeSpeed;

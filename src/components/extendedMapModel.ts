@@ -1,6 +1,8 @@
+import { Point } from '../model';
+
 export type CellType = 'Road' | 'Construct';
 
-export type ExtendedCellRoad = {
+export type ExtendedCellRoad = { position: Point } & {
   type: 'Road';
   rightRoad: boolean;
   leftRoad: boolean;
@@ -8,6 +10,15 @@ export type ExtendedCellRoad = {
   bottomRoad: boolean;
 };
 
-export type ExtendedCellConstruct = {
+export type ConstructType = 'House' | 'Shop' | 'Office';
+
+export type ExtendedCellConstruct = { position: Point } & {
   type: 'Construct';
+  constructType: ConstructType;
 };
+
+export type ExtendedCellNone = { position: Point } & {
+  type: 'None';
+};
+
+export type ExtendedCell = ExtendedCellNone | ExtendedCellRoad | ExtendedCellConstruct;

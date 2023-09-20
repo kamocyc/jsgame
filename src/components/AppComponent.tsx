@@ -2,11 +2,13 @@ import { useEffect, useState } from 'preact/hooks';
 import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
 import { DetailedTimetable } from '../model';
 import { Polygon, sat } from '../sat';
+import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
 import { TimetableEditorComponent } from './timetable-editor/timetable-editor-component';
 import { getInitialTimetable } from './timetable-editor/timetable-util';
 import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
+import { AgentManager } from './track-editor/agentManager';
 import { TrainMove2 } from './track-editor/trainMove2';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
@@ -20,6 +22,21 @@ function initializeMap(mapWidth: number, mapHeight: number): GameMap {
       } as Cell);
     }
   }
+  return map;
+}
+
+function initializeExtendedMap(mapWidth: number, mapHeight: number): ExtendedCell[][] {
+  const map: ExtendedCell[][] = [];
+  for (let x = 0; x < mapWidth; x++) {
+    map.push([]);
+    for (let y = 0; y < mapHeight; y++) {
+      map[x].push({
+        position: { x, y },
+        type: 'None',
+      });
+    }
+  }
+
   return map;
 }
 
@@ -72,10 +89,14 @@ function TestComponent() {
 }
 
 export function getInitialAppStates(): AppStates {
+  const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
+  const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
+  const timetableData = getInitialTimetable();
+  const trainMove = new TrainMove2(timetable);
   return {
     editMode: 'Create',
     detailedTimetable: timetable,
-    timetableData: getInitialTimetable(),
+    timetableData: timetableData,
     trains: [
       {
         diaTimes: [],
@@ -92,11 +113,13 @@ export function getInitialAppStates(): AppStates {
         direction: 'Outbound',
       },
     ],
-    map: initializeMap(defaultMapWidth, defaultMapHeight),
+    map: gameMap,
     mapWidth: defaultMapWidth,
     mapHeight: defaultMapHeight,
     mapContext: createMapContext(defaultMapWidth, defaultMapHeight),
-    trainMove: new TrainMove2(timetable),
+    extendedMap: extendedMap,
+    trainMove: trainMove,
+    agentManager: new AgentManager(extendedMap, [], gameMap, timetableData.timetable, trainMove),
     switches: [],
     stations: [],
     tracks: [],

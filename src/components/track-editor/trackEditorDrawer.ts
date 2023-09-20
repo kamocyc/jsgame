@@ -4,6 +4,7 @@ import {
   Cell,
   CellHeight,
   CellWidth,
+  ExtendedGameMap,
   LineType,
   LineTypeBranch,
   LineTypeCurve,
@@ -296,14 +297,70 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
   ctx.strokeStyle = 'black';
 }
 
+function drawCellImage(
+  mapContext: MapContext,
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  position: Point
+) {
+  ctx.drawImage(
+    image,
+    rx(position.x * CellWidth, mapContext),
+    ry(position.y * CellHeight + CellHeight, mapContext),
+    CellWidth * mapContext.scale,
+    CellHeight * mapContext.scale
+  );
+}
+export function drawExtendedMap(
+  mapContext: MapContext,
+  ctx: CanvasRenderingContext2D,
+  mapWidth: number,
+  mapHeight: number,
+  extendedMap: ExtendedGameMap
+) {
+  for (let x = 0; x < mapWidth; x++) {
+    for (let y = 0; y < mapHeight; y++) {
+      const position = extendedMap[x][y].position;
+      const extendedCell = extendedMap[x][y];
+      if (extendedCell.type === 'Road') {
+        const image = new Image();
+        if (extendedCell.bottomRoad || extendedCell.topRoad) {
+          image.src = './images/road_v.png';
+          drawCellImage(mapContext, ctx, image, position);
+        } else if (extendedCell.leftRoad || extendedCell.rightRoad) {
+          image.src = './images/road_h.png';
+          drawCellImage(mapContext, ctx, image, position);
+        }
+      } else if (extendedCell.type === 'Construct') {
+        if (extendedCell.constructType === 'House') {
+          const image = new Image();
+          image.src = './images/house.png';
+          drawCellImage(mapContext, ctx, image, position);
+        } else if (extendedCell.constructType === 'Shop') {
+          const image = new Image();
+          image.src = './images/shop.png';
+          drawCellImage(mapContext, ctx, image, position);
+        } else if (extendedCell.constructType === 'Office') {
+          const image = new Image();
+          image.src = './images/office.png';
+          drawCellImage(mapContext, ctx, image, position);
+        }
+      }
+    }
+  }
+}
+
 export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
-  const { stations, tracks, trainMove, map, mapWidth, mapHeight, mapContext } = appStates;
+  const { stations, tracks, trainMove, map, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates;
 
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
 
   // clear
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // extended Mapを描画
+  drawExtendedMap(mapContext, ctx, mapWidth, mapHeight, extendedMap);
 
   // 罫線を描画
   ctx.strokeStyle = 'rgb(0, 0, 0, 0.2)';
@@ -352,6 +409,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     }
   }
 
+  // 列車を描画
   for (const train of trainMove.placedTrains) {
     const position = train.position;
 
@@ -360,6 +418,22 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     ctx.strokeStyle = 'red';
     ctx.fillStyle = 'red';
     ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 10, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.fill();
+
+    ctx.strokeStyle = 'black';
+    ctx.fillStyle = 'black';
+  }
+
+  // エージェントを描画
+  for (const agent of agentManager.agents) {
+    const position = agent.position;
+
+    // 塗りつぶした円を描画
+    ctx.beginPath();
+    ctx.strokeStyle = 'blue';
+    ctx.fillStyle = 'blue';
+    ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 5, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 

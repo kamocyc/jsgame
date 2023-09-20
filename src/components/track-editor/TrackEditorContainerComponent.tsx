@@ -1,5 +1,15 @@
 import { useState } from 'preact/hooks';
-import { AppStates, Cell, CellHeight, CellWidth, EditorDialogMode, GameMap, MapContext } from '../../mapEditorModel';
+import { deepEqual } from '../../common';
+import {
+  AppStates,
+  Cell,
+  CellHeight,
+  CellWidth,
+  EditorDialogMode,
+  ExtendedGameMap,
+  GameMap,
+  MapContext,
+} from '../../mapEditorModel';
 import {
   DefaultStationDistance,
   DetailedTimetable,
@@ -12,12 +22,13 @@ import {
   generateId,
 } from '../../model';
 import { getMidPoint } from '../../trackUtil';
+import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove2 } from './trainMove2';
 
-type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform';
+type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
 function mouseToMapPosition(
   mousePoint: Point,
@@ -187,11 +198,17 @@ function showInfoPanel(
   }
 }
 
+function createExtendedMapCell(mapCell: ExtendedCell, constructType: ConstructType) {
+  mapCell.type = 'Construct';
+  (mapCell as ExtendedCellConstruct).constructType = constructType;
+}
+
 function onmousedown(
   e: MouseEvent,
   appStates: AppStates,
   selectedTrain: Train,
   numberOfPlatforms: number,
+  constructType: ConstructType,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
   setPlatform: (platform: Platform | null) => void,
   setSwitch: (Switch: Switch | null) => void,
@@ -243,6 +260,11 @@ function onmousedown(
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'Delete') {
       setMouseDragMode('Delete');
+      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    } else if (appStates.editMode === 'ExtendedMap') {
+      createExtendedMapCell(appStates.extendedMap[mapPosition.x][mapPosition.y], constructType);
+    } else if (appStates.editMode === 'Road') {
+      setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
     } else {
       console.error('editModeが不正');
@@ -371,7 +393,15 @@ function onmouseup(
           validateAppState(appStates);
         }
       }
+    } else if (mouseDragMode === 'Road') {
+      const result = createRoad(appStates.extendedMap, mouseStartCell, mouseEndCell);
+      if (result !== null && 'error' in result) {
+        setToast(result.error);
+      } else {
+        validateAppState(appStates);
+      }
     }
+
     drawEditor(appStates);
   }
   drawEditor(appStates);
@@ -442,10 +472,12 @@ export function EditorContainer({
 export function CanvasComponent({
   appStates,
   numberOfPlatforms,
+  constructType,
   update,
 }: {
   appStates: AppStates;
   numberOfPlatforms: number;
+  constructType: ConstructType;
   update: () => void;
 }) {
   const [editorDialogMode, setEditorDialogMode] = useState<EditorDialogMode | null>(null);
@@ -479,6 +511,7 @@ export function CanvasComponent({
             appStates,
             selectedTrain,
             numberOfPlatforms,
+            constructType,
             setEditorDialogMode,
             setPlatform,
             setSwitch,
@@ -530,4 +563,60 @@ export function CanvasComponent({
       </div>
     </>
   );
+}
+
+function createRoad(
+  map: ExtendedGameMap,
+  mouseStartCell: Cell,
+  mouseEndCell: Cell
+): {
+  error: string;
+} | null {
+  if (deepEqual(mouseStartCell.position, mouseEndCell.position)) {
+    return { error: '同じセル' };
+  }
+
+  if (mouseStartCell.position.x === mouseEndCell.position.x) {
+    if (mouseStartCell.position.y > mouseEndCell.position.y) {
+      const tmp = mouseStartCell;
+      mouseStartCell = mouseEndCell;
+      mouseEndCell = tmp;
+    }
+
+    const x = mouseStartCell.position.x;
+    for (let y = mouseStartCell.position.y; y <= mouseEndCell.position.y; y++) {
+      map[x][y].type = 'Road';
+      const cell = map[x][y] as ExtendedCellRoad;
+      if (y !== mouseStartCell.position.y) {
+        cell.topRoad = true;
+      }
+      if (y !== mouseEndCell.position.y) {
+        cell.bottomRoad = true;
+      }
+    }
+
+    return null; // OK
+  } else if (mouseStartCell.position.y === mouseEndCell.position.y) {
+    if (mouseStartCell.position.x > mouseEndCell.position.x) {
+      const tmp = mouseStartCell;
+      mouseStartCell = mouseEndCell;
+      mouseEndCell = tmp;
+    }
+
+    const y = mouseStartCell.position.y;
+    for (let x = mouseStartCell.position.x; x <= mouseEndCell.position.x; x++) {
+      map[x][y].type = 'Road';
+      const cell = map[x][y] as ExtendedCellRoad;
+      if (x !== mouseStartCell.position.x) {
+        cell.leftRoad = true;
+      }
+      if (x !== mouseEndCell.position.x) {
+        cell.rightRoad = true;
+      }
+    }
+
+    return null; // OK
+  } else {
+    return { error: '斜め' };
+  }
 }

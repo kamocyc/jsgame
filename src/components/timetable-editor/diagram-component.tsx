@@ -1,12 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
-import {
-  DiagramProps,
-  copyTrains,
-  deleteTrains,
-  initializeKonva,
-  initializeStationKonva,
-  pasteTrains,
-} from './diagram-konva-drawer';
+import { DiagramProps, copyTrains, deleteTrains, initializeKonva, pasteTrains } from './diagram-konva-drawer';
+import { StationKonvaManager } from './station-konva';
 
 export function KonvaCanvas(props: DiagramProps) {
   const stationCanvasWidth = 100;
@@ -20,8 +14,12 @@ export function KonvaCanvas(props: DiagramProps) {
       if (!stationsCanvas || !mainCanvas) {
         throw new Error('Canvas not found');
       }
-      const stationStage = initializeStationKonva(stationsCanvas as HTMLDivElement, stationCanvasWidth, props);
-      initializeKonva(mainCanvas as HTMLDivElement, props, stationStage);
+      const stationKonvaManager = new StationKonvaManager(
+        stationsCanvas as HTMLDivElement,
+        stationCanvasWidth,
+        props.diaStations
+      );
+      initializeKonva(mainCanvas as HTMLDivElement, props, stationKonvaManager);
     }
   }, [containerRef]);
 
@@ -36,17 +34,19 @@ export function KonvaCanvas(props: DiagramProps) {
         // Ctrl+Cを取得する
         onKeyDown={(e) => {
           if (e.ctrlKey && e.key === 'c') {
+            destroySelections();
             copyTrains(props);
           }
           // delete keyを取得
           if (e.key === 'Delete') {
+            destroySelections();
             deleteTrains(props);
           }
         }}
         // Ctrl+Vを取得する
         onKeyUp={(e) => {
           if (e.ctrlKey && e.key === 'v') {
-            pasteTrains(props);
+            const newTrains = pasteTrains(props);
           }
         }}
         tabIndex={-1}

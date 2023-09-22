@@ -11,6 +11,7 @@ import {
   LineTypeStraight,
   LineTypeTerminal,
   MapContext,
+  RailwayLine,
   addVector,
   timesVector,
 } from '../../mapEditorModel';
@@ -358,6 +359,23 @@ export function drawExtendedMap(
   }
 }
 
+function drawBackground(ctx: CanvasRenderingContext2D, mapContext: MapContext) {
+  // 草の色にする
+  ctx.fillStyle = 'rgb(200, 255, 200)';
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.fillStyle = 'rgb(0, 0, 0)';
+}
+
+function drawTrainLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, railwayLine: RailwayLine) {
+  for (const stop of railwayLine.stops) {
+    for (const path of stop.platformPaths) {
+      ctx.strokeStyle = 'rgb(255, 0, 0)'
+      drawLine(ctx, mapContext, path.begin, path.end);
+      ctx.strokeStyle = 'rgb(0, 0, 0)'
+    }
+  }
+}
+
 export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
   const { stations, tracks, trainMove, map, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates;
 
@@ -366,7 +384,10 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // clear
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+  
+  // 背景色を描画
+  drawBackground(ctx, mapContext);
+  
   // extended Mapを描画
   drawExtendedMap(mapContext, ctx, mapWidth, mapHeight, extendedMap);
 
@@ -380,9 +401,11 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 
   ctx.strokeStyle = 'black';
-
+  
+  // 駅
   drawStations(ctx, mapContext, stations, tracks);
 
+  // マウスがある場所
   if (mouseStartCell !== null) {
     ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
     fillRect(
@@ -408,6 +431,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   if (!map) return;
 
+  // マップを描画
   for (let x = 0; x < mapWidth; x++) {
     for (let y = 0; y < mapHeight; y++) {
       const cell = map[x][y];
@@ -415,6 +439,16 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
         drawLineType(ctx, mapContext, cell.position, cell.lineType);
       }
     }
+  }
+  
+  // 選択中の路線
+  if (appStates.currentRailwayLine != null) {
+    drawTrainLine(ctx, mapContext, appStates.currentRailwayLine);
+  }
+  
+  // 作成した路線
+  for (const railwayLine of appStates.railwayLines) {
+    drawTrainLine(ctx, mapContext, railwayLine);
   }
 
   // 列車を描画

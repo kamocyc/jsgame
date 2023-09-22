@@ -237,6 +237,18 @@ export function TrackEditorComponent({
             checked={appStates.editMode === 'Info'}
             setEditorMode={setEditMode}
           />
+          <ModeOptionRadioComponent
+            mode='LineCreate'
+            text='路線を作成'
+            checked={appStates.editMode === 'LineCreate'}
+            setEditorMode={setEditMode}
+          />
+          <ModeOptionRadioComponent
+            mode='DepotCreate'
+            text='車庫を作成'
+            checked={appStates.editMode === 'DepotCreate'}
+            setEditorMode={setEditMode}
+          />
           <div
             style={{
               border: '1px solid black',

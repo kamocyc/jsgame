@@ -247,7 +247,7 @@ function getTrackOfPlatform(tracks: Track[], platform: Platform): Track | undefi
   );
 }
 
-function searchTrackPath(track1: Track, track2: Track): Track[] | undefined {
+export function searchTrackPath(track1: Track, track2: Track): Track[] | undefined {
   // TODO: nextしか使っていない。=> 直したかな？
   const result = abstractSearch<Track>(
     track1,

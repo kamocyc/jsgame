@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { deepEqual } from '../../common';
+import { assert, deepEqual } from '../../common';
 import {
   AppStates,
   Cell,
@@ -9,6 +9,7 @@ import {
   ExtendedGameMap,
   GameMap,
   MapContext,
+  RailwayLineStop,
 } from '../../mapEditorModel';
 import {
   DefaultStationDistance,
@@ -25,6 +26,7 @@ import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } 
 import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
+import { searchTrackPath } from './timetableConverter';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -104,6 +106,61 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
 //   return true;
 // }
 
+
+function createDepot(
+  map: GameMap,
+  position: Point,
+  mapWidth: number,
+  mapHeight: number,
+  setToast: (message: string) => void
+): [Track, Switch[], Depot] | null {
+  const newTracks: Track[] = [];
+  const newSwitches: Switch[] = [];
+  // const newDepot: Depot[] = [];
+
+  const newDepot: Depot = {
+    depotId: generateId()
+  }
+  
+  position = { x: position.x, y: position.y };
+
+  if (
+    position.x < 0 ||
+    position.x >= mapWidth - 1 ||
+    position.y < 0 ||
+    position.y >= mapHeight-  1
+  ) {
+    setToast('positionが範囲外');
+    return null;
+  }
+  
+  
+    const cell1 = map[position.x][position.y + i];
+    const cell2 = map[position.x + 1][position.y + i];
+    const result = createLine(map, cell1, cell2);
+    if ('error' in result) {
+      setToast(result.error);
+      return null;
+    }
+
+    const [tracks, switches] = result;
+
+    const newPlatform = {
+      platformId: generateId(),
+      platformName: (i + 1).toString(),
+      station: newStation,
+      shouldDepart: null,
+    };
+    tracks[0].track.platform = newPlatform;
+    tracks[0].reverseTrack.track.platform = tracks[0].track.platform;
+
+    newStation.platforms.push(newPlatform);
+
+    newTracks.push(...tracks);
+    newSwitches.push(...switches);
+    newPlatforms.push(newPlatform);
+}
+
 function placeStation(
   map: GameMap,
   position: Point,
@@ -174,6 +231,19 @@ function placeStation(
   return [newTracks, newSwitches, newStation];
 }
 
+function getPlatformOfCell(cell: Cell): Platform | null {
+  if (
+    cell.lineType?.lineClass != null &&
+    cell.lineType?.tracks.length > 0 &&
+    cell.lineType?.tracks[0].track.platform !== null
+  ) {
+    const platform = cell.lineType.tracks[0].track.platform;
+    return platform;
+  }
+  
+  return null;
+}
+
 function showInfoPanel(
   cell: Cell,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
@@ -185,14 +255,13 @@ function showInfoPanel(
 
     setSwitch(Switch);
     setEditorDialogMode('SwitchEditor');
-  } else if (
-    cell.lineType?.lineClass != null &&
-    cell.lineType?.tracks.length > 0 &&
-    cell.lineType?.tracks[0].track.platform !== null
-  ) {
-    const platform = cell.lineType.tracks[0].track.platform;
-
-    setPlatform(platform as Platform);
+    
+    return;
+  }
+  
+  const platform = getPlatformOfCell(cell);
+  if (platform !== null) {
+    setPlatform(platform);
     setEditorDialogMode('StationEditor');
   }
 }
@@ -266,6 +335,19 @@ function onmousedown(
     } else if (appStates.editMode === 'Road') {
       setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    } else if (appStates.editMode === 'LineCreate') {
+      const platform = getPlatformOfCell(appStates.map[mapPosition.x][mapPosition.y]);
+      if (platform === null) {
+        console.error('platformがnull');
+      } else {
+        const error = addPlatformToLine(platform, appStates.map[mapPosition.x][mapPosition.y], appStates);
+        if (error !== null) {
+          setToast(error.error);
+        } else {
+        }
+      }
+    } else if (appStates.editMode === 'DepotCreate') {
+      createDepot()
     } else {
       console.error('editModeが不正');
     }
@@ -644,3 +726,56 @@ function createRoad(
     return { error: '斜め' };
   }
 }
+
+export function commitRailwayLine(appStates: AppStates) {
+  const railwayLine = appStates.currentRailwayLine;
+  if (railwayLine !== null) {
+    appStates.railwayLines.push(railwayLine);
+    appStates.currentRailwayLine = null;
+  }
+}
+
+// まずはTFベースの仕組み。そのうち改良
+// 環状線はとりあえずは無いとする。（片側だけは無い）。駅単位で追加する。駅と駅の間の経路はどうするか。 => いずれか経路があればいいとする。いや、プラットフォーム指定。
+// 「路線」
+// appStates.currentRailwayLine を破壊的に変更する
+export function addPlatformToLine(platform: Platform, cell: Cell, appStates: AppStates): { error: string } | null {
+  const platformTrack = cell?.lineType?.tracks[0]
+  assert(platformTrack != null, 'track != null')
+  
+  if (appStates.currentRailwayLine === null) {
+    const id = generateId();
+    
+    appStates.currentRailwayLine = {
+      railwayLineId: id,
+      railwayLineName: '路線' + id,
+      railwayLineColor: 'black',
+      stops: [{
+        platform: platform,
+        platformPaths: null,
+        platformTrack: platformTrack,
+      }],
+    };
+  } else {
+    const stops = appStates.currentRailwayLine.stops;
+    const pathToNewStop = searchTrackPath(stops[stops.length - 1].platformTrack, platformTrack);
+    if (pathToNewStop == null) {
+      return {
+        error: 'addPlatformToLine (no path)'
+      };
+    }
+    // １つ前のパスを、現在の駅までのパスにする。
+    stops[stops.length - 1].platformPaths = pathToNewStop;
+    
+    // 1周するパスを取得
+    const pathToLoop = searchTrackPath(platformTrack, stops[0].platformTrack);
+    stops.push({
+      platform: platform,
+      platformPaths: pathToLoop ?? null,
+      platformTrack: platformTrack
+    });
+  }
+  
+  return null;
+}
+

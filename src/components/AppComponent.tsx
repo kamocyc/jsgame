@@ -124,6 +124,8 @@ export function getInitialAppStates(): AppStates {
     stations: [],
     tracks: [],
     message: null,
+    currentRailwayLine: null,
+    railwayLines: []
   };
 }
 

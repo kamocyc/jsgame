@@ -368,10 +368,12 @@ function drawBackground(ctx: CanvasRenderingContext2D, mapContext: MapContext) {
 
 function drawTrainLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, railwayLine: RailwayLine) {
   for (const stop of railwayLine.stops) {
-    for (const path of stop.platformPaths) {
-      ctx.strokeStyle = 'rgb(255, 0, 0)'
-      drawLine(ctx, mapContext, path.begin, path.end);
-      ctx.strokeStyle = 'rgb(0, 0, 0)'
+    if (stop.platformPaths !== null) {
+      for (const path of stop.platformPaths) {
+        ctx.strokeStyle = 'rgb(255, 0, 0)';
+        drawLine(ctx, mapContext, path.begin, path.end);
+        ctx.strokeStyle = 'rgb(0, 0, 0)';
+      }
     }
   }
 }
@@ -384,10 +386,10 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // clear
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
   // 背景色を描画
   drawBackground(ctx, mapContext);
-  
+
   // extended Mapを描画
   drawExtendedMap(mapContext, ctx, mapWidth, mapHeight, extendedMap);
 
@@ -401,7 +403,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 
   ctx.strokeStyle = 'black';
-  
+
   // 駅
   drawStations(ctx, mapContext, stations, tracks);
 
@@ -440,12 +442,12 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
       }
     }
   }
-  
+
   // 選択中の路線
   if (appStates.currentRailwayLine != null) {
     drawTrainLine(ctx, mapContext, appStates.currentRailwayLine);
   }
-  
+
   // 作成した路線
   for (const railwayLine of appStates.railwayLines) {
     drawTrainLine(ctx, mapContext, railwayLine);

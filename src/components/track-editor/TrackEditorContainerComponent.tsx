@@ -9,10 +9,10 @@ import {
   ExtendedGameMap,
   GameMap,
   MapContext,
-  RailwayLineStop,
 } from '../../mapEditorModel';
 import {
   DefaultStationDistance,
+  Depot,
   DetailedTimetable,
   Platform,
   Point,
@@ -24,9 +24,9 @@ import {
 } from '../../model';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
+import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
-import { searchTrackPath } from './timetableConverter';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -106,59 +106,45 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
 //   return true;
 // }
 
-
 function createDepot(
   map: GameMap,
   position: Point,
   mapWidth: number,
   mapHeight: number,
   setToast: (message: string) => void
-): [Track, Switch[], Depot] | null {
+): [Track[], Switch[], Depot] | null {
   const newTracks: Track[] = [];
   const newSwitches: Switch[] = [];
   // const newDepot: Depot[] = [];
 
-  const newDepot: Depot = {
-    depotId: generateId()
-  }
-  
   position = { x: position.x, y: position.y };
 
-  if (
-    position.x < 0 ||
-    position.x >= mapWidth - 1 ||
-    position.y < 0 ||
-    position.y >= mapHeight-  1
-  ) {
+  if (position.x < 0 || position.x >= mapWidth - 1 || position.y < 0 || position.y >= mapHeight - 1) {
     setToast('positionが範囲外');
     return null;
   }
-  
-  
-    const cell1 = map[position.x][position.y + i];
-    const cell2 = map[position.x + 1][position.y + i];
-    const result = createLine(map, cell1, cell2);
-    if ('error' in result) {
-      setToast(result.error);
-      return null;
-    }
 
-    const [tracks, switches] = result;
+  const cell1 = map[position.x][position.y];
+  const cell2 = map[position.x + 1][position.y];
+  const result = createLine(map, cell1, cell2);
+  if ('error' in result) {
+    setToast(result.error);
+    return null;
+  }
 
-    const newPlatform = {
-      platformId: generateId(),
-      platformName: (i + 1).toString(),
-      station: newStation,
-      shouldDepart: null,
-    };
-    tracks[0].track.platform = newPlatform;
-    tracks[0].reverseTrack.track.platform = tracks[0].track.platform;
+  const [tracks, switches] = result;
 
-    newStation.platforms.push(newPlatform);
+  const newDepot: Depot = {
+    depotId: generateId(),
+  };
 
-    newTracks.push(...tracks);
-    newSwitches.push(...switches);
-    newPlatforms.push(newPlatform);
+  tracks[0].track.depot = newDepot;
+  tracks[0].reverseTrack.track.depot = tracks[0].track.depot;
+
+  newTracks.push(...tracks);
+  newSwitches.push(...switches);
+
+  return [newTracks, newSwitches, newDepot];
 }
 
 function placeStation(
@@ -240,7 +226,7 @@ function getPlatformOfCell(cell: Cell): Platform | null {
     const platform = cell.lineType.tracks[0].track.platform;
     return platform;
   }
-  
+
   return null;
 }
 
@@ -255,10 +241,10 @@ function showInfoPanel(
 
     setSwitch(Switch);
     setEditorDialogMode('SwitchEditor');
-    
+
     return;
   }
-  
+
   const platform = getPlatformOfCell(cell);
   if (platform !== null) {
     setPlatform(platform);
@@ -347,7 +333,7 @@ function onmousedown(
         }
       }
     } else if (appStates.editMode === 'DepotCreate') {
-      createDepot()
+      createDepot(appStates.map, mapPosition, appStates.mapWidth, appStates.mapHeight, setToast);
     } else {
       console.error('editModeが不正');
     }
@@ -740,42 +726,43 @@ export function commitRailwayLine(appStates: AppStates) {
 // 「路線」
 // appStates.currentRailwayLine を破壊的に変更する
 export function addPlatformToLine(platform: Platform, cell: Cell, appStates: AppStates): { error: string } | null {
-  const platformTrack = cell?.lineType?.tracks[0]
-  assert(platformTrack != null, 'track != null')
-  
+  const platformTrack = cell?.lineType?.tracks[0];
+  assert(platformTrack != null, 'track != null');
+
   if (appStates.currentRailwayLine === null) {
     const id = generateId();
-    
+
     appStates.currentRailwayLine = {
       railwayLineId: id,
       railwayLineName: '路線' + id,
       railwayLineColor: 'black',
-      stops: [{
-        platform: platform,
-        platformPaths: null,
-        platformTrack: platformTrack,
-      }],
+      stops: [
+        {
+          platform: platform,
+          platformPaths: null,
+          platformTrack: platformTrack,
+        },
+      ],
     };
   } else {
     const stops = appStates.currentRailwayLine.stops;
     const pathToNewStop = searchTrackPath(stops[stops.length - 1].platformTrack, platformTrack);
     if (pathToNewStop == null) {
       return {
-        error: 'addPlatformToLine (no path)'
+        error: 'addPlatformToLine (no path)',
       };
     }
     // １つ前のパスを、現在の駅までのパスにする。
     stops[stops.length - 1].platformPaths = pathToNewStop;
-    
+
     // 1周するパスを取得
     const pathToLoop = searchTrackPath(platformTrack, stops[0].platformTrack);
     stops.push({
       platform: platform,
       platformPaths: pathToLoop ?? null,
-      platformTrack: platformTrack
+      platformTrack: platformTrack,
     });
   }
-  
+
   return null;
 }
-

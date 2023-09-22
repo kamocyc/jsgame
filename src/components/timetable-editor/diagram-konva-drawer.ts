@@ -1,66 +1,39 @@
 import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
-import { AppClipboard, DiaTime, Operation, Point, Station, Train, generateId } from '../../model';
+import { DiaTime, Operation, Train, generateId } from '../../model';
 import { fillMissingTimes } from '../../oudParser';
-import { Polygon, sat } from '../../sat';
 import { createOperations, getReasonOfNotConnected } from '../track-editor/timetableConverter';
 import { toStringFromSeconds } from './common-component';
+import {
+  DiagramProps,
+  StationPosition,
+  TrainSelection,
+  diagramState,
+  getOverlappedTrainLines,
+  hitStrokeWidth,
+} from './drawer-util';
 import { StationKonvaManager } from './station-konva';
 import { getDefaultPlatform } from './timetable-util';
 
-export interface DiagramProps {
-  diaStations: Station[];
-  setUpdate: () => void;
-  inboundDiaTrains: Train[];
-  outboundDiaTrains: Train[];
-  clipboard: AppClipboard;
-  setClipboard: (clipboard: AppClipboard) => void;
-}
+const canvasHeight = 600;
+const canvasWidth = 600; // dummy width (will be set by initializeKonva)
+const virtualCanvasHeight = 2000;
+const virtualCanvasWidth = 10000;
 
-const hitStrokeWidth = 10;
-
-let editMode: 'Edit' | 'Create' = 'Edit';
-
-interface StationPosition {
-  station: Station;
-  diagramPosition: number;
-}
-
-interface TrainSelection {
-  shape: Konva.Line;
-  lineGroup: Konva.Group;
-  train: Train;
-}
-interface DiagramState {
-  // props: DiagramProps;
-  // stationCanvasWidth: number;
-  // stationCanvas: HTMLCanvasElement;
-  // mainCanvas: HTMLCanvasElement;
-  layer: Konva.Layer;
-  stationPositions: { station: Station; diagramPosition: number }[];
-  secondWidth: number;
-  // 線を伸ばしている途中の線
-  drawingLine: Konva.Line | null;
-  drawingLineTimes: { station: Station; time: number }[];
-  selections: TrainSelection[];
-  selectionGroup: Konva.Group;
-  dragStartPoint: Point | null;
-  dragRect: Konva.Rect | null;
-}
-
-const diagramState: DiagramState = {
-  drawingLine: null,
-  drawingLineTimes: [],
-  layer: null as any,
-  stationPositions: [],
-  secondWidth: 0,
-  selections: [],
-  selectionGroup: new Konva.Group({
-    draggable: true,
-  }),
-  dragStartPoint: null,
-  dragRect: null,
+export const stagePosition = {
+  x: 0,
+  y: 0,
+  zoom: 0.8,
 };
+
+function positionToTime(position: number, secondWidth: number) {
+  return Math.round(position / secondWidth);
+}
+
+function getPointerPosition(stage: Stage) {
+  const vec = stage.getPointerPosition()!;
+  return { x: (vec.x - stage.x()) / stage.scaleX(), y: (vec.y - stage.y()) / stage.scaleY() };
+}
 
 function drawTimeGrid(layer: Konva.Layer, layerHeight: number, secondWidth: number) {
   const timeGrid = new Konva.Group();
@@ -125,11 +98,7 @@ function drawTimeGrid(layer: Konva.Layer, layerHeight: number, secondWidth: numb
   }
 }
 
-function positionToTime(position: number, secondWidth: number) {
-  return Math.round(position / secondWidth);
-}
-
-function commitDrawingLine(props: DiagramProps): Train | null {
+function commitDrawingLine(props: DiagramProps, layer: Konva.Layer): Train | null {
   if (diagramState.drawingLine === null) {
     return null;
   }
@@ -172,7 +141,7 @@ function commitDrawingLine(props: DiagramProps): Train | null {
     fillMissingTimes(trains, props.diaStations);
 
     props.setUpdate();
-    updateTrains(trains /*, trains[trains.length - 1]*/);
+    updateTrains(layer, [trains[trains.length - 1]]);
 
     diagramState.drawingLineTimes = [];
 
@@ -181,11 +150,6 @@ function commitDrawingLine(props: DiagramProps): Train | null {
 
   diagramState.drawingLineTimes = [];
   return null;
-}
-
-function getPointerPosition(stage: Stage) {
-  const vec = stage.getPointerPosition()!;
-  return { x: (vec.x - stage.x()) / stage.scaleX(), y: (vec.y - stage.y()) / stage.scaleY() };
 }
 
 function drawStationLines(
@@ -221,11 +185,7 @@ function drawStationLines(
 
       if (e.evt.button === 2) {
         // 右クリック
-        const train = commitDrawingLine(props);
-
-        if (train !== null) {
-          drawTrain(train);
-        }
+        commitDrawingLine(props, layer);
         return;
       }
 
@@ -259,7 +219,7 @@ function drawStationLines(
         ) {
           // 既に同じ駅が追加されている。 => 分けないとデータ構造上。。
           // TODO: 直前と同じなら、停車時間、発車時間
-          commitDrawingLine(props);
+          commitDrawingLine(props, layer);
           return;
         }
 
@@ -403,7 +363,7 @@ function addTrainSelection(trainLine: Konva.Line, train: Train) {
       points[index * 2] = e.target.x() + 5;
       trainLine.points(points);
 
-      updateTrains(train);
+      updateTrains(layer, [train]);
 
       e.cancelBubble = true;
     });
@@ -415,6 +375,7 @@ function clickTrainLine(trainLine: Konva.Line, train: Train) {
   addTrainSelection(trainLine, train);
 }
 
+// 列車線をドラッグしたときの処理
 function processTrainDragMove(trainSelection: TrainSelection) {
   const { secondWidth, stationPositions, layer, selectionGroup } = diagramState;
 
@@ -445,7 +406,7 @@ function processTrainDragMove(trainSelection: TrainSelection) {
     diaTimeIndex += 2;
   }
 
-  updateTrains(trains /*, train*/);
+  updateTrains(layer, [train]);
 }
 
 function drawOperations(operations: Operation[]) {
@@ -504,7 +465,7 @@ function drawTrain(train: Train) {
     stroke: train.trainType?.trainTypeColor ?? 'black',
     strokeWidth: 1,
     hitStrokeWidth: 10,
-    name: `trainLine`,
+    name: 'trainLine',
     id: `trainLine-${train.trainId}`,
   });
   layer.add(line);
@@ -524,55 +485,24 @@ function drawTrain(train: Train) {
   return line;
 }
 
-const canvasHeight = 600;
-const canvasWidth = 600; // dummy width (will be set by initializeKonva)
-const virtualCanvasHeight = 2000;
-const virtualCanvasWidth = 10000;
-export const stagePosition = {
-  x: 0,
-  y: 0,
-  zoom: 0.8,
-};
+export function updateTrains(layer: Konva.Layer, trains: Train[]) {
+  // for (const train of trains) {
+  //   const trainLine = layer.findOne(`#trainLine-${train.trainId}`) as Konva.Text;
+  //   if (trainLine !== null) {
+  //     trainLine.destroy();
+  //   }
+  //   drawTrain(train);
+  // }
+}
 
-function areOverlapped(rect: Konva.Rect, trainLine: Konva.Line) {
-  // rectの頂点の配列
-  const width = rect.width() !== 0 ? rect.width() : 0.001;
-  const height = rect.height() !== 0 ? rect.height() : 0.001;
-
-  const rectPoints = [
-    { x: rect.x(), y: rect.y() },
-    { x: rect.x() + width, y: rect.y() },
-    { x: rect.x() + width, y: rect.y() + height },
-    { x: rect.x(), y: rect.y() + height },
-  ];
-  const rectPolygon = new Polygon(rectPoints);
-
-  const segments = [];
-  let previousPoint = { x: trainLine.points()[0] + trainLine.x(), y: trainLine.points()[1] + trainLine.y() };
-  for (let i = 2; i < trainLine.points().length; i += 2) {
-    const currentPoint = { x: trainLine.points()[i] + trainLine.x(), y: trainLine.points()[i + 1] + trainLine.y() };
-    segments.push([previousPoint, currentPoint]);
-    previousPoint = currentPoint;
-  }
-
-  for (const segment of segments) {
-    const overlapped = sat(rectPolygon, new Polygon(segment));
-    if (overlapped) {
-      return true;
+export function updateDeleteTrains(layer: Konva.Layer, trains: Train[]) {
+  for (const train of trains) {
+    const trainLine = layer.findOne(`#trainLine-${train.trainId}`) as Konva.Text;
+    if (trainLine !== null) {
+      trainLine.destroy();
     }
   }
-
-  return false;
 }
-
-function getOverlappedTrainLines(rect: Konva.Rect) {
-  const { layer } = diagramState;
-  const trainLines: Konva.Line[] = layer.find('.trainLine');
-  const overlappedTrainLines = trainLines.filter((trainLine) => areOverlapped(rect, trainLine as Konva.Line));
-  return overlappedTrainLines;
-}
-
-function updateTrains() {}
 
 export function initializeKonva(
   container: HTMLDivElement,
@@ -716,11 +646,7 @@ export function initializeKonva(
   stage.on('click', function (e) {
     if (e.evt.button === 2) {
       // 右クリック
-      const train = commitDrawingLine(props);
-
-      if (train !== null) {
-        drawTrain(train);
-      }
+      commitDrawingLine(props, layer);
       return;
     }
   });
@@ -809,7 +735,7 @@ function destroySelection(selection: TrainSelection) {
   selection.lineGroup.destroy();
 }
 
-function destroySelections(selections: TrainSelection[]) {
+export function destroySelections(selections: TrainSelection[]) {
   for (const selection of selections) {
     destroySelection(selection);
   }

@@ -134,6 +134,7 @@ export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable 
       },
     ],
     trainTypes: [],
+    operations: [],
   };
 }
 

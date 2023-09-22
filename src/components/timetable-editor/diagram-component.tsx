@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
-import { DiagramProps, copyTrains, deleteTrains, initializeKonva, pasteTrains } from './diagram-konva-drawer';
+import { copyTrains, deleteTrains, pasteTrains } from './diagram-core';
+import { destroySelections, initializeKonva, updateDeleteTrains, updateTrains } from './diagram-konva-drawer';
+import { DiagramProps, diagramState } from './drawer-util';
 import { StationKonvaManager } from './station-konva';
 
 export function KonvaCanvas(props: DiagramProps) {
@@ -34,19 +36,25 @@ export function KonvaCanvas(props: DiagramProps) {
         // Ctrl+Cを取得する
         onKeyDown={(e) => {
           if (e.ctrlKey && e.key === 'c') {
-            destroySelections();
-            copyTrains(props);
+            destroySelections(diagramState.selections);
+            copyTrains(
+              props,
+              diagramState.selections.map((s) => s.train)
+            );
           }
           // delete keyを取得
           if (e.key === 'Delete') {
-            destroySelections();
-            deleteTrains(props);
+            destroySelections(diagramState.selections);
+            const trains = diagramState.selections.map((s) => s.train);
+            deleteTrains(props, trains);
+            updateDeleteTrains(diagramState.layer, trains);
           }
         }}
         // Ctrl+Vを取得する
         onKeyUp={(e) => {
           if (e.ctrlKey && e.key === 'v') {
             const newTrains = pasteTrains(props);
+            updateTrains(diagramState.layer, newTrains);
           }
         }}
         tabIndex={-1}

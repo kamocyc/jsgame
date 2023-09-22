@@ -114,6 +114,7 @@ export interface OutlinedTimetable {
   outboundTrains: Train[];
   stations: Station[];
   trainTypes: TrainType[];
+  operations: Operation[];
 }
 
 // Timetableを含む全てのデータ

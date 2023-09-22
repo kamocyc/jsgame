@@ -1,5 +1,5 @@
 import { Train, cloneTrain } from '../../model';
-import { DiagramProps } from './diagram-konva-drawer';
+import { DiagramProps } from './drawer-util';
 
 export function copyTrains(props: DiagramProps, selectedTrains: Train[]) {
   const trains = [];

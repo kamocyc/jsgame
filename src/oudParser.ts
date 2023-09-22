@@ -1,3 +1,4 @@
+import { createOperations } from './components/track-editor/timetableConverter';
 import { DiaTime, OutlinedTimetable, Platform, Station, StationOperation, Train, TrainType, generateId } from './model';
 
 // oud形式をjson形式に変換する
@@ -321,13 +322,16 @@ export function getEkiJikokus(oudBuf: string): OutlinedTimetable {
   const trains = convertRessyas(ressyas, stations, trainTypes);
   fillMissingTimes(trains, stations);
 
+  const inboundTrains = trains.filter((t) => t.houkou === 'Nobori');
+  const outboundTrains = trains.filter((t) => t.houkou === 'Kudari');
   return {
     trainTypes,
-    inboundTrains: trains.filter((t) => t.houkou === 'Nobori'),
-    outboundTrains: trains.filter((t) => t.houkou === 'Kudari'),
+    inboundTrains,
+    outboundTrains,
     stations: stations
       .map((station, index) => [station, index] as const)
       .sort((a, b) => b[1] - a[1])
       .map(([station, _]) => station), // stationは逆順にする
+    operations: createOperations(inboundTrains, outboundTrains),
   };
 }

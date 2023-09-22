@@ -364,6 +364,7 @@ export function TimetableEditorComponent({
                     diaStations={timetableData.timetable.stations}
                     inboundDiaTrains={timetableData.timetable.inboundTrains}
                     outboundDiaTrains={timetableData.timetable.outboundTrains}
+                    operations={timetableData.timetable.operations}
                     setUpdate={() => {
                       setTimetableData({ ...timetableData });
                     }}

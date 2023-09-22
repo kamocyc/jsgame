@@ -9,6 +9,7 @@ import {
   TrainType,
   generateId,
 } from '../../model';
+import { createOperations } from '../track-editor/timetableConverter';
 import './timetable-editor.css';
 
 export function getDefaultPlatform(diaStation: Station, direction: TimetableDirection): Platform {
@@ -119,6 +120,7 @@ export function getInitialTimetable(): TimetableData {
     ],
     stations: diaStations,
     trainTypes: getInitialTrainTypes(),
+    operations: [],
   };
 
   return { timetable };
@@ -144,5 +146,6 @@ export function reverseTimetableDirection(timetable: OutlinedTimetable): Outline
     outboundTrains,
     stations: timetable.stations.slice().reverse(),
     trainTypes: timetable.trainTypes,
+    operations: createOperations(inboundTrains, outboundTrains),
   };
 }

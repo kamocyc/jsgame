@@ -1,7 +1,7 @@
 import { ExtendedCell } from './components/extendedMapModel';
 import { AgentManager } from './components/track-editor/agentManager';
 import { TrainMove2 } from './components/track-editor/trainMove2';
-import { DetailedTimetable, Station, Point, Platform, Switch, TimetableData, Track, Train } from './model';
+import { DetailedTimetable, Platform, Point, Station, Switch, TimetableData, Track, Train } from './model';
 
 export const CellWidth = 30;
 export const CellHeight = 30;
@@ -91,7 +91,17 @@ export function addVector(vector: Point, add: Point): Point {
 
 export type EditorDialogMode = 'StationEditor' | 'SwitchEditor';
 
-export type EditMode = 'Create' | 'Delete' | 'PlaceTrain' | 'SetPlatform' | 'Station' | 'Info' | 'ExtendedMap' | 'Road' | 'LineCreate' | 'DepotCreate';
+export type EditMode =
+  | 'Create'
+  | 'Delete'
+  | 'PlaceTrain'
+  | 'SetPlatform'
+  | 'Station'
+  | 'Info'
+  | 'ExtendedMap'
+  | 'Road'
+  | 'LineCreate'
+  | 'DepotCreate';
 
 export interface MapContext {
   scale: number;

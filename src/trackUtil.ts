@@ -1,6 +1,6 @@
 import { MinPriorityQueue } from '@datastructures-js/priority-queue';
 import { assert, deepEqual } from './common.js';
-import { Platform, Point, Switch, Track, TrackProperty, generateId } from './model.js';
+import { Point, Switch, Track, TrackProperty, generateId } from './model.js';
 import { Queue } from './queue.js';
 
 interface TrackWip {
@@ -95,7 +95,6 @@ export function createNewTrack(
   _end: Point,
   nextTracks: Track[],
   prevTracks: Track[],
-  station: Platform | null,
   explicitNextSwitch?: Switch,
   explicitPrevSwitch?: Switch
 ): [Track, Track, Switch[]] {
@@ -111,7 +110,8 @@ export function createNewTrack(
     nextSwitch: _nextSwitch,
     prevSwitch: _prevSwitch,
     track: {
-      platform: station,
+      platform: null,
+      depot: null,
     },
   });
 
@@ -343,6 +343,56 @@ export function getOccupyingTracks(track: Track): Track[] {
   const forwardTracks = getOccupyingTracksSub(track);
   const backwardTracks = getOccupyingTracksSub(track.reverseTrack);
   return forwardTracks.concat(backwardTracks);
+}
+
+function isInLine(lineStart: Point, lineEnd: Point, targetPoint: Point): boolean {
+  // targetPointから線分に下した垂線との交点が、線分の始点と終点の間にあるかどうかを判定する
+  const a = lineStart.y - lineEnd.y;
+  const b = lineEnd.x - lineStart.x;
+  const c = lineStart.x * lineEnd.y - lineEnd.x * lineStart.y;
+
+  const k = (a * targetPoint.x + b * targetPoint.y + c) / (a * a + b * b);
+  const intersectionPoint = { x: targetPoint.x - a * k, y: targetPoint.y - b * k };
+
+  const minX = Math.min(lineStart.x, lineEnd.x);
+  const maxX = Math.max(lineStart.x, lineEnd.x);
+  const minY = Math.min(lineStart.y, lineEnd.y);
+  const maxY = Math.max(lineStart.y, lineEnd.y);
+
+  return (
+    minX <= intersectionPoint.x &&
+    intersectionPoint.x <= maxX &&
+    minY <= intersectionPoint.y &&
+    intersectionPoint.y <= maxY
+  );
+}
+
+function getLineDistance(lineStart: Point, lineEnd: Point, targetPoint: Point): number {
+  const a = lineStart.y - lineEnd.y;
+  const b = lineEnd.x - lineStart.x;
+  const c = lineStart.x * lineEnd.y - lineEnd.x * lineStart.y;
+
+  const distance = Math.abs(a * targetPoint.x + b * targetPoint.y + c) / Math.sqrt(a * a + b * b);
+  return distance;
+}
+
+// 点と線分の交差判定
+export function isHitLine(point: Point, points: number[], mapTotalHeight: number, hitStrokeWidth: number): boolean {
+  point = { ...point };
+  point.y = mapTotalHeight - point.y;
+  let hitFlag = false;
+  for (let i = 0; i <= points.length - 4; i += 2) {
+    const lineStart = { x: points[i], y: points[i + 1] };
+    const lineEnd = { x: points[i + 2], y: points[i + 3] };
+    if (isInLine(lineStart, lineEnd, point)) {
+      const distance = getLineDistance(lineStart, lineEnd, point);
+      if (distance < hitStrokeWidth / 2) {
+        hitFlag = true;
+        break;
+      }
+    }
+  }
+  return hitFlag;
 }
 
 // export function searchTrack(startTrack: HalfTrack, stationId: number): [HalfTrack[] | undefined, Map<number, NodeWithDistance<HalfTrack>>] {

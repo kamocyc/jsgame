@@ -16,6 +16,7 @@ import {
   timesVector,
 } from '../../mapEditorModel';
 import { Point, Station, Track } from '../../model';
+import { getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
 
 function toCY(cellPoint: CellPoint): Point {
@@ -446,6 +447,15 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   // 選択中の路線
   if (appStates.currentRailwayLine != null) {
     drawTrainLine(ctx, mapContext, appStates.currentRailwayLine);
+
+    for (const stop of appStates.currentRailwayLine.stops) {
+      const midPoint = getMidPoint(stop.platformTrack.begin, stop.platformTrack.end);
+
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = 'orange';
+      ctx.fillText('●', rx(midPoint.x - 8, mapContext), ry(midPoint.y, mapContext));
+      ctx.fillStyle = 'black';
+    }
   }
 
   // 作成した路線

@@ -336,8 +336,7 @@ function createTrackOnAdjacentCells(
     _begin,
     _end,
     nextTracks.map((t) => t.reverseTrack),
-    prevTracks,
-    null
+    prevTracks
   );
   const beginTrack = deepEqual(newTrack1.end, _begin) ? newTrack1 : newTrack2;
   const endTrack = deepEqual(newTrack1.end, _begin) ? newTrack2 : newTrack1;

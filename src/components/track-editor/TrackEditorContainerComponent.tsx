@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { assert, deepEqual } from '../../common';
+import { deepEqual } from '../../common';
 import {
   AppStates,
   Cell,
@@ -22,6 +22,7 @@ import {
   Train,
   generateId,
 } from '../../model';
+import { isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
 import { searchTrackPath } from './timetableConverter';
@@ -217,38 +218,48 @@ function placeStation(
   return [newTracks, newSwitches, newStation];
 }
 
-function getPlatformOfCell(cell: Cell): Platform | null {
-  if (
-    cell.lineType?.lineClass != null &&
-    cell.lineType?.tracks.length > 0 &&
-    cell.lineType?.tracks[0].track.platform !== null
-  ) {
-    const platform = cell.lineType.tracks[0].track.platform;
-    return platform;
+function getPlatformOfCell(mapTotalHeight: number, cell: Cell, mousePoint: Point): [Track, Platform] | null {
+  const hitStrokeWidth = CellWidth / 2;
+  if (cell.lineType?.lineClass != null && cell.lineType?.tracks.length > 0) {
+    const tracks = cell.lineType?.tracks;
+    for (const track of tracks) {
+      if (track.track.platform == null) continue;
+
+      const isHit = isHitLine(
+        mousePoint,
+        [track.begin.x, track.begin.y, track.end.x, track.end.y],
+        mapTotalHeight,
+        hitStrokeWidth
+      );
+      if (isHit) {
+        return [track, track.track.platform];
+      }
+    }
   }
 
   return null;
 }
 
 function showInfoPanel(
+  mapTotalHeight: number,
   cell: Cell,
+  mousePoint: Point,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
   setPlatform: (platform: Platform | null) => void,
   setSwitch: (Switch: Switch | null) => void
 ) {
-  if (cell.lineType?.lineClass === 'Branch') {
-    const Switch = cell.lineType.switch;
-
-    setSwitch(Switch);
-    setEditorDialogMode('SwitchEditor');
-
+  const trackAndPlatform = getPlatformOfCell(mapTotalHeight, cell, mousePoint);
+  if (trackAndPlatform !== null) {
+    setPlatform(trackAndPlatform[1]);
+    setEditorDialogMode('StationEditor');
     return;
   }
 
-  const platform = getPlatformOfCell(cell);
-  if (platform !== null) {
-    setPlatform(platform);
-    setEditorDialogMode('StationEditor');
+  if (cell.lineType?.lineClass === 'Branch') {
+    const Switch = cell.lineType.switch;
+    setSwitch(Switch);
+    setEditorDialogMode('SwitchEditor');
+    return;
   }
 }
 
@@ -286,7 +297,14 @@ function onmousedown(
   const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
   if (mapPosition != null) {
     if (appStates.editMode === 'Info') {
-      showInfoPanel(appStates.map[mapPosition.x][mapPosition.y], setEditorDialogMode, setPlatform, setSwitch);
+      showInfoPanel(
+        appStates.mapContext.mapTotalHeight,
+        appStates.map[mapPosition.x][mapPosition.y],
+        { x, y },
+        setEditorDialogMode,
+        setPlatform,
+        setSwitch
+      );
       return;
     } else if (appStates.editMode === 'PlaceTrain') {
       // placeTrain(appStates.map[mapPosition.x][mapPosition.y], appStates.trainMove, selectedTrain);
@@ -322,11 +340,20 @@ function onmousedown(
       setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'LineCreate') {
-      const platform = getPlatformOfCell(appStates.map[mapPosition.x][mapPosition.y]);
-      if (platform === null) {
+      const trackAndPlatform = getPlatformOfCell(
+        appStates.mapContext.mapTotalHeight,
+        appStates.map[mapPosition.x][mapPosition.y],
+        { x, y }
+      );
+      if (trackAndPlatform === null) {
         console.error('platformがnull');
       } else {
-        const error = addPlatformToLine(platform, appStates.map[mapPosition.x][mapPosition.y], appStates);
+        const error = addPlatformToLine(
+          trackAndPlatform[0],
+          trackAndPlatform[1],
+          appStates.map[mapPosition.x][mapPosition.y],
+          appStates
+        );
         if (error !== null) {
           setToast(error.error);
         } else {
@@ -725,10 +752,12 @@ export function commitRailwayLine(appStates: AppStates) {
 // 環状線はとりあえずは無いとする。（片側だけは無い）。駅単位で追加する。駅と駅の間の経路はどうするか。 => いずれか経路があればいいとする。いや、プラットフォーム指定。
 // 「路線」
 // appStates.currentRailwayLine を破壊的に変更する
-export function addPlatformToLine(platform: Platform, cell: Cell, appStates: AppStates): { error: string } | null {
-  const platformTrack = cell?.lineType?.tracks[0];
-  assert(platformTrack != null, 'track != null');
-
+export function addPlatformToLine(
+  platformTrack: Track,
+  platform: Platform,
+  cell: Cell,
+  appStates: AppStates
+): { error: string } | null {
   if (appStates.currentRailwayLine === null) {
     const id = generateId();
 

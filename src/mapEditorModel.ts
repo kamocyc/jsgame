@@ -4,8 +4,8 @@ import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
 import { TrainMove2 } from './components/track-editor/trainMove2';
 import { DetailedTimetable, Platform, Point, Station, Switch, TimetableData, Track, Train } from './model';
 
-export const CellWidth = 30;
-export const CellHeight = 30;
+export const CellWidth = 32;
+export const CellHeight = 32;
 
 export interface LineType {
   lineClass: 'Straight' | 'Curve' | 'Branch' | 'Terminal';
@@ -117,8 +117,8 @@ export function createMapContext(mapWidth: number, mapHeight: number): MapContex
     scale: 1,
     offsetX: 0,
     offsetY: 0,
-    mapTotalWidth: mapWidth * 30,
-    mapTotalHeight: mapHeight * 30,
+    mapTotalWidth: mapWidth * CellWidth,
+    mapTotalHeight: mapHeight * CellHeight,
   };
 }
 

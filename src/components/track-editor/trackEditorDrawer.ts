@@ -5,6 +5,7 @@ import {
   CellHeight,
   CellWidth,
   ExtendedGameMap,
+  LineDirection,
   LineType,
   LineTypeBranch,
   LineTypeCurve,
@@ -16,8 +17,9 @@ import {
   timesVector,
 } from '../../mapEditorModel';
 import { Point, Station, Track } from '../../model';
-import { getMidPoint } from '../../trackUtil';
+import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
+import { PlacedTrain } from './trainMove2';
 
 function toCY(cellPoint: CellPoint): Point {
   return {
@@ -54,6 +56,132 @@ function drawLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, begin: 
   ctx.stroke();
 }
 
+function drawStraightSub(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  begin: Point,
+  end: Point,
+  lineDirection: LineDirection,
+  isBeginCurve: boolean = false,
+  isEndCurve: boolean = false
+) {
+  // ここらへんの値は1セルの大きさに依存するので、CellWidthを使うほうがいいけど、とりあえず固定値で
+  switch (lineDirection) {
+    case 'Horizontal':
+      ctx.lineWidth = 4 * mapContext.scale;
+      // 枕木
+      ctx.strokeStyle = 'rgb(145, 145, 145)';
+      for (let i = 0; i < getDistance(begin, end) / 8; i++) {
+        drawLine(
+          ctx,
+          mapContext,
+          { x: begin.x + i * 8 + 4, y: begin.y + 12 },
+          { x: begin.x + i * 8 + 4, y: begin.y - 12 }
+        );
+      }
+
+      // 線路
+      ctx.strokeStyle = 'rgb(89, 47, 24)';
+      drawLine(ctx, mapContext, { ...begin, y: begin.y + 8 }, { ...end, y: end.y + 8 });
+      drawLine(ctx, mapContext, { ...begin, y: begin.y - 8 }, { ...end, y: end.y - 8 });
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1;
+      break;
+    case 'Vertical':
+      ctx.lineWidth = 4 * mapContext.scale;
+      // 枕木
+      ctx.strokeStyle = 'rgb(145, 145, 145)';
+      for (let i = 0; i < getDistance(begin, end) / 8; i++) {
+        drawLine(
+          ctx,
+          mapContext,
+          { x: begin.x - 12, y: begin.y + i * 8 + 2 },
+          { x: begin.x + 12, y: begin.y + i * 8 + 2 }
+        );
+      }
+
+      // 線路
+      ctx.strokeStyle = 'rgb(89, 47, 24)';
+      drawLine(ctx, mapContext, { ...begin, x: begin.x + 8 }, { ...end, x: end.x + 8 });
+      drawLine(ctx, mapContext, { ...begin, x: begin.x - 8 }, { ...end, x: end.x - 8 });
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1;
+      break;
+    case 'TopBottom':
+      // 枕木
+      ctx.lineWidth = 4 * mapContext.scale;
+      ctx.strokeStyle = 'rgb(145, 145, 145)';
+      for (let i = 0; i < getDistance(begin, end) / 9; i++) {
+        drawLine(
+          ctx,
+          mapContext,
+          { x: begin.x + i * 5 - 7 + 2, y: begin.y - i * 5 - 7 - 2 },
+          { x: begin.x + i * 5 + 7 + 2, y: begin.y - i * 5 + 7 - 2 }
+        );
+      }
+
+      ctx.lineWidth = 3 * mapContext.scale;
+      // 線路
+      ctx.strokeStyle = 'rgb(89, 47, 24)';
+      const begin1 = isBeginCurve ? { x: begin.x - 1, y: begin.y - 7 } : { x: begin.x - 4, y: begin.y - 4 };
+      const end1 = { x: end.x - 4, y: end.y - 4 };
+      const begin2 = isBeginCurve ? { x: begin.x - 1, y: begin.y + 9 } : { x: begin.x + 4, y: begin.y + 4 };
+      const end2 = { x: end.x + 4, y: end.y + 4 };
+      drawLine(ctx, mapContext, begin1, end1);
+      drawLine(ctx, mapContext, begin2, end2);
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1;
+      break;
+    case 'BottomTop':
+      if (Math.random() < 0.5) {
+        ctx.lineWidth = 3 * mapContext.scale;
+
+        // 線路
+        ctx.strokeStyle = 'rgb(89, 47, 24)';
+        drawLine(ctx, mapContext, { x: begin.x - 4, y: begin.y + 4 }, { x: end.x - 4, y: end.y + 4 });
+        drawLine(ctx, mapContext, { x: begin.x + 4, y: begin.y - 4 }, { x: end.x + 4, y: end.y - 4 });
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+      } else {
+        const center = getMidPoint(begin, end);
+        const straightTypeToImage = {
+          Horizontal: './images/rail_s_0.png',
+          Vertical: './images/rail_s_90.png',
+          BottomTop: './images/rail_s_45.png',
+          TopBottom: './images/rail_s_135.png',
+        };
+        const image = new Image();
+        image.src = straightTypeToImage[lineDirection];
+        ctx.drawImage(
+          image,
+          rx(center.x - image.width / 2, mapContext),
+          ry(center.y + image.height / 2, mapContext),
+          image.width * mapContext.scale,
+          image.height * mapContext.scale
+        );
+      }
+      break;
+  }
+}
+
+// } else {
+//   const center = getMidPoint(begin, end);
+//   const straightTypeToImage = {
+//     Horizontal: './images/rail_s_0.png',
+//     Vertical: './images/rail_s_90.png',
+//     BottomTop: './images/rail_s_45.png',
+//     TopBottom: './images/rail_s_135.png',
+//   };
+//   const image = new Image();
+//   image.src = straightTypeToImage[lineType.straightType];
+//   ctx.drawImage(
+//     image,
+//     rx(center.x - image.width / 2, mapContext),
+//     ry(center.y + image.height / 2, mapContext),
+//     image.width * mapContext.scale,
+//     image.height * mapContext.scale
+//   );
+// }
 function drawStraight(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
@@ -83,8 +211,28 @@ function drawStraight(
     timesVector(straightType.end, CellWidth / 2)
   );
 
-  ctx.strokeStyle = 'green';
-  drawLine(ctx, mapContext, begin, end);
+  // ctx.strokeStyle = 'green';
+  // drawLine(ctx, mapContext, begin, end);
+
+  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType);
+
+  // const center = getMidPoint(begin, end);
+  // const straightTypeToImage = {
+  //   Horizontal: './images/rail_s_0.png',
+  //   Vertical: './images/rail_s_90.png',
+  //   BottomTop: './images/rail_s_45.png',
+  //   TopBottom: './images/rail_s_135.png',
+  // };
+  // const image = new Image();
+  // image.src = straightTypeToImage[lineType.straightType];
+  // ctx.drawImage(
+  //   image,
+  //   rx(center.x - image.width / 2, mapContext),
+  //   ry(center.y + image.height / 2, mapContext),
+  //   image.width * mapContext.scale,
+  //   image.height * mapContext.scale
+  // );
+
   ctx.strokeStyle = 'black';
 }
 
@@ -141,6 +289,10 @@ function drawCurve(ctx: CanvasRenderingContext2D, mapContext: MapContext, positi
 
   // カーブはとりあえず色は赤にする
   ctx.strokeStyle = 'red';
+
+  drawStraightSub(ctx, mapContext, begin, center, 'Horizontal');
+  drawStraightSub(ctx, mapContext, center, end, 'TopBottom', true, false);
+
   drawLine(ctx, mapContext, begin, center);
   drawLine(ctx, mapContext, center, end);
   ctx.strokeStyle = 'black';
@@ -239,10 +391,22 @@ function drawBranch(ctx: CanvasRenderingContext2D, mapContext: MapContext, posit
   const end1 = addVector(center, timesVector(curveType.end1, CellWidth / 2));
   const end2 = addVector(center, timesVector(curveType.end2, CellWidth / 2));
 
-  ctx.strokeStyle = 'blue';
-  drawLine(ctx, mapContext, begin, end1);
-  drawLine(ctx, mapContext, center, end2);
-  ctx.strokeStyle = 'black';
+  if (lineType.branchType === 'BottomTop_Right') {
+    const image = new Image();
+    image.src = './images/rail_s_45 - コピー.png';
+    ctx.drawImage(
+      image,
+      rx(center.x - image.width / 2, mapContext),
+      ry(center.y + image.height / 2, mapContext),
+      image.width * mapContext.scale,
+      image.height * mapContext.scale
+    );
+  } else {
+    ctx.strokeStyle = 'blue';
+    drawLine(ctx, mapContext, begin, end1);
+    drawLine(ctx, mapContext, center, end2);
+    ctx.strokeStyle = 'black';
+  }
 }
 
 function drawLineType(ctx: CanvasRenderingContext2D, mapContext: MapContext, position: Point, lineType: LineType) {
@@ -321,6 +485,7 @@ function drawCellImage(
     CellHeight * mapContext.scale
   );
 }
+
 export function drawExtendedMap(
   mapContext: MapContext,
   ctx: CanvasRenderingContext2D,
@@ -465,18 +630,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // 列車を描画
   for (const train of trainMove.placedTrains) {
-    const position = train.position;
-
-    // 塗りつぶした円を描画
-    ctx.beginPath();
-    ctx.strokeStyle = 'red';
-    ctx.fillStyle = 'red';
-    ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 10, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.fill();
-
-    ctx.strokeStyle = 'black';
-    ctx.fillStyle = 'black';
+    drawTrain(ctx, mapContext, train);
   }
 
   // エージェントを描画
@@ -488,6 +642,32 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     ctx.strokeStyle = 'blue';
     ctx.fillStyle = 'blue';
     ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 5, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.fill();
+
+    ctx.strokeStyle = 'black';
+    ctx.fillStyle = 'black';
+  }
+}
+function drawTrain(ctx: CanvasRenderingContext2D, mapContext: MapContext, train: PlacedTrain) {
+  const position = train.position;
+
+  if (true) {
+    const image = new Image();
+    image.src = './images/train.png';
+    ctx.drawImage(
+      image,
+      rx(position.x - image.width / 2, mapContext),
+      ry(position.y + image.height / 2, mapContext),
+      image.width * mapContext.scale,
+      image.height * mapContext.scale
+    );
+  } else {
+    // 塗りつぶした円を描画
+    ctx.beginPath();
+    ctx.strokeStyle = 'red';
+    ctx.fillStyle = 'red';
+    ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 10, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.fill();
 

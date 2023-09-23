@@ -1,4 +1,5 @@
 import { assert } from '../../common';
+import { CellHeight } from '../../mapEditorModel';
 import {
   DetailedTimetable,
   DiaTime,
@@ -59,7 +60,7 @@ function getInitialDiaTimes(
 ) {
   const trainSpeedPixelPerFrame = 10;
   const timeSpeedSecondPerFrame = defaultGlobalTimeSpeed;
-  const cellLengthPixelPerCell = 30 * 1.5;
+  const cellLengthPixelPerCell = CellHeight * 1.5;
   const coefficient = (cellLengthPixelPerCell * timeSpeedSecondPerFrame) / trainSpeedPixelPerFrame;
   const waitTimePerStation = 15;
 

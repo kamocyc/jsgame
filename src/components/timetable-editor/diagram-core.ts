@@ -18,11 +18,11 @@ export function deleteTrains(props: DiagramProps, selectedTrains: Train[]) {
     const train = selection;
     if (train.direction === 'Inbound') {
       // 破壊的に削除する
-      const index = props.inboundDiaTrains.findIndex((t) => t.trainId === train.trainId);
-      if (index >= 0) props.inboundDiaTrains.splice(index, 1);
+      const index = props.inboundTrains.findIndex((t) => t.trainId === train.trainId);
+      if (index >= 0) props.inboundTrains.splice(index, 1);
     } else {
-      const index = props.outboundDiaTrains.findIndex((t) => t.trainId === train.trainId);
-      if (index >= 0) props.outboundDiaTrains.splice(index, 1);
+      const index = props.outboundTrains.findIndex((t) => t.trainId === train.trainId);
+      if (index >= 0) props.outboundTrains.splice(index, 1);
     }
   }
 
@@ -39,9 +39,9 @@ export function pasteTrains(props: DiagramProps): Train[] {
       if (diaTime.departureTime != null) diaTime.departureTime += 2 * 60;
     }
     if (train.direction === 'Inbound') {
-      props.inboundDiaTrains.push(train);
+      props.inboundTrains.push(train);
     } else {
-      props.outboundDiaTrains.push(train);
+      props.outboundTrains.push(train);
     }
     newTrains.push(train);
     // selectedTrains.push(train);

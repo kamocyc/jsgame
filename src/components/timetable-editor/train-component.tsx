@@ -17,21 +17,21 @@ import { getDefaultPlatform } from './timetable-util';
 
 function TrainContextMenuComponent({
   trains,
-  setDiaTrains,
+  setTrains,
   contextData,
   setContextData,
   clipboard,
   setClipboard,
-  selectedDiaTrain,
+  selectedTrain,
 }: {
   trains: Train[];
-  setDiaTrains: (trains: Train[]) => void;
+  setTrains: (trains: Train[]) => void;
   contextData: ContextData;
 
   setContextData: (contextData: ContextData) => void;
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;
-  selectedDiaTrain: Train | null;
+  selectedTrain: Train | null;
 }) {
   return (
     <ContextMenuComponent
@@ -41,10 +41,10 @@ function TrainContextMenuComponent({
         {
           label: '列車を削除',
           onClick: () => {
-            const index = trains.findIndex((train) => train.trainId === selectedDiaTrain?.trainId);
+            const index = trains.findIndex((train) => train.trainId === selectedTrain?.trainId);
             if (index >= 0) {
               trains.splice(index, 1);
-              setDiaTrains([...trains]);
+              setTrains([...trains]);
               setContextData({ ...contextData, visible: false });
             }
           },
@@ -52,11 +52,11 @@ function TrainContextMenuComponent({
         {
           label: '列車をコピー',
           onClick: () => {
-            const index = trains.findIndex((train) => train.trainId === selectedDiaTrain?.trainId);
-            if (selectedDiaTrain != null && index >= 0) {
-              const newDiaTrain: Train = cloneTrain(selectedDiaTrain);
-              newDiaTrain.trainId = generateId();
-              setClipboard({ trains: [newDiaTrain], originalTrains: [selectedDiaTrain] });
+            const index = trains.findIndex((train) => train.trainId === selectedTrain?.trainId);
+            if (selectedTrain != null && index >= 0) {
+              const newTrain: Train = cloneTrain(selectedTrain);
+              newTrain.trainId = generateId();
+              setClipboard({ trains: [newTrain], originalTrains: [selectedTrain] });
             }
             setContextData({ ...contextData, visible: false });
           },
@@ -65,16 +65,16 @@ function TrainContextMenuComponent({
           label: '列車を貼り付け',
           onClick: () => {
             if (clipboard.trains.length > 0) {
-              const newDiaTrains = clipboard.trains;
+              const newTrains = clipboard.trains;
 
               // 現在のdiaTrainの直前に挿入
-              const index = trains.findIndex((train) => train.trainId === selectedDiaTrain?.trainId);
+              const index = trains.findIndex((train) => train.trainId === selectedTrain?.trainId);
               if (index >= 0) {
-                trains.splice(index, 0, ...newDiaTrains);
+                trains.splice(index, 0, ...newTrains);
               } else {
-                trains.push(...newDiaTrains);
+                trains.push(...newTrains);
               }
-              setDiaTrains([...trains]);
+              setTrains([...trains]);
               setContextData({ ...contextData, visible: false });
             }
           },
@@ -122,11 +122,11 @@ export function PlatformComponent({
 function TrainListItemComponent({
   diaTime,
   trains,
-  setDiaTrains,
+  setTrains,
 }: {
   diaTime: DiaTime;
   trains: Train[];
-  setDiaTrains: (trains: Train[]) => void;
+  setTrains: (trains: Train[]) => void;
 }) {
   return (
     <div
@@ -149,7 +149,7 @@ function TrainListItemComponent({
         }}
         onClick={() => {
           diaTime.isPassing = !diaTime.isPassing;
-          setDiaTrains([...trains]);
+          setTrains([...trains]);
         }}
       >
         レ
@@ -159,7 +159,7 @@ function TrainListItemComponent({
           time={diaTime.arrivalTime}
           setTime={(time) => {
             diaTime.arrivalTime = time;
-            setDiaTrains([...trains]);
+            setTrains([...trains]);
           }}
         />
         <PlatformComponent
@@ -167,14 +167,14 @@ function TrainListItemComponent({
           allDiaPlatforms={diaTime.station.platforms}
           setDiaPlatform={(diaPlatform) => {
             diaTime.platform = diaPlatform;
-            setDiaTrains([...trains]);
+            setTrains([...trains]);
           }}
         />
         <TimeInputComponent
           time={diaTime.departureTime}
           setTime={(time) => {
             diaTime.departureTime = time;
-            setDiaTrains([...trains]);
+            setTrains([...trains]);
           }}
         />
       </div>
@@ -229,7 +229,7 @@ export function TrainListComponent({
   trains,
   diaStations,
   timetableDirection,
-  setDiaTrains,
+  setTrains,
   trainTypes,
   clipboard,
   setClipboard,
@@ -237,7 +237,7 @@ export function TrainListComponent({
   trains: Train[];
   diaStations: Station[];
   timetableDirection: TimetableDirection;
-  setDiaTrains: (trains: Train[]) => void;
+  setTrains: (trains: Train[]) => void;
   trainTypes: TrainType[];
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;
@@ -247,7 +247,7 @@ export function TrainListComponent({
     posX: 0,
     posY: 0,
   });
-  const [selectedDiaTrain, setSelectedDiaTrain] = useState<Train | null>(null);
+  const [selectedTrain, setSelectedTrain] = useState<Train | null>(null);
 
   function getDiaTimesOfStations(train: Train, diaStations: Station[]): DiaTime[] {
     return diaStations.map((diaStation) => {
@@ -264,7 +264,7 @@ export function TrainListComponent({
     <div
       style={{ display: 'flex' }}
       onContextMenu={(e) => {
-        const targetDiaTrain = (() => {
+        const targetTrain = (() => {
           for (const train of trains) {
             const id = 'dia-train-block-' + train.trainId;
             const elem = document.getElementById(id);
@@ -275,15 +275,15 @@ export function TrainListComponent({
           return null;
         })();
 
-        if (targetDiaTrain) {
+        if (targetTrain) {
           e.preventDefault();
           setContextData({ visible: true, posX: e.clientX, posY: e.clientY });
-          setSelectedDiaTrain(targetDiaTrain);
+          setSelectedTrain(targetTrain);
         }
       }}
     >
       <TrainContextMenuComponent
-        {...{ contextData, trains, setDiaTrains, setContextData, clipboard, setClipboard, selectedDiaTrain }}
+        {...{ contextData, trains, setTrains, setContextData, clipboard, setClipboard, selectedTrain }}
       />
       {trains.map((train) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -297,7 +297,7 @@ export function TrainListComponent({
                 } else {
                   train.trainName = value;
                 }
-                setDiaTrains([...trains]);
+                setTrains([...trains]);
                 return true;
               }}
               height={24}
@@ -319,7 +319,7 @@ export function TrainListComponent({
                   } else {
                     train.trainType = undefined;
                   }
-                  setDiaTrains([...trains]);
+                  setTrains([...trains]);
                 }
               }}
             >
@@ -336,7 +336,7 @@ export function TrainListComponent({
               stationOperation={train.firstStationOperation}
               setStationOperation={(stationOperation) => {
                 train.firstStationOperation = stationOperation;
-                setDiaTrains([...trains]);
+                setTrains([...trains]);
               }}
             />
           </div>
@@ -346,14 +346,14 @@ export function TrainListComponent({
               stationOperation={train.lastStationOperation}
               setStationOperation={(stationOperation) => {
                 train.lastStationOperation = stationOperation;
-                setDiaTrains([...trains]);
+                setTrains([...trains]);
               }}
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + train.trainId}>
             {/* 時刻リスト */}
             {getDiaTimesOfStations(train, diaStations).map((diaTime) => (
-              <TrainListItemComponent {...{ diaTime, trains, setDiaTrains }} />
+              <TrainListItemComponent {...{ diaTime, trains, setTrains }} />
             ))}
           </div>
         </div>
@@ -375,7 +375,7 @@ export function TrainListComponent({
               trainCode: '',
               direction: timetableDirection,
             });
-            setDiaTrains([...trains]);
+            setTrains([...trains]);
           }}
         >
           列車を追加

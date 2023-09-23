@@ -2,10 +2,10 @@ import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
-import { AppStates, Cell, EditMode, createMapContext } from '../../mapEditorModel';
+import { AppStates, Cell, CellHeight, EditMode, createMapContext, timesVector } from '../../mapEditorModel';
 import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
 import { getInitialAppStates } from '../AppComponent';
-import { ConstructType } from '../extendedMapModel';
+import { ConstructType, ExtendedCellConstruct } from '../extendedMapModel';
 import { toStringFromSeconds } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { SeekBarComponent } from './SeekBarComponent';
@@ -144,6 +144,28 @@ function loadEditorDataLocalStorage(setAppStates: StateUpdater<AppStates>) {
   loadEditorDataBuf(data, setAppStates);
 }
 
+function addAgents(appStates: AppStates) {
+  // 目的地に到着したら消す
+  const agents = [...appStates.agentManager.agents];
+  for (const agent of agents) {
+    if (agent.inDestination) {
+      appStates.agentManager.remove(agent);
+    }
+  }
+
+  // 追加
+  const houses = appStates.extendedMap
+    .map((row) => row.filter((cell) => cell.type === 'Construct' && cell.constructType === 'House'))
+    .flat() as ExtendedCellConstruct[];
+  const agentManager = appStates.agentManager;
+
+  for (const house of houses) {
+    if (Math.random() < 0.1) {
+      agentManager.add(timesVector({ x: house.position.cx, y: house.position.cy }, CellHeight));
+    }
+  }
+}
+
 export function TrackEditorComponent({
   appStates,
   setAppStates,
@@ -158,8 +180,8 @@ export function TrackEditorComponent({
   const [constructType, setConstructType] = useState<ConstructType>('House');
 
   const update = () => {
-    setUpdate_([]);
     setAppStates((s) => ({ ...s }));
+    setUpdate_([]);
     drawEditor(appStates);
   };
 
@@ -184,9 +206,11 @@ export function TrackEditorComponent({
 
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
-      appStates.trainMove.tick();
-      appStates.agentManager.tick(appStates.trainMove.globalTime);
-      setPositionPercentage(appStates.trainMove.globalTime / (24 * 60 * 60));
+      appStates.globalTimeManager.tick();
+      appStates.trainMove.tick(appStates.globalTimeManager);
+      addAgents(appStates);
+      appStates.agentManager.tick(appStates.globalTimeManager.globalTime);
+      setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
     }, interval);
     setRunningIntervalId(intervalId);
@@ -314,24 +338,6 @@ export function TrackEditorComponent({
         </button>
       </div>
       <button
-        id='button-slow-speed'
-        onClick={() => {
-          stopInterval();
-        }}
-      >
-        停止
-      </button>
-      <button
-        onClick={() => {
-          stopInterval();
-          appStates.trainMove.placedTrains = [];
-          appStates.trainMove.resetGlobalTime();
-          startTop(100);
-        }}
-      >
-        最初から開始
-      </button>
-      <button
         onClick={() => {
           (() => {
             const station1 = appStates.stations[0];
@@ -352,30 +358,47 @@ export function TrackEditorComponent({
         agentManagerを開始
       </button>
       <br />
-      {/* <button
-        id='button-slow-speed-2'
+      <button
+        title={'一時停止'}
+        onClick={(e) => {
+          stopInterval();
+        }}
+      >
+        ||
+      </button>
+      <button
         onClick={() => {
           stopInterval();
           startTop(100);
         }}
+        title={'開始'}
       >
-        早くする
+        ▸
       </button>
-      <br /> */}
-      <button id='button-speed-slow'>＜＜</button>
-      <button id='button-speed-fast'>＞＞</button>
-      <div id='speed-text'></div>
+      <button
+        onClick={() => {
+          stopInterval();
+          appStates.trainMove.placedTrains = [];
+          appStates.globalTimeManager.resetGlobalTime(appStates.trainMove.getMinTimetableTime());
+          startTop(100);
+        }}
+      >
+        最初から開始
+      </button>
+      {/* <button id='button-speed-fast' title={'早送り'}>
+        ▸▸▸
+      </button> */}
       <br />
 
       <SeekBarComponent
         positionPercentage={positionPercentage}
         width={600}
         setPositionPercentage={(p) => {
-          appStates.trainMove.globalTime = 24 * 60 * 60 * p;
+          appStates.globalTimeManager.resetGlobalTime(24 * 60 * 60 * p);
           setPositionPercentage(p);
         }}
       />
-      <div id='time'>{appStates.trainMove.toStringGlobalTime()}</div>
+      <div id='time'>{appStates.globalTimeManager.toStringGlobalTime()}</div>
       <div>{positionPercentage}</div>
     </>
   );

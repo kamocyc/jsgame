@@ -115,7 +115,7 @@ function commitDrawingLine(props: DiagramProps, layer: Konva.Layer): Train | nul
       (station) => station.stationId === diagramState.drawingLineTimes[1].station.stationId
     );
     const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
-    const trains = direction === 'Inbound' ? props.inboundDiaTrains : props.outboundDiaTrains;
+    const trains = direction === 'Inbound' ? props.inboundTrains : props.outboundTrains;
 
     const diaTimes = diagramState.drawingLineTimes.map(
       (drawingLineTime) =>
@@ -510,10 +510,10 @@ export function initializeKonva(
   stationKonvaManager: StationKonvaManager
 ) {
   const minTime = Math.min(
-    ...(props.inboundDiaTrains
+    ...(props.inboundTrains
       .map((train) => train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat())
       .concat(
-        props.outboundDiaTrains.map((train) =>
+        props.outboundTrains.map((train) =>
           train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat()
         )
       )
@@ -550,14 +550,14 @@ export function initializeKonva(
   drawTimeGrid(layer, stationPositions[stationPositions.length - 1].diagramPosition + 50, diagramState.secondWidth);
   drawStationLines(layer, stationPositions, diagramState.secondWidth, props);
 
-  for (const train of props.inboundDiaTrains) {
+  for (const train of props.inboundTrains) {
     drawTrain(train);
   }
-  for (const train of props.outboundDiaTrains) {
+  for (const train of props.outboundTrains) {
     drawTrain(train);
   }
 
-  const operations = createOperations(props.inboundDiaTrains, props.outboundDiaTrains);
+  const operations = createOperations(props.inboundTrains, props.outboundTrains);
   drawOperations(operations);
 
   function fitStageIntoParentContainer() {
@@ -660,7 +660,7 @@ export function initializeKonva(
 
     for (const trainLine of overlappedTrainLines) {
       const trainId = trainLine.id().split('-')[1];
-      const train = props.inboundDiaTrains.concat(props.outboundDiaTrains).find((train) => train.trainId === trainId);
+      const train = props.inboundTrains.concat(props.outboundTrains).find((train) => train.trainId === trainId);
       if (train == null) continue;
 
       addTrainSelection(trainLine, train);

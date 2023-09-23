@@ -9,6 +9,7 @@ import { getInitialTimetable } from './timetable-editor/timetable-util';
 import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { AgentManager } from './track-editor/agentManager';
+import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { TrainMove2 } from './track-editor/trainMove2';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
@@ -95,6 +96,7 @@ export function getInitialAppStates(): AppStates {
   const trainMove = new TrainMove2(timetable);
   return {
     editMode: 'Create',
+    globalTimeManager: new GlobalTimeManager(),
     detailedTimetable: timetable,
     timetableData: timetableData,
     trains: [
@@ -125,7 +127,7 @@ export function getInitialAppStates(): AppStates {
     tracks: [],
     message: null,
     currentRailwayLine: null,
-    railwayLines: []
+    railwayLines: [],
   };
 }
 

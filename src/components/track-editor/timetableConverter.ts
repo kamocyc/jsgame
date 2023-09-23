@@ -13,7 +13,8 @@ import {
   generateId,
 } from '../../model';
 import { abstractSearch, getDistance, getNextTracks } from '../../trackUtil';
-import { defaultGlobalTimeSpeed, getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove2';
+import { defaultGlobalTimeSpeed } from './globalTimeManager';
+import { getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove2';
 
 function getStationDistances(platforms: (readonly [Track, Platform])[], stations: Station[]) {
   // 距離を計算する

@@ -31,7 +31,7 @@ function StationContextMenuComponent({
   diaStations,
   setDiaStations,
   trains,
-  otherDirectionDiaTrains,
+  otherDirectionTrains,
   selectedStation,
   showStationDetail,
   timetableDirection,
@@ -41,7 +41,7 @@ function StationContextMenuComponent({
   diaStations: Station[];
   setDiaStations: (diaStations: Station[]) => void;
   trains: Train[];
-  otherDirectionDiaTrains: Train[];
+  otherDirectionTrains: Train[];
   selectedStation: Station | null;
   showStationDetail: (diaStation: Station) => void;
   timetableDirection: 'Inbound' | 'Outbound';
@@ -61,7 +61,7 @@ function StationContextMenuComponent({
                   (diaTime) => diaTime.station.stationId !== selectedStation.stationId
                 );
               });
-              otherDirectionDiaTrains.forEach((train) => {
+              otherDirectionTrains.forEach((train) => {
                 train.diaTimes = train.diaTimes.filter(
                   (diaTime) => diaTime.station.stationId !== selectedStation.stationId
                 );
@@ -100,7 +100,7 @@ function StationContextMenuComponent({
                 platform: getDefaultPlatform(newStation, timetableDirection),
               });
             });
-            otherDirectionDiaTrains.forEach((train) => {
+            otherDirectionTrains.forEach((train) => {
               train.diaTimes.push({
                 diaTimeId: generateId(),
                 arrivalTime: null,
@@ -124,14 +124,14 @@ export function StationListComponent({
   diaStations,
   setDiaStations,
   trains,
-  otherDirectionDiaTrains,
+  otherDirectionTrains,
   timetableDirection,
   setSettingData,
 }: {
   diaStations: Station[];
   setDiaStations: (diaStations: Station[]) => void;
   trains: Train[];
-  otherDirectionDiaTrains: Train[];
+  otherDirectionTrains: Train[];
   timetableDirection: 'Inbound' | 'Outbound';
   setSettingData: (settingData: SettingData) => void;
 }) {
@@ -157,7 +157,7 @@ export function StationListComponent({
           setContextData,
           diaStations,
           trains,
-          otherDirectionDiaTrains,
+          otherDirectionTrains,
           setDiaStations,
           selectedStation,
           showStationDetail: showStationDetail,
@@ -216,7 +216,7 @@ export function StationListComponent({
               });
             });
 
-            otherDirectionDiaTrains.forEach((train) => {
+            otherDirectionTrains.forEach((train) => {
               train.diaTimes.unshift({
                 diaTimeId: generateId(),
                 arrivalTime: null,

@@ -1,6 +1,6 @@
 import { assert } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap } from '../../mapEditorModel';
-import { DiaTime, OutlinedTimetable, Point, Station } from '../../model';
+import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
 import { PlacedTrain, TrainMove2 } from './trainMove2';
@@ -38,6 +38,7 @@ export interface Agent {
   position: Point;
   status: AgentStatus;
   destination: ExtendedCellConstruct | null;
+  inDestination: boolean;
   path: AgentPath;
   placedTrain: PlacedTrain | null;
 }
@@ -368,15 +369,21 @@ export class AgentManager {
   }
 
   add(position: Point) {
+    const id = generateId();
     this.agents.push({
-      id: 'agent-' + this.agents.length,
-      name: 'Agent ' + this.agents.length,
+      id: 'agent-' + id,
+      name: 'Agent ' + id,
       position: { ...position },
       status: 'Idle',
       destination: null,
+      inDestination: false,
       path: [],
       placedTrain: null,
     });
+  }
+
+  remove(agent: Agent) {
+    this.agents = this.agents.filter((a) => a.id !== agent.id);
   }
 
   getRandomDestination(agent: Agent): ExtendedCellConstruct {
@@ -396,6 +403,7 @@ export class AgentManager {
         const destination = this.getRandomDestination(agent);
         if (destination) {
           agent.destination = destination;
+          agent.inDestination = false;
           agent.status = 'Move';
           agent.path = createAgentPath(this.stations, agent, this.gameMap, currentTime, this.timetable);
         }
@@ -406,6 +414,7 @@ export class AgentManager {
       if (agent.path.length === 0) {
         // 目的地に到着したら
         agent.destination = null;
+        agent.inDestination = true;
         agent.status = 'Idle';
         return;
       }
@@ -424,6 +433,10 @@ export class AgentManager {
               .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
             assert(train !== undefined, 'train is undefined');
             const placedTrain = this.trainMove.placedTrains.find((t) => t.train.trainId === train.trainId);
+            if (placedTrain === undefined) {
+              console.error('placedTrain is undefined');
+              return;
+            }
             assert(placedTrain !== undefined, 'placedTrain is undefined');
 
             agent.placedTrain = placedTrain;

@@ -10,6 +10,7 @@ import {
   getTrackDirection,
   isTrainOutTrack,
 } from '../../trackUtil.js';
+import { GlobalTimeManager } from './globalTimeManager.js';
 
 function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | undefined {
   if (!stationTrack.track.platform) return undefined;
@@ -137,27 +138,21 @@ export interface PlacedTrain {
 
 const TimeActionMode: 'Just' | 'After' = 'After';
 
-export const defaultGlobalTimeSpeed = 5; // 1サイクルで進む秒数
-
 export class TrainMove2 {
   placedTrains: PlacedTrain[] = [];
   timetable: DetailedTimetable;
   readonly trainOccupy = new TrainOccupy();
-  readonly globalTimeSpeed = defaultGlobalTimeSpeed;
   readonly maxStationWaitTime = Number.MAX_VALUE;
-
-  globalTime = 0;
 
   constructor(timetable: DetailedTimetable) {
     this.timetable = timetable;
-    this.resetGlobalTime();
   }
 
-  resetGlobalTime() {
+  getMinTimetableTime(): number {
     const minTimetableTime = Math.min(
       ...this.timetable.platformTTItems.filter((t) => t.departureTime !== null).map((t) => t.departureTime! - 60)
     );
-    this.globalTime = minTimetableTime === Infinity ? 0 : minTimetableTime;
+    return minTimetableTime;
   }
 
   private getNextTrack(track: Track, placedTrain: PlacedTrain): Track {
@@ -199,7 +194,7 @@ export class TrainMove2 {
     }
   }
 
-  private moveTrain(placedTrain: PlacedTrain): void {
+  private moveTrain(placedTrain: PlacedTrain, globalTimeManager: GlobalTimeManager): void {
     // 現在stationだったら出発条件を満たすまで停止する
     if (
       placedTrain.track.track.platform !== null &&
@@ -219,7 +214,9 @@ export class TrainMove2 {
       } else {
         if (TimeActionMode === 'Just') {
           const possibleTTItems = timetableItems.filter(
-            (tt) => tt.departureTime !== null && tt.departureTime > this.globalTime - this.globalTimeSpeed
+            (tt) =>
+              tt.departureTime !== null &&
+              tt.departureTime > globalTimeManager.globalTime - globalTimeManager.globalTimeSpeed
           );
           // if (possibleTTItems.length === 0) {
           //   // 可能な時刻が無いときは、列車を削除する
@@ -229,7 +226,7 @@ export class TrainMove2 {
 
           // ちょうど発車時間になったら出発する
           const departureItems = possibleTTItems.filter(
-            (tt) => tt.departureTime !== null && tt.departureTime <= this.globalTime
+            (tt) => tt.departureTime !== null && tt.departureTime <= globalTimeManager.globalTime
           );
           if (departureItems.length === 0) {
             // 発車時間ではない
@@ -242,7 +239,9 @@ export class TrainMove2 {
           // TODO: 別のモードを実装
           // 「過ぎていたら」を実装する、。「通ったフラグ」が欲しいが、同じ駅を通る前に列車番号を変えるようにするとかで無くてもなんとかなるのかな。
 
-          if (timetableItems.some((tt) => tt.departureTime !== null && tt.departureTime <= this.globalTime)) {
+          if (
+            timetableItems.some((tt) => tt.departureTime !== null && tt.departureTime <= globalTimeManager.globalTime)
+          ) {
             console.log('after departure time');
             if (placedTrain.stationWaitTime === 0) {
               // 1回以上は待つ
@@ -369,13 +368,8 @@ export class TrainMove2 {
     return null;
   }
 
-  toStringGlobalTime(): string {
-    const m = Math.floor((this.globalTime / 60) % 60);
-    return Math.floor(this.globalTime / 60 / 60).toString() + ':' + (m < 10 ? '0' + m.toString() : '' + m.toString());
-  }
-
   // 必要な列車を配置する
-  private placeTrainFromPlatformTimetable(): void {
+  private placeTrainFromPlatformTimetable(globalTimeManager: GlobalTimeManager): void {
     // まだ設置していない列車で、かつ、設置が必要な列車
     const operations = this.timetable.operations.filter((operation) => {
       if (operation.trains.length === 0 || operation.trains[0].diaTimes.length === 0) return;
@@ -387,13 +381,16 @@ export class TrainMove2 {
       return (
         (ttItem.arrivalTime !== null &&
           ttItem.departureTime !== null &&
-          ttItem.arrivalTime <= this.globalTime &&
+          ttItem.arrivalTime <= globalTimeManager.globalTime &&
           ttItem.departureTime >
-            this.globalTime - this.globalTimeSpeed - 15 - 20) /* 始発駅で到着時間が設定されていた場合*/ ||
+            globalTimeManager.globalTime -
+              globalTimeManager.globalTimeSpeed -
+              15 -
+              20) /* 始発駅で到着時間が設定されていた場合*/ ||
         (ttItem.departureTime !== null &&
           ttItem.departureTime - 15 /* 到着時間が設定されていない場合は、15秒前には到着しているようにする */ <=
-            this.globalTime &&
-          ttItem.departureTime > this.globalTime - this.globalTimeSpeed - 15 - 20)
+            globalTimeManager.globalTime &&
+          ttItem.departureTime > globalTimeManager.globalTime - globalTimeManager.globalTimeSpeed - 15 - 20)
       ); /* 既に到着時間を20sec以上過ぎた場合はスキップ */
     });
 
@@ -419,12 +416,12 @@ export class TrainMove2 {
   }
 
   // 1フレームごとに呼び出す関数
-  tick(): void {
-    this.placeTrainFromPlatformTimetable();
+  tick(globalTimeManager: GlobalTimeManager): void {
+    this.placeTrainFromPlatformTimetable(globalTimeManager);
 
     const placedTrains = [...this.placedTrains]; // 一応中で破壊的にremoveするので、コピーを作る
     for (const train of placedTrains) {
-      this.moveTrain(train);
+      this.moveTrain(train, globalTimeManager);
     }
 
     const collided = this.getCollidedTrains();
@@ -433,11 +430,6 @@ export class TrainMove2 {
       console.log(`collide`);
       console.log(train1);
       console.log(train2);
-    }
-
-    this.globalTime += this.globalTimeSpeed;
-    if (this.globalTime >= 24 * 60 * 60) {
-      this.globalTime = 24 * 60 * 60 - 1;
     }
   }
 }

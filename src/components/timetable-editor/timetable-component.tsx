@@ -59,12 +59,12 @@ function StationTimetableComponent({ trains, diaStation }: { trains: Train[]; di
 }
 
 export function StationTimetablePageComponent({
-  inboundDiaTrains,
-  outboundDiaTrains,
+  inboundTrains,
+  outboundTrains,
   diaStations,
 }: {
-  inboundDiaTrains: Train[];
-  outboundDiaTrains: Train[];
+  inboundTrains: Train[];
+  outboundTrains: Train[];
   diaStations: Station[];
 }) {
   const [selectedDiaStation, setSelectedDiaStation] = useState(diaStations[0]);
@@ -105,7 +105,7 @@ export function StationTimetablePageComponent({
       <div>
         <StationTimetableComponent
           diaStation={selectedDiaStation}
-          trains={timetableDirection === 'Inbound' ? inboundDiaTrains : outboundDiaTrains}
+          trains={timetableDirection === 'Inbound' ? inboundTrains : outboundTrains}
         />
       </div>
     </div>

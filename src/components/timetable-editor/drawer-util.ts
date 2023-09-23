@@ -5,8 +5,8 @@ import { Polygon, sat } from '../../sat';
 export interface DiagramProps {
   diaStations: Station[];
   setUpdate: () => void;
-  inboundDiaTrains: Train[];
-  outboundDiaTrains: Train[];
+  inboundTrains: Train[];
+  outboundTrains: Train[];
   operations: Operation[];
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;

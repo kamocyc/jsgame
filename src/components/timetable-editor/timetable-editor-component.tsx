@@ -12,6 +12,7 @@ import {
   Train,
   TrainType,
 } from '../../model';
+import { AgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { TrainMove2 } from '../track-editor/trainMove2';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
@@ -41,8 +42,8 @@ export function TimetableEditorTableComponent({
   diaStations,
   setDiaStations,
   trains,
-  otherDirectionDiaTrains,
-  setDiaTrains,
+  otherDirectionTrains,
+  setTrains,
   timetableDirection,
   trainTypes,
   setSettingData,
@@ -52,8 +53,8 @@ export function TimetableEditorTableComponent({
   diaStations: Station[];
   setDiaStations: (diaStations: Station[]) => void;
   trains: Train[];
-  otherDirectionDiaTrains: Train[];
-  setDiaTrains: (trains: Train[]) => void;
+  otherDirectionTrains: Train[];
+  setTrains: (trains: Train[]) => void;
   timetableDirection: 'Inbound' | 'Outbound';
   trainTypes: TrainType[];
   setSettingData: (settingData: SettingData) => void;
@@ -68,7 +69,7 @@ export function TimetableEditorTableComponent({
         <div>始発駅作業</div>
         <div>終着駅作業</div>
         <StationListComponent
-          {...{ diaStations, trains, otherDirectionDiaTrains, setDiaStations, timetableDirection, setSettingData }}
+          {...{ diaStations, trains, otherDirectionTrains, setDiaStations, timetableDirection, setSettingData }}
         />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -82,8 +83,8 @@ export function TimetableEditorTableComponent({
         {...{
           diaStations: diaStations,
           trains: trains,
-          setDiaTrains: (trains) => {
-            setDiaTrains([...trains]);
+          setTrains: (trains) => {
+            setTrains([...trains]);
           },
           timetableDirection: timetableDirection,
           trainTypes,
@@ -166,7 +167,7 @@ export function TimetableEditorComponent({
     }));
   };
 
-  const setDiaTrains = (trains: Train[]) => {
+  const setTrains = (trains: Train[]) => {
     const timetableData: TimetableData =
       timetableDirection === 'Inbound'
         ? {
@@ -243,9 +244,17 @@ export function TimetableEditorComponent({
               .concat(timetable.switchTTItems.map((switchTTItem) => switchTTItem.train))
               .filter((train, i, self) => self.findIndex((t) => t.trainId === train.trainId) === i);
 
+            const trainMove = new TrainMove2(timetable);
             setAppStates((appStates) => ({
               ...appStates,
-              trainMove: new TrainMove2(timetable),
+              trainMove: trainMove,
+              agentManager: new AgentManager(
+                appStates.extendedMap,
+                timetableData.timetable.stations,
+                appStates.map,
+                timetableData.timetable,
+                trainMove
+              ),
               detailedTimetable: timetable,
               trains: trains, // これは使っているのか？
             }));
@@ -304,8 +313,8 @@ export function TimetableEditorComponent({
                       diaStations: timetableData.timetable.stations,
                       setDiaStations: setDiaStations,
                       trains: timetableData.timetable.inboundTrains,
-                      otherDirectionDiaTrains: timetableData.timetable.outboundTrains,
-                      setDiaTrains: setDiaTrains,
+                      otherDirectionTrains: timetableData.timetable.outboundTrains,
+                      setTrains: setTrains,
                       timetableDirection,
                       trainTypes: appStates.timetableData.timetable.trainTypes,
                       setSettingData,
@@ -324,8 +333,8 @@ export function TimetableEditorComponent({
                       diaStations: reverseArray(timetableData.timetable.stations),
                       setDiaStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
                       trains: timetableData.timetable.outboundTrains,
-                      otherDirectionDiaTrains: timetableData.timetable.inboundTrains,
-                      setDiaTrains: setDiaTrains,
+                      otherDirectionTrains: timetableData.timetable.inboundTrains,
+                      setTrains: setTrains,
                       timetableDirection,
                       trainTypes: appStates.timetableData.timetable.trainTypes,
                       setSettingData,
@@ -351,8 +360,8 @@ export function TimetableEditorComponent({
                 component: () => (
                   <StationTimetablePageComponent
                     diaStations={timetableData.timetable.stations}
-                    inboundDiaTrains={timetableData.timetable.inboundTrains}
-                    outboundDiaTrains={timetableData.timetable.outboundTrains}
+                    inboundTrains={timetableData.timetable.inboundTrains}
+                    outboundTrains={timetableData.timetable.outboundTrains}
                   />
                 ),
               },
@@ -362,8 +371,8 @@ export function TimetableEditorComponent({
                 component: () => (
                   <DiagramPageComponent
                     diaStations={timetableData.timetable.stations}
-                    inboundDiaTrains={timetableData.timetable.inboundTrains}
-                    outboundDiaTrains={timetableData.timetable.outboundTrains}
+                    inboundTrains={timetableData.timetable.inboundTrains}
+                    outboundTrains={timetableData.timetable.outboundTrains}
                     operations={timetableData.timetable.operations}
                     setUpdate={() => {
                       setTimetableData({ ...timetableData });

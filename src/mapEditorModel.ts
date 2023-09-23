@@ -1,5 +1,6 @@
 import { ExtendedCell } from './components/extendedMapModel';
 import { AgentManager } from './components/track-editor/agentManager';
+import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
 import { TrainMove2 } from './components/track-editor/trainMove2';
 import { DetailedTimetable, Platform, Point, Station, Switch, TimetableData, Track, Train } from './model';
 
@@ -135,6 +136,7 @@ export interface RailwayLine {
 }
 
 export interface AppStates {
+  globalTimeManager: GlobalTimeManager;
   editMode: EditMode;
   detailedTimetable: DetailedTimetable;
   timetableData: TimetableData;

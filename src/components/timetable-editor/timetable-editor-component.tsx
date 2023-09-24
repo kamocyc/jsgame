@@ -23,6 +23,7 @@ import './timetable-editor.css';
 import { getInitialTimetable, reverseTimetableDirection } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
+import { removeNull } from '../../common';
 
 export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Station[] }) {
   return (
@@ -236,17 +237,17 @@ export function TimetableEditorComponent({
               return;
             }
 
-            const [timetable, operations] = timetableAndOperations;
+            const [timetable, _] = timetableAndOperations;
 
             // console.log('timetable');
             // console.log(timetable);
 
-            const trains = timetable.platformTTItems
-              .map((platformTTItem) => platformTTItem.train)
-              .concat(timetable.switchTTItems.map((switchTTItem) => switchTTItem.train))
-              .filter((train, i, self) => self.findIndex((t) => t.trainId === train.trainId) === i);
+            // const trains = removeNull(timetable.platformTTItems
+            //   .map((platformTTItem) => platformTTItem.train)
+            //   .concat(timetable.switchTTItems.map((switchTTItem) => switchTTItem.train)))
+            //   .filter((train, i, self) => self.findIndex((t) => t.trainId === train.trainId) === i);
 
-            const trainMove = new TrainMove(timetable, operations);
+            const trainMove = new TrainMove(timetable);
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: trainMove,
@@ -258,7 +259,7 @@ export function TimetableEditorComponent({
                 trainMove
               ),
               detailedTimetable: timetable,
-              trains: trains, // これは使っているのか？
+              // placedTrains: trains, // これは使っているのか？
             }));
           }}
         >

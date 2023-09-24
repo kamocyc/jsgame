@@ -1,7 +1,7 @@
 import { ExtendedCell } from './components/extendedMapModel';
 import { AgentManager } from './components/track-editor/agentManager';
 import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
-import { PlacedTrain, TrainMove } from './components/track-editor/trainMove';
+import { PlacedTrain, StoredTrain, TrainMove } from './components/track-editor/trainMove';
 import { DetailedTimetable, Operation, Platform, Point, Station, Switch, TimetableData, Track } from './model';
 
 export const CellWidth = 32;
@@ -102,7 +102,8 @@ export type EditMode =
   | 'ExtendedMap'
   | 'Road'
   | 'LineCreate'
-  | 'DepotCreate';
+  | 'DepotCreate'
+  | 'ShowLine';
 
 export interface MapContext {
   scale: number;
@@ -141,7 +142,11 @@ export interface AppStates {
   detailedTimetable: DetailedTimetable;
   operations: Operation[]; // DetailedTimetableのoperation
   timetableData: TimetableData;
-  trains: PlacedTrain[];
+  storedTrains: StoredTrain[];
+  /**
+   * 配置するときのほうこうの決定に使う予定
+   */
+  trainPlaceDirection: 'Up' | 'Down';
   switches: Switch[]; // 今は使っていない
   stations: Station[];
   tracks: Track[];
@@ -155,4 +160,5 @@ export interface AppStates {
   message: string | null;
   currentRailwayLine: RailwayLine | null;
   railwayLines: RailwayLine[];
+  selectedRailwayLineId: string | null;
 }

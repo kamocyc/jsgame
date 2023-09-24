@@ -16,6 +16,10 @@ export function min(arr: number[]): number {
   return cur;
 }
 
+export function removeNull<T>(array: (T | null)[]): T[] {
+  return array.filter((x) => x !== null) as T[];
+}
+
 export function assert(b: boolean, message?: string): asserts b {
   if (!b) throw new Error('assert' + (message ? ': ' + message : ''));
 }

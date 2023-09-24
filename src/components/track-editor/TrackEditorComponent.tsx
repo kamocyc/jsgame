@@ -20,7 +20,7 @@ import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
 import { AgentManager, SearchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
-import { TrainMove, getMinTimetableTime } from './trainMove';
+import { PlacedTrain, StoredTrain, TrainMove, getMinTimetableTime } from './trainMove';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -81,11 +81,12 @@ function toStringEditorData(appStates: AppStates) {
   // }
   const obj = {
     map: appStates.map,
-    trains: appStates.trains,
+    storedTrains: appStates.storedTrains,
     timetable: appStates.detailedTimetable,
     timetableData: appStates.timetableData,
     extendedMap: appStates.extendedMap,
     operations: appStates.operations,
+    placedTrains: appStates.trainMove.placedTrains,
   };
 
   return JSON.stringify(JSON_decycle(obj), null, 2);
@@ -107,12 +108,14 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   }
   const extendedMap = obj['extendedMap'] as ExtendedGameMap;
 
-  const trainsJson = obj['trains'] ?? [];
+  const storedTrains: StoredTrain[]  = obj['storedTrains'] ?? [];
+  const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
   const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable() };
   const operations = obj['operations'] ?? [];
 
   const trainMove = new TrainMove(timetable);
+  trainMove.placedTrains = placedTrains;
   const switches = mapData.flatMap(
     (row) =>
       row
@@ -140,6 +143,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     switches: switches,
     tracks: tracks,
     trainMove: trainMove,
+    storedTrains: storedTrains,
     detailedTimetable: timetable,
     stations: stations,
     agentManager: new AgentManager(appStates.extendedMap, stations, mapData, timetableData.timetable, trainMove),
@@ -259,6 +263,7 @@ export function TrackEditorComponent({
             setEditorMode={setEditMode}
           />
           <input
+            title={'プラットフォーム数'}
             style={{ width: '30px' }}
             type='number'
             value={numberOfPlatforms}
@@ -269,6 +274,12 @@ export function TrackEditorComponent({
               }
             }}
           />
+          <ModeOptionRadioComponent
+            mode='PlaceTrain'
+            text='列車を配置'
+            checked={appStates.editMode === 'PlaceTrain'}
+            setEditorMode={setEditMode}
+            />
           <ModeOptionRadioComponent
             mode='Info'
             text='情報を表示'
@@ -285,6 +296,12 @@ export function TrackEditorComponent({
             mode='DepotCreate'
             text='車庫を作成'
             checked={appStates.editMode === 'DepotCreate'}
+            setEditorMode={setEditMode}
+          />
+          <ModeOptionRadioComponent
+            mode='ShowLine'
+            text='路線を表示'
+            checked={appStates.editMode === 'ShowLine'}
             setEditorMode={setEditMode}
           />
           <div

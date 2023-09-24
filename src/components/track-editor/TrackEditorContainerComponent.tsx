@@ -27,7 +27,8 @@ import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEdito
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
-import { PlacedTrain, TrainMove } from './trainMove';
+import { StoredTrain, TrainMove } from './trainMove';
+import { LineInfoPanel } from './LineInfoPanelComponent';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -84,7 +85,7 @@ function placeTrain(
   mapTotalHeight: number,
   cell: Cell,
   mousePoint: Point,
-  selectedTrain: PlacedTrain
+  selectedTrain: StoredTrain
 ) {
   const hitTracks = getHitTracks(mapTotalHeight, cell, mousePoint);
   if (hitTracks.length === 0) {
@@ -101,13 +102,13 @@ function placeTrain(
   const position = getMidPoint(hitTrack.begin, hitTrack.end);
 
   trainMove.placedTrains.push({
+    ...selectedTrain,
     train: null,
-    speed: 0,
+    speed: 10,  /* 加速す料にしたいところ*/
     stationWaitTime: 0,
     stationStatus: 'NotArrived',
     track: hitTrack,
     position: position,
-    placedTrainId: generateId(),
     operation: null,
   });
 
@@ -227,11 +228,11 @@ function placeStation(
 
 function getHitTracks(mapTotalHeight: number, cell: Cell, mousePoint: Point): Track[] {
   const hitStrokeWidth = CellWidth * 0.8;
-
+  
   const results: Track[] = [];
 
   if (cell.lineType?.lineClass != null) {
-    for (const track of cell.lineType?.tracks) {
+    for (const track of cell.lineType.tracks) {
       const isHit = isHitLine(
         mousePoint,
         [track.begin.x, track.begin.y, track.end.x, track.end.y],
@@ -288,7 +289,7 @@ function createExtendedMapCell(mapCell: ExtendedCell, constructType: ConstructTy
 function onmousedown(
   e: MouseEvent,
   appStates: AppStates,
-  selectedTrain: PlacedTrain,
+  selectedTrain: StoredTrain,
   numberOfPlatforms: number,
   constructType: ConstructType,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
@@ -297,6 +298,7 @@ function onmousedown(
   setMouseStartCell: (cell: Cell | null) => void,
   setMouseStartPoint: (point: Point | null) => void,
   setMouseDragMode: (mode: MouseDragMode | null) => void,
+  setShowLineInfoPanel: (show: boolean) => void,
   setToast: (message: string) => void
 ) {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
@@ -361,29 +363,13 @@ function onmousedown(
     } else if (appStates.editMode === 'Road') {
       setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
-    } else if (appStates.editMode === 'LineCreate') {
-      const trackAndPlatform = getPlatformOfCell(
-        appStates.mapContext.mapTotalHeight,
-        appStates.map[mapPosition.x][mapPosition.y],
-        { x, y }
-      );
-      if (trackAndPlatform === null) {
-        console.error('platformがnull');
-      } else {
-        const error = addPlatformToLine(
-          trackAndPlatform[0],
-          trackAndPlatform[1],
-          appStates.map[mapPosition.x][mapPosition.y],
-          appStates
-        );
-        if (error !== null) {
-          setToast(error.error);
-        } else {
-        }
-      }
     } else if (appStates.editMode === 'DepotCreate') {
       createDepot(appStates.map, mapPosition, appStates.mapWidth, appStates.mapHeight, setToast);
-    } else {
+    } else if (appStates.editMode === 'ShowLine') {
+      setShowLineInfoPanel(true);
+    } else if (appStates.editMode === 'LineCreate') {
+           /* LineCreateは右クリックも使うため、mouseupで処理する */}
+    else {
       console.error('editModeが不正');
     }
   }
@@ -503,12 +489,15 @@ function onmouseup(
   setMouseStartCell: (cell: Cell | null) => void,
   setMouseStartPoint: (point: Point | null) => void,
   setMouseDragMode: (mode: MouseDragMode | null) => void,
-  setToast: (message: string) => void
+  setToast: (message: string) => void,
+  dragMoved: boolean
 ) {
   if (mouseDragMode === 'MoveMap') {
     setMouseDragMode(null);
     setMouseStartPoint(null);
-    return;
+    if (dragMoved) {
+      return;
+    }
   }
 
   if (!mouseStartCell) return;
@@ -541,6 +530,34 @@ function onmouseup(
       } else {
         validateAppState(appStates);
       }
+    } else if (appStates.editMode === 'LineCreate') {
+      if (e.button === 2) {
+        // 選択終了
+        if (appStates.currentRailwayLine !== null) {
+          appStates.railwayLines.push(appStates.currentRailwayLine);
+          appStates.currentRailwayLine = null;
+        }
+      } else {
+      const trackAndPlatform = getPlatformOfCell(
+        appStates.mapContext.mapTotalHeight,
+        appStates.map[mapPosition.x][mapPosition.y],
+        { x, y }
+      );
+      if (trackAndPlatform === null) {
+        console.error('platformがnull');
+      } else {
+        const error = addPlatformToLine(
+          trackAndPlatform[0],
+          trackAndPlatform[1],
+          appStates.map[mapPosition.x][mapPosition.y],
+          appStates
+        );
+        if (error !== null) {
+          setToast(error.error);
+        } else {
+        }
+      }
+    }
     }
 
     drawEditor(appStates);
@@ -577,7 +594,7 @@ export function EditorContainer({
 }: {
   editorDialogMode: EditorDialogMode | null;
   timetable: DetailedTimetable | null;
-  trains: PlacedTrain[] | null;
+  trains: StoredTrain[] | null;
   setPlatform: (platform: Platform) => void;
   platform: Platform | null;
   Switch: Switch | null;
@@ -627,7 +644,9 @@ export function CanvasComponent({
   const [mouseStartCell, setMouseStartCell] = useState<Cell | null>(null);
   const [mouseStartPoint, setMouseStartPoint] = useState<Point | null>(null);
   const [mouseDragMode, setMouseDragMode] = useState<MouseDragMode | null>(null);
-  const [selectedTrain, setSelectedTrain] = useState<PlacedTrain>(appStates.trains[0]);
+  const [dragMoved, setDragMoved] = useState<boolean>(false);
+  const [selectedTrain, setSelectedTrain] = useState<StoredTrain>(appStates.storedTrains[0]);
+  const [showLineInfoPanel, setShowLineInfoPanel] = useState<boolean>(false);
 
   const setToast = (message: string) => {
     console.warn({ setToast: message });
@@ -659,8 +678,10 @@ export function CanvasComponent({
             setMouseStartCell,
             setMouseStartPoint,
             setMouseDragMode,
+            setShowLineInfoPanel,
             setToast
           );
+          setDragMoved(false);
           update();
         }}
         onMouseUp={(e) =>
@@ -673,12 +694,14 @@ export function CanvasComponent({
             setMouseStartCell,
             setMouseStartPoint,
             setMouseDragMode,
-            setToast
+            setToast,
+            dragMoved
           )
         }
-        onMouseMove={(e) =>
-          onmousemove(e, appStates, mouseStartCell, mouseStartPoint, mouseDragMode, setMouseStartPoint, update)
-        }
+        onMouseMove={(e) => {
+          onmousemove(e, appStates, mouseStartCell, mouseStartPoint, mouseDragMode, setMouseStartPoint, update);
+          setDragMoved(true);
+        }}
         onContextMenu={(e) => e.preventDefault()}
         onWheel={(e) => {
           /* TODO: 邪魔なのでいったんコメントアウト */
@@ -688,16 +711,29 @@ export function CanvasComponent({
       <EditorContainer
         timetable={appStates.detailedTimetable}
         update={update}
-        trains={appStates.trains}
+        trains={appStates.storedTrains}
         Switch={Switch}
         editorDialogMode={editorDialogMode}
         setPlatform={setPlatform}
         platform={platform}
       />
+      (showLineInfoPanel ? (
+        <div className='dialog'>
+          <LineInfoPanel
+            railwayLines={appStates.railwayLines}
+            selectedRailwayLineId={appStates.selectedRailwayLineId}
+            setSelectedRailwayLineId={(id) => {
+              appStates.selectedRailwayLineId = id;
+              update();
+            }}
+            />
+            </div>
+      ) : (<></>)
+      )
 
       <div>
         {appStates.editMode === 'PlaceTrain' ? (
-          <TrainSelector trains={appStates.trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
+          <TrainSelector trains={appStates.storedTrains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
         ) : (
           <> </>
         )}

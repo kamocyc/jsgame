@@ -1,34 +1,53 @@
 import { useState } from 'preact/hooks';
-import { DetailedTimetable, Platform, Switch, Train } from '../../model';
+import { DetailedTimetable, Platform, Switch } from '../../model';
 import { TimeInputComponent } from '../timetable-editor/common-component';
+import { StoredTrain } from './trainMove';
+import { AppStates } from '../../mapEditorModel';
 
 export function TrainSelector({
   trains,
   selectedTrain,
   setSelectedTrain,
+  // appStates,
+  // update,
 }: {
-  trains: Train[];
-  selectedTrain: Train;
-  setSelectedTrain: (train: Train) => void;
+  trains: StoredTrain[];
+  selectedTrain: StoredTrain;
+  setSelectedTrain: (train: StoredTrain) => void;
+  // appStates: AppStates;
+  // update: () => void;
 }) {
   return (
     <>
+    {/* <>
+      <button onClick={() => {
+        const trainPlaceDirection = appStates.trainPlaceDirection;
+        if (trainPlaceDirection === 'Up') {
+          appStates.trainPlaceDirection = 'Down';
+        } else {
+          appStates.trainPlaceDirection = 'Up';
+        }
+        update();
+      }}>向きを反転</button>
+    </> */}
+      <>
       列車:
       <select
         onChange={(e) => {
-          const trainId = (e.target as HTMLSelectElement).value;
-          const train = trains.find((train) => train.trainId === trainId);
+          const placedTrainId = (e.target as HTMLSelectElement).value;
+          const train = trains.find((train) => train.placedTrainId === placedTrainId);
           if (train) {
             setSelectedTrain(train);
           }
         }}
       >
         {trains.map((train) => (
-          <option value={train.trainId} selected={train.trainId === selectedTrain.trainId ? true : false}>
-            {train.trainName}
+          <option value={train.placedTrainId} selected={train.placedTrainId === selectedTrain.placedTrainId ? true : false}>
+            {train.placedTrainName}
           </option>
         ))}
       </select>
+      </>
     </>
   );
 }
@@ -39,18 +58,19 @@ export function SwitchEditor({
   Switch,
 }: {
   timetable: DetailedTimetable;
-  trains: Train[];
+  trains: StoredTrain[];
   Switch: Switch;
 }) {
-  const [selectedTrain, setSelectedTrain] = useState<Train>(trains[0]);
+  const [selectedTrain, setSelectedTrain] = useState<StoredTrain>(trains[0]);
   const [_, setUpdate] = useState([]);
   const ttItems = timetable.switchTTItems.filter(
-    (item) => item.Switch.switchId === Switch.switchId && item.train.trainId === selectedTrain.trainId
+    (item) => item.Switch.switchId === Switch.switchId && item.placedTrainId === selectedTrain.placedTrainId
   );
 
   if (ttItems.length === 0) {
     ttItems.push({
-      train: selectedTrain,
+      placedTrainId: selectedTrain.placedTrainId,
+      train: null,
       Switch: Switch,
       branchDirection: 'Straight',
       changeTime: null,
@@ -153,12 +173,12 @@ export function StationEditor({
   update,
 }: {
   timetable: DetailedTimetable;
-  trains: Train[];
+  trains: StoredTrain[];
   platform: Platform;
   setPlatform: (platform: Platform) => void;
   update: () => void;
 }) {
-  const [selectedTrain, setSelectedTrain] = useState<Train>(trains[0]);
+  const [selectedTrain, setSelectedTrain] = useState<StoredTrain>(trains[0]);
   const [_, setUpdate_] = useState([]);
   const setUpdate = () => {
     setUpdate_([]);
@@ -167,7 +187,7 @@ export function StationEditor({
 
   const station = platform.station;
   const ttItems = timetable.platformTTItems.filter(
-    (item) => item.platform.platformId === platform.platformId && item.train.trainId === selectedTrain.trainId
+    (item) => item.platform.platformId === platform.platformId && item.placedTrainId === selectedTrain.placedTrainId
   );
 
   return (
@@ -186,7 +206,7 @@ export function StationEditor({
           <PlatformSelector platforms={station.platforms} platform={platform} setSelectedPlatform={setPlatform} />
         </div>
         <div>
-          <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
+          <TrainSelector trains={trains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain}/>
         </div>
       </div>
 
@@ -194,7 +214,8 @@ export function StationEditor({
         <button
           onClick={() => {
             timetable.platformTTItems.push({
-              train: selectedTrain,
+              placedTrainId: selectedTrain.placedTrainId,
+              train: null,
               platform: platform,
               departureTime: 0,
               arrivalTime: 0,

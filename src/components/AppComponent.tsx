@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
-import { DetailedTimetable } from '../model';
+import { DetailedTimetable, Track } from '../model';
 import { Polygon, sat } from '../sat';
 import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
@@ -99,22 +99,17 @@ export function getInitialAppStates(): AppStates {
     detailedTimetable: timetable,
     timetableData: timetableData,
     operations: [],
-    trains: [
+    storedTrains: [
       {
-        diaTimes: [],
-        trainId: '1',
-        trainName: 'A',
-        trainCode: '',
-        direction: 'Inbound',
+        placedTrainId: '1',
+        placedTrainName: 'A',
       },
       {
-        diaTimes: [],
-        trainId: '2',
-        trainName: 'B',
-        trainCode: '',
-        direction: 'Outbound',
+        placedTrainId: '2',
+        placedTrainName: 'B',
       },
     ],
+    trainPlaceDirection: 'Up',
     map: gameMap,
     mapWidth: defaultMapWidth,
     mapHeight: defaultMapHeight,

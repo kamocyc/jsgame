@@ -1,4 +1,4 @@
-import { assert } from '../../common';
+import { assert, removeNull } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap } from '../../mapEditorModel';
 import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
@@ -41,10 +41,6 @@ export interface Agent {
   inDestination: boolean;
   path: AgentPath;
   placedTrain: PlacedTrain | null;
-}
-
-function removeNull<T>(array: (T | null)[]): T[] {
-  return array.filter((x) => x !== null) as T[];
 }
 
 type NextStationInfo = {
@@ -432,7 +428,7 @@ export class AgentManager {
               .concat(this.timetable.outboundTrains)
               .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
             assert(train !== undefined, 'train is undefined');
-            const placedTrain = this.trainMove.placedTrains.find((t) => t.train.trainId === train.trainId);
+            const placedTrain = this.trainMove.placedTrains.find((t) => t.train?.trainId === train.trainId);
             if (placedTrain === undefined) {
               console.error('placedTrain is undefined');
               return;

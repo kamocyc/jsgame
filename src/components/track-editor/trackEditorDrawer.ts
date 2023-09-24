@@ -492,6 +492,11 @@ function drawLineType(
   }
 }
 
+function drawText(ctx: CanvasRenderingContext2D, mapContext: MapContext, text: string, position: Point) {
+  const metrics = ctx.measureText(text);
+  ctx.fillText(text, rx(position.x - metrics.width / 2, mapContext), ry(position.y, mapContext));
+}
+
 function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, stations: Station[], tracks: Track[]) {
   const fontSize = 15;
 
@@ -516,16 +521,10 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
         image.height * mapContext.scale
       );
 
-      const name = track.track.platform.platformName;
-      const metrics = ctx.measureText(name);
-
       // platformの名前を描画
-      ctx.font = '12px ' + fontName;
-      ctx.fillText(
-        name,
-        rx((track.begin.x + track.end.x) / 2 - metrics.width / 2, mapContext),
-        ry((track.begin.y + track.end.y) / 2 - 10, mapContext)
-      );
+      const name = track.track.platform.platformName;
+      ctx.font = fontSize.toString() + 'px ' + fontName;
+      drawText(ctx, mapContext, name, { x: (track.begin.x + track.end.x) / 2, y: (track.begin.y + track.end.y) / 2 - 10 });
 
       const station = stations.find((station) =>
         station.platforms.some((platform) => platform.platformId === track.track.platform!.platformId)
@@ -537,15 +536,13 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
   }
 
   // 駅名を描画
-  ctx.font = fontSize.toString() + 'px ' + fontName;
   ctx.fillStyle = '#aa0000';
   for (const [stationId, points] of drawnStationPoints) {
     const station = stations.find((station) => station.stationId === stationId)!;
     const name = station.stationName;
-    const metrics = ctx.measureText(name);
     const x = points.reduce((acc, p) => acc + p.x, 0) / points.length;
     const y = Math.max(...points.map((p) => p.y));
-    ctx.fillText(name, rx(x - metrics.width / 2, mapContext), ry(y + 10, mapContext));
+    drawText(ctx, mapContext, name, { x: x, y: y + 10 }, fontSize);
   }
 
   ctx.strokeStyle = 'black';
@@ -617,7 +614,9 @@ function drawTrainLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, ra
     if (stop.platformPaths !== null) {
       for (const path of stop.platformPaths) {
         ctx.strokeStyle = 'rgb(255, 0, 0)';
+        ctx.lineWidth = 2;
         drawLine(ctx, mapContext, path.begin, path.end);
+        ctx.lineWidth = 1;
         ctx.strokeStyle = 'rgb(0, 0, 0)';
       }
     }
@@ -751,6 +750,11 @@ function drawTrain(ctx: CanvasRenderingContext2D, mapContext: MapContext, train:
       image.width * mapContext.scale,
       image.height * mapContext.scale
     );
+
+    // 車両名を表示
+    ctx.fillStyle = 'red';
+    ctx.font =  '15px ' + fontName + ' bold';
+    drawText(ctx, mapContext, train.placedTrainName, position);
   } else {
     // 塗りつぶした円を描画
     ctx.beginPath();

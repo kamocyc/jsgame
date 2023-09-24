@@ -133,9 +133,15 @@ export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track)
   return candidatePatterns[0][1];
 }
 
+export interface StoredTrain {
+  placedTrainId: string;
+  placedTrainName: string;
+}
+
 export interface PlacedTrain {
   placedTrainId: string; // 車両ID（物理的な車両）
   train: Train | null; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
+  placedTrainName: string;
   operation: Operation | null;
   speed: number;
   track: Track;
@@ -145,6 +151,7 @@ export interface PlacedTrain {
 }
 
 const TimeActionMode: 'Just' | 'After' = 'After';
+const StartIfNoTimetable = true;
 
 export function getMinTimetableTime(timetable: DetailedTimetable): number {
   const minTimetableTime = Math.min(
@@ -215,13 +222,15 @@ export class TrainMove {
           t.placedTrainId === placedTrain.placedTrainId
       );
       if (timetableItems.length === 0) {
-        // 時刻が設定されていないときは発車しない
         console.warn('timetableItems.length === 0');
-        placedTrain.stationWaitTime++;
-        return;
-      }
-
-      if (TimeActionMode === 'Just') {
+        if (StartIfNoTimetable) {
+          // 時刻が設定されていないときは即座に発車
+        } else {
+          // 時刻が設定されていないときは発車しない
+          placedTrain.stationWaitTime++;
+          return;
+        }
+      } else if (TimeActionMode === 'Just') {
         const possibleTTItems = timetableItems.filter(
           (tt) =>
             tt.departureTime !== null &&
@@ -452,6 +461,7 @@ export class TrainMoveWithTimetable {
       this.trainMove.placedTrains.push({
         placedTrainId: operation.trains[0].trainId,
         train: operation.trains[0],
+        placedTrainName: operation.trains[0].trainName,
         speed: 10,
         stationWaitTime: 0,
         stationStatus: 'NotArrived',

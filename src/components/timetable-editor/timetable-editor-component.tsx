@@ -14,7 +14,7 @@ import {
 } from '../../model';
 import { AgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
-import { TrainMove2 } from '../track-editor/trainMove2';
+import { TrainMove } from '../track-editor/trainMove';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
@@ -226,15 +226,17 @@ export function TimetableEditorComponent({
         </div>
         <button
           onClick={() => {
-            const timetable = toDetailedTimetable(
+            const timetableAndOperations = toDetailedTimetable(
               timetableData.timetable.stations,
               timetableData.timetable,
               appStates.tracks
             );
 
-            if (timetable === null) {
+            if (timetableAndOperations === null) {
               return;
             }
+
+            const [timetable, operations] = timetableAndOperations;
 
             // console.log('timetable');
             // console.log(timetable);
@@ -244,7 +246,7 @@ export function TimetableEditorComponent({
               .concat(timetable.switchTTItems.map((switchTTItem) => switchTTItem.train))
               .filter((train, i, self) => self.findIndex((t) => t.trainId === train.trainId) === i);
 
-            const trainMove = new TrainMove2(timetable);
+            const trainMove = new TrainMove(timetable, operations);
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: trainMove,

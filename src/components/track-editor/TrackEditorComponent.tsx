@@ -2,7 +2,15 @@ import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
-import { AppStates, Cell, CellHeight, EditMode, createMapContext, timesVector } from '../../mapEditorModel';
+import {
+  AppStates,
+  Cell,
+  CellHeight,
+  EditMode,
+  ExtendedGameMap,
+  createMapContext,
+  timesVector,
+} from '../../mapEditorModel';
 import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct } from '../extendedMapModel';
@@ -12,7 +20,7 @@ import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
 import { AgentManager, SearchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
-import { TrainMove2 } from './trainMove2';
+import { TrainMove, getMinTimetableTime } from './trainMove';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -76,6 +84,8 @@ function toStringEditorData(appStates: AppStates) {
     trains: appStates.trains,
     timetable: appStates.detailedTimetable,
     timetableData: appStates.timetableData,
+    extendedMap: appStates.extendedMap,
+    operations: appStates.operations,
   };
 
   return JSON.stringify(JSON_decycle(obj), null, 2);
@@ -95,11 +105,14 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     alert('マップデータが不正です');
     return;
   }
+  const extendedMap = obj['extendedMap'] as ExtendedGameMap;
+
   const trainsJson = obj['trains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
   const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable() };
+  const operations = obj['operations'] ?? [];
 
-  const trainMove = new TrainMove2(timetable);
+  const trainMove = new TrainMove(timetable);
   const switches = mapData.flatMap(
     (row) =>
       row
@@ -123,6 +136,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   setAppStates((appStates) => ({
     ...appStates,
     map: mapData,
+    extendedMap: extendedMap,
     switches: switches,
     tracks: tracks,
     trainMove: trainMove,
@@ -379,7 +393,7 @@ export function TrackEditorComponent({
         onClick={() => {
           stopInterval();
           appStates.trainMove.placedTrains = [];
-          appStates.globalTimeManager.resetGlobalTime(appStates.trainMove.getMinTimetableTime());
+          appStates.globalTimeManager.resetGlobalTime(getMinTimetableTime(appStates.trainMove.timetable));
           startTop(100);
         }}
       >

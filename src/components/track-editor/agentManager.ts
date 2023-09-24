@@ -3,7 +3,7 @@ import { CellHeight, CellWidth, ExtendedGameMap, GameMap } from '../../mapEditor
 import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
-import { PlacedTrain, TrainMove2 } from './trainMove2';
+import { PlacedTrain, TrainMove } from './trainMove';
 
 export type AgentStatus = 'Idle' | 'Move';
 
@@ -359,7 +359,7 @@ export class AgentManager {
     private stations: Station[],
     private gameMap: GameMap,
     private timetable: OutlinedTimetable,
-    private trainMove: TrainMove2
+    private trainMove: TrainMove
   ) {
     this.agents = [];
   }

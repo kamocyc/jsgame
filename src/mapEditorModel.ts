@@ -1,8 +1,8 @@
 import { ExtendedCell } from './components/extendedMapModel';
 import { AgentManager } from './components/track-editor/agentManager';
 import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
-import { TrainMove2 } from './components/track-editor/trainMove2';
-import { DetailedTimetable, Platform, Point, Station, Switch, TimetableData, Track, Train } from './model';
+import { PlacedTrain, TrainMove } from './components/track-editor/trainMove';
+import { DetailedTimetable, Operation, Platform, Point, Station, Switch, TimetableData, Track } from './model';
 
 export const CellWidth = 32;
 export const CellHeight = 32;
@@ -139,8 +139,9 @@ export interface AppStates {
   globalTimeManager: GlobalTimeManager;
   editMode: EditMode;
   detailedTimetable: DetailedTimetable;
+  operations: Operation[]; // DetailedTimetableのoperation
   timetableData: TimetableData;
-  trains: Train[];
+  trains: PlacedTrain[];
   switches: Switch[]; // 今は使っていない
   stations: Station[];
   tracks: Track[];
@@ -149,7 +150,7 @@ export interface AppStates {
   mapWidth: number;
   mapHeight: number;
   mapContext: MapContext;
-  trainMove: TrainMove2;
+  trainMove: TrainMove;
   agentManager: AgentManager;
   message: string | null;
   currentRailwayLine: RailwayLine | null;

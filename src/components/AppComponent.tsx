@@ -10,7 +10,7 @@ import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { AgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
-import { TrainMove2 } from './track-editor/trainMove2';
+import { TrainMove } from './track-editor/trainMove';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
@@ -44,7 +44,6 @@ function initializeExtendedMap(mapWidth: number, mapHeight: number): ExtendedCel
 const timetable: DetailedTimetable = {
   platformTTItems: [],
   switchTTItems: [],
-  operations: [],
 };
 
 const defaultMapWidth = 200;
@@ -93,12 +92,13 @@ export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
   const timetableData = getInitialTimetable();
-  const trainMove = new TrainMove2(timetable);
+  const trainMove = new TrainMove(timetable);
   return {
     editMode: 'Create',
     globalTimeManager: new GlobalTimeManager(),
     detailedTimetable: timetable,
     timetableData: timetableData,
+    operations: [],
     trains: [
       {
         diaTimes: [],

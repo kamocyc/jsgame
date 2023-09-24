@@ -15,7 +15,7 @@ import {
 } from '../../model';
 import { abstractSearch, getDistance, getNextTracks } from '../../trackUtil';
 import { defaultGlobalTimeSpeed } from './globalTimeManager';
-import { getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove2';
+import { getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove';
 
 function getStationDistances(platforms: (readonly [Track, Platform])[], stations: Station[]) {
   // 距離を計算する
@@ -226,6 +226,7 @@ function toPlatformTTItems(allTrackStations: Station[], tracks: Track[], trains:
 
       platformTTItems.push({
         train: { ...train },
+        placedTrainId: train.trainId, // TODO: とりあえずは同じにする
         platform: {
           ...getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!)!.track.platform!,
         } /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */,
@@ -353,6 +354,7 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
         train: {
           ...train,
         },
+        placedTrainId: train.trainId, // TODO: とりあえずは同じにする
         Switch: { ...currentSwitch },
         changeTime: prevDepartureTime,
         branchDirection: branchDirection,
@@ -382,7 +384,7 @@ export function toDetailedTimetable(
   allTrackStations: Station[],
   timetable: OutlinedTimetable,
   tracks: Track[]
-): DetailedTimetable | null {
+): [DetailedTimetable, Operation[]] | null {
   if (!isPlatformsIsNotNull(timetable)) {
     return null;
   }
@@ -408,11 +410,13 @@ export function toDetailedTimetable(
   }
 
   const operations = createOperations(timetable.inboundTrains, timetable.outboundTrains);
-  return {
-    platformTTItems: platformTTItems,
-    switchTTItems: switchTTItems,
-    operations: operations,
-  };
+  return [
+    {
+      platformTTItems: platformTTItems,
+      switchTTItems: switchTTItems,
+    },
+    operations,
+  ];
 }
 
 export function getReasonOfNotConnected(train1: Train, train2: Train): string[] {

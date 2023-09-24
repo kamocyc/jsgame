@@ -150,15 +150,17 @@ export type BranchDirection = 'Straight' | 'Branch';
 // 1つのtrain, platformに対して、複数のtimetableItemが存在する
 
 export interface PlatformTimetableItem {
-  train: Train;
+  placedTrainId: string;
   platform: Platform;
+  train: Train | null;
   arrivalTime: number | null;
   departureTime: number | null;
   track: Track | null;
 }
 
 export interface SwitchTimetableItem {
-  train: Train;
+  placedTrainId: string;
+  train: Train | null;
   Switch: Switch;
   changeTime: number | null;
   branchDirection: BranchDirection;
@@ -173,5 +175,4 @@ export interface Operation {
 export interface DetailedTimetable {
   platformTTItems: PlatformTimetableItem[];
   switchTTItems: SwitchTimetableItem[];
-  operations: Operation[];
 }

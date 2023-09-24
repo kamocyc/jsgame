@@ -19,15 +19,15 @@ import {
   Station,
   Switch,
   Track,
-  Train,
   generateId,
 } from '../../model';
-import { isHitLine } from '../../trackUtil';
+import { getMidPoint, isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
 import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
+import { PlacedTrain, TrainMove } from './trainMove';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -79,33 +79,40 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
   }
 }
 
-// function placeTrain(cell: Cell, trainMove: TrainMove2, selectedTrain: Train) {
-//   if (!cell.lineType?.tracks[0]) {
-//     return false;
-//   }
+function placeTrain(
+  trainMove: TrainMove,
+  mapTotalHeight: number,
+  cell: Cell,
+  mousePoint: Point,
+  selectedTrain: PlacedTrain
+) {
+  const hitTracks = getHitTracks(mapTotalHeight, cell, mousePoint);
+  if (hitTracks.length === 0) {
+    // trackがないところには置けない
+    return false;
+  }
+  const hitTrack = hitTracks[0];
 
-//   const track = cell.lineType?.tracks[0];
-//   const position = getMidPoint(track.begin, track.end);
+  if (trainMove.placedTrains.some((placedTrain) => placedTrain.track.trackId === hitTrack.trackId)) {
+    // すでに置かれているところには置けない
+    return false;
+  }
 
-//   const moveTrain = trainMove.placedTrains.find((train) => train.train.trainId === selectedTrain.trainId);
-//   if (moveTrain === undefined) {
-//     trainMove.placedTrains.push({
-//       train: selectedTrain,
-//       speed: 10,
-//       stationWaitTime: 0,
-//       stationStatus: 'NotArrived',
-//       track: cell.lineType?.tracks[0],
-//       position: position,
-//       placedTrainId: generateId(),
-//       operation: null,
-//     });
-//   } else {
-//     moveTrain.track = cell.lineType?.tracks[0];
-//     moveTrain.position = position;
-//   }
+  const position = getMidPoint(hitTrack.begin, hitTrack.end);
 
-//   return true;
-// }
+  trainMove.placedTrains.push({
+    train: null,
+    speed: 0,
+    stationWaitTime: 0,
+    stationStatus: 'NotArrived',
+    track: hitTrack,
+    position: position,
+    placedTrainId: generateId(),
+    operation: null,
+  });
+
+  return true;
+}
 
 function createDepot(
   map: GameMap,
@@ -218,13 +225,13 @@ function placeStation(
   return [newTracks, newSwitches, newStation];
 }
 
-function getPlatformOfCell(mapTotalHeight: number, cell: Cell, mousePoint: Point): [Track, Platform] | null {
-  const hitStrokeWidth = CellWidth / 2;
-  if (cell.lineType?.lineClass != null && cell.lineType?.tracks.length > 0) {
-    const tracks = cell.lineType?.tracks;
-    for (const track of tracks) {
-      if (track.track.platform == null) continue;
+function getHitTracks(mapTotalHeight: number, cell: Cell, mousePoint: Point): Track[] {
+  const hitStrokeWidth = CellWidth * 0.8;
 
+  const results: Track[] = [];
+
+  if (cell.lineType?.lineClass != null) {
+    for (const track of cell.lineType?.tracks) {
       const isHit = isHitLine(
         mousePoint,
         [track.begin.x, track.begin.y, track.end.x, track.end.y],
@@ -232,12 +239,22 @@ function getPlatformOfCell(mapTotalHeight: number, cell: Cell, mousePoint: Point
         hitStrokeWidth
       );
       if (isHit) {
-        return [track, track.track.platform];
+        results.push(track);
       }
     }
   }
 
-  return null;
+  return results;
+}
+
+function getPlatformOfCell(mapTotalHeight: number, cell: Cell, mousePoint: Point): [Track, Platform] | null {
+  const tracks = getHitTracks(mapTotalHeight, cell, mousePoint);
+  const stationTrack = tracks.find((track) => track.track.platform != null);
+  if (stationTrack != null) {
+    return [stationTrack, stationTrack.track.platform!];
+  } else {
+    return null;
+  }
 }
 
 function showInfoPanel(
@@ -271,7 +288,7 @@ function createExtendedMapCell(mapCell: ExtendedCell, constructType: ConstructTy
 function onmousedown(
   e: MouseEvent,
   appStates: AppStates,
-  selectedTrain: Train,
+  selectedTrain: PlacedTrain,
   numberOfPlatforms: number,
   constructType: ConstructType,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
@@ -307,8 +324,13 @@ function onmousedown(
       );
       return;
     } else if (appStates.editMode === 'PlaceTrain') {
-      // placeTrain(appStates.map[mapPosition.x][mapPosition.y], appStates.trainMove, selectedTrain);
-      console.log('undefined');
+      placeTrain(
+        appStates.trainMove,
+        appStates.mapContext.mapTotalHeight,
+        appStates.map[mapPosition.x][mapPosition.y],
+        { x, y },
+        selectedTrain
+      );
       return;
     } else if (appStates.editMode === 'SetPlatform') {
       setMouseDragMode('SetPlatform');
@@ -555,7 +577,7 @@ export function EditorContainer({
 }: {
   editorDialogMode: EditorDialogMode | null;
   timetable: DetailedTimetable | null;
-  trains: Train[] | null;
+  trains: PlacedTrain[] | null;
   setPlatform: (platform: Platform) => void;
   platform: Platform | null;
   Switch: Switch | null;
@@ -605,7 +627,7 @@ export function CanvasComponent({
   const [mouseStartCell, setMouseStartCell] = useState<Cell | null>(null);
   const [mouseStartPoint, setMouseStartPoint] = useState<Point | null>(null);
   const [mouseDragMode, setMouseDragMode] = useState<MouseDragMode | null>(null);
-  const [selectedTrain, setSelectedTrain] = useState<Train>(appStates.trains[0]);
+  const [selectedTrain, setSelectedTrain] = useState<PlacedTrain>(appStates.trains[0]);
 
   const setToast = (message: string) => {
     console.warn({ setToast: message });

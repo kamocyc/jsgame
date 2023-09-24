@@ -19,7 +19,9 @@ import {
 import { Point, Station, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
-import { PlacedTrain } from './trainMove2';
+import { PlacedTrain } from './trainMove';
+
+const fontName = 'Meiryo';
 
 function toCY(cellPoint: CellPoint): Point {
   return {
@@ -62,131 +64,132 @@ function drawStraightSub(
   begin: Point,
   end: Point,
   lineDirection: LineDirection,
-  isBeginCurve: boolean = false,
-  isEndCurve: boolean = false
+  isBeginCurve: boolean,
+  drawSleeper: boolean
 ) {
   // ここらへんの値は1セルの大きさに依存するので、CellWidthを使うほうがいいけど、とりあえず固定値で
   switch (lineDirection) {
-    case 'Horizontal':
-      ctx.lineWidth = 4 * mapContext.scale;
-      // 枕木
-      ctx.strokeStyle = 'rgb(145, 145, 145)';
-      for (let i = 0; i < getDistance(begin, end) / 8; i++) {
-        drawLine(
-          ctx,
-          mapContext,
-          { x: begin.x + i * 8 + 4, y: begin.y + 12 },
-          { x: begin.x + i * 8 + 4, y: begin.y - 12 }
-        );
-      }
-
-      // 線路
-      ctx.strokeStyle = 'rgb(89, 47, 24)';
-      drawLine(ctx, mapContext, { ...begin, y: begin.y + 8 }, { ...end, y: end.y + 8 });
-      drawLine(ctx, mapContext, { ...begin, y: begin.y - 8 }, { ...end, y: end.y - 8 });
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 1;
-      break;
-    case 'Vertical':
-      ctx.lineWidth = 4 * mapContext.scale;
-      // 枕木
-      ctx.strokeStyle = 'rgb(145, 145, 145)';
-      for (let i = 0; i < getDistance(begin, end) / 8; i++) {
-        drawLine(
-          ctx,
-          mapContext,
-          { x: begin.x - 12, y: begin.y + i * 8 + 2 },
-          { x: begin.x + 12, y: begin.y + i * 8 + 2 }
-        );
-      }
-
-      // 線路
-      ctx.strokeStyle = 'rgb(89, 47, 24)';
-      drawLine(ctx, mapContext, { ...begin, x: begin.x + 8 }, { ...end, x: end.x + 8 });
-      drawLine(ctx, mapContext, { ...begin, x: begin.x - 8 }, { ...end, x: end.x - 8 });
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 1;
-      break;
-    case 'TopBottom':
-      // 枕木
-      ctx.lineWidth = 4 * mapContext.scale;
-      ctx.strokeStyle = 'rgb(145, 145, 145)';
-      for (let i = 0; i < getDistance(begin, end) / 9; i++) {
-        drawLine(
-          ctx,
-          mapContext,
-          { x: begin.x + i * 5 - 7 + 2, y: begin.y - i * 5 - 7 - 2 },
-          { x: begin.x + i * 5 + 7 + 2, y: begin.y - i * 5 + 7 - 2 }
-        );
-      }
-
-      ctx.lineWidth = 3 * mapContext.scale;
-      // 線路
-      ctx.strokeStyle = 'rgb(89, 47, 24)';
-      const begin1 = isBeginCurve ? { x: begin.x - 1, y: begin.y - 7 } : { x: begin.x - 4, y: begin.y - 4 };
-      const end1 = { x: end.x - 4, y: end.y - 4 };
-      const begin2 = isBeginCurve ? { x: begin.x - 1, y: begin.y + 9 } : { x: begin.x + 4, y: begin.y + 4 };
-      const end2 = { x: end.x + 4, y: end.y + 4 };
-      drawLine(ctx, mapContext, begin1, end1);
-      drawLine(ctx, mapContext, begin2, end2);
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 1;
-      break;
-    case 'BottomTop':
-      if (Math.random() < 0.5) {
-        ctx.lineWidth = 3 * mapContext.scale;
-
+    case 'Horizontal': {
+      if (drawSleeper) {
+        // 枕木
+        ctx.lineWidth = 4 * mapContext.scale;
+        ctx.strokeStyle = 'rgb(145, 145, 145)';
+        const begin_ = begin.x < end.x ? begin : end;
+        const end_ = begin.x < end.x ? end : begin;
+        for (let i = 0; i < getDistance(begin_, end_) / 8; i++) {
+          drawLine(
+            ctx,
+            mapContext,
+            { x: begin_.x + i * 8 + 4, y: begin_.y + 6 },
+            { x: begin_.x + i * 8 + 4, y: begin_.y - 6 }
+          );
+        }
+      } else {
         // 線路
+        ctx.lineWidth = 2 * mapContext.scale;
         ctx.strokeStyle = 'rgb(89, 47, 24)';
-        drawLine(ctx, mapContext, { x: begin.x - 4, y: begin.y + 4 }, { x: end.x - 4, y: end.y + 4 });
-        drawLine(ctx, mapContext, { x: begin.x + 4, y: begin.y - 4 }, { x: end.x + 4, y: end.y - 4 });
+        drawLine(ctx, mapContext, { ...begin, y: begin.y + 3 }, { ...end, y: end.y + 3 });
+        drawLine(ctx, mapContext, { ...begin, y: begin.y - 3 }, { ...end, y: end.y - 3 });
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
-      } else {
-        const center = getMidPoint(begin, end);
-        const straightTypeToImage = {
-          Horizontal: './images/rail_s_0.png',
-          Vertical: './images/rail_s_90.png',
-          BottomTop: './images/rail_s_45.png',
-          TopBottom: './images/rail_s_135.png',
-        };
-        const image = new Image();
-        image.src = straightTypeToImage[lineDirection];
-        ctx.drawImage(
-          image,
-          rx(center.x - image.width / 2, mapContext),
-          ry(center.y + image.height / 2, mapContext),
-          image.width * mapContext.scale,
-          image.height * mapContext.scale
-        );
       }
       break;
+    }
+    case 'Vertical': {
+      if (drawSleeper) {
+        // 枕木
+        ctx.lineWidth = 4 * mapContext.scale;
+        ctx.strokeStyle = 'rgb(145, 145, 145)';
+        const begin_ = begin.y < end.y ? begin : end;
+        const end_ = begin.y < end.y ? end : begin;
+        for (let i = 0; i < getDistance(begin_, end_) / 8; i++) {
+          drawLine(
+            ctx,
+            mapContext,
+            { x: begin_.x - 6, y: begin_.y + i * 8 + 4 },
+            { x: begin_.x + 6, y: begin_.y + i * 8 + 4 }
+          );
+        }
+      } else {
+        // 線路
+        ctx.lineWidth = 2 * mapContext.scale;
+        ctx.strokeStyle = 'rgb(89, 47, 24)';
+        drawLine(ctx, mapContext, { ...begin, x: begin.x + 3 }, { ...end, x: end.x + 3 });
+        drawLine(ctx, mapContext, { ...begin, x: begin.x - 3 }, { ...end, x: end.x - 3 });
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+      }
+      break;
+    }
+    case 'TopBottom': {
+      if (drawSleeper) {
+        // 枕木
+        ctx.lineWidth = 4 * mapContext.scale;
+        ctx.strokeStyle = 'rgb(145, 145, 145)';
+        const begin_ = begin.x < end.x ? begin : end;
+        const end_ = begin.x < end.x ? end : begin;
+        for (let i = 0; i < getDistance(begin_, end_) / 9; i++) {
+          drawLine(
+            ctx,
+            mapContext,
+            { x: begin_.x + i * 5 - 5 + 2, y: begin_.y - i * 5 - 5 - 2 },
+            { x: begin_.x + i * 5 + 5 + 2, y: begin_.y - i * 5 + 5 - 2 }
+          );
+        }
+      } else {
+        // 線路
+        ctx.lineWidth = 2 * mapContext.scale;
+        ctx.strokeStyle = 'rgb(89, 47, 24)';
+        const begin1 = isBeginCurve ? { x: begin.x - 0, y: begin.y - 4 } : { x: begin.x - 2, y: begin.y - 2 };
+        const end1 = { x: end.x - 2, y: end.y - 2 };
+        const begin2 = isBeginCurve ? { x: begin.x - 0, y: begin.y + 4 } : { x: begin.x + 2, y: begin.y + 2 };
+        const end2 = { x: end.x + 2, y: end.y + 2 };
+        drawLine(ctx, mapContext, begin1, end1);
+        drawLine(ctx, mapContext, begin2, end2);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+      }
+      break;
+    }
+    case 'BottomTop': {
+      if (drawSleeper) {
+        // 枕木
+        ctx.lineWidth = 4 * mapContext.scale;
+        ctx.strokeStyle = 'rgb(145, 145, 145)';
+        const begin_ = begin.x < end.x ? begin : end;
+        const end_ = begin.x < end.x ? end : begin;
+        for (let i = 0; i < getDistance(begin_, end_) / 9; i++) {
+          drawLine(
+            ctx,
+            mapContext,
+            { x: begin_.x + i * 5 - 5 + 2, y: begin_.y + i * 5 + 5 + 2 },
+            { x: begin_.x + i * 5 + 5 + 2, y: begin_.y + i * 5 - 5 + 2 }
+          );
+        }
+      } else {
+        // 線路
+        ctx.lineWidth = 2 * mapContext.scale;
+        ctx.strokeStyle = 'rgb(89, 47, 24)';
+        const begin1 = isBeginCurve ? { x: begin.x - 0, y: begin.y + 4 } : { x: begin.x - 2, y: begin.y + 2 };
+        const end1 = { x: end.x - 2, y: end.y + 2 };
+        const begin2 = isBeginCurve ? { x: begin.x + 0, y: begin.y - 4 } : { x: begin.x + 2, y: begin.y - 2 };
+        const end2 = { x: end.x + 2, y: end.y - 2 };
+        drawLine(ctx, mapContext, begin1, end1);
+        drawLine(ctx, mapContext, begin2, end2);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 1;
+      }
+      break;
+    }
   }
 }
 
-// } else {
-//   const center = getMidPoint(begin, end);
-//   const straightTypeToImage = {
-//     Horizontal: './images/rail_s_0.png',
-//     Vertical: './images/rail_s_90.png',
-//     BottomTop: './images/rail_s_45.png',
-//     TopBottom: './images/rail_s_135.png',
-//   };
-//   const image = new Image();
-//   image.src = straightTypeToImage[lineType.straightType];
-//   ctx.drawImage(
-//     image,
-//     rx(center.x - image.width / 2, mapContext),
-//     ry(center.y + image.height / 2, mapContext),
-//     image.width * mapContext.scale,
-//     image.height * mapContext.scale
-//   );
-// }
 function drawStraight(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
   position: Point,
-  lineType: LineTypeStraight
+  lineType: LineTypeStraight,
+  drawSleeper: boolean
 ) {
   const straightTypeToPositionMap = {
     Horizontal: { begin: { x: -1, y: 0 }, end: { x: 1, y: 0 } },
@@ -211,36 +214,32 @@ function drawStraight(
     timesVector(straightType.end, CellWidth / 2)
   );
 
+  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType, false, drawSleeper);
+
   // ctx.strokeStyle = 'green';
   // drawLine(ctx, mapContext, begin, end);
+  // ctx.strokeStyle = 'black';
+}
 
-  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType);
+function xyToLineDirection(xy: Point): LineDirection {
+  if (xy.x === 1 && xy.y === 0) return 'Horizontal';
+  if (xy.x === 1 && xy.y === 1) return 'BottomTop';
+  if (xy.x === 0 && xy.y === 1) return 'Vertical';
+  if (xy.x === -1 && xy.y === 1) return 'TopBottom';
+  if (xy.x === -1 && xy.y === 0) return 'Horizontal';
+  if (xy.x === -1 && xy.y === -1) return 'BottomTop';
+  if (xy.x === 0 && xy.y === -1) return 'Vertical';
+  if (xy.x === 1 && xy.y === -1) return 'TopBottom';
 
-  // const center = getMidPoint(begin, end);
-  // const straightTypeToImage = {
-  //   Horizontal: './images/rail_s_0.png',
-  //   Vertical: './images/rail_s_90.png',
-  //   BottomTop: './images/rail_s_45.png',
-  //   TopBottom: './images/rail_s_135.png',
-  // };
-  // const image = new Image();
-  // image.src = straightTypeToImage[lineType.straightType];
-  // ctx.drawImage(
-  //   image,
-  //   rx(center.x - image.width / 2, mapContext),
-  //   ry(center.y + image.height / 2, mapContext),
-  //   image.width * mapContext.scale,
-  //   image.height * mapContext.scale
-  // );
-
-  ctx.strokeStyle = 'black';
+  throw new Error('xyToLineDirection: invalid xy');
 }
 
 function drawTerminal(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
   position: Point,
-  lineType: LineTypeTerminal
+  lineType: LineTypeTerminal,
+  drawSleeper: boolean
 ) {
   const angleToPositionMap = {
     0: { x: 1, y: 0 },
@@ -251,7 +250,7 @@ function drawTerminal(
     225: { x: -1, y: -1 },
     270: { x: 0, y: -1 },
     315: { x: 1, y: -1 },
-  };
+  } as const;
 
   const begin = addVector(timesVector(position, CellWidth), {
     x: CellWidth / 2,
@@ -264,20 +263,59 @@ function drawTerminal(
     }),
     timesVector(angleToPositionMap[lineType.angle], CellWidth / 2)
   );
-  drawLine(ctx, mapContext, begin, end);
+  drawStraightSub(
+    ctx,
+    mapContext,
+    begin,
+    end,
+    xyToLineDirection(angleToPositionMap[lineType.angle]),
+    false,
+    drawSleeper
+  );
+  // drawLine(ctx, mapContext, begin, end);
 }
 
-function drawCurve(ctx: CanvasRenderingContext2D, mapContext: MapContext, position: Point, lineType: LineTypeCurve) {
+function drawCurve(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  position: Point,
+  lineType: LineTypeCurve,
+  drawSleeper: boolean
+) {
   const curveTypeToPositionMap = {
-    Bottom_TopLeft: { begin: { x: 0, y: -1 }, end: { x: -1, y: 1 } },
-    Bottom_TopRight: { begin: { x: 0, y: -1 }, end: { x: 1, y: 1 } },
-    Top_BottomLeft: { begin: { x: 0, y: 1 }, end: { x: -1, y: -1 } },
-    Top_BottomRight: { begin: { x: 0, y: 1 }, end: { x: 1, y: -1 } },
-    Left_TopRight: { begin: { x: -1, y: 0 }, end: { x: 1, y: 1 } },
-    Left_BottomRight: { begin: { x: -1, y: 0 }, end: { x: 1, y: -1 } },
-    Right_TopLeft: { begin: { x: 1, y: 0 }, end: { x: -1, y: 1 } },
-    Right_BottomLeft: { begin: { x: 1, y: 0 }, end: { x: -1, y: -1 } },
-  };
+    Bottom_TopLeft: {
+      begin: { x: 0, y: -1 },
+      end: { x: -1, y: 1 },
+    },
+    Bottom_TopRight: {
+      begin: { x: 0, y: -1 },
+      end: { x: 1, y: 1 },
+    },
+    Top_BottomLeft: {
+      begin: { x: 0, y: 1 },
+      end: { x: -1, y: -1 },
+    },
+    Top_BottomRight: {
+      begin: { x: 0, y: 1 },
+      end: { x: 1, y: -1 },
+    },
+    Left_TopRight: {
+      begin: { x: -1, y: 0 },
+      end: { x: 1, y: 1 },
+    },
+    Left_BottomRight: {
+      begin: { x: -1, y: 0 },
+      end: { x: 1, y: -1 },
+    },
+    Right_TopLeft: {
+      begin: { x: 1, y: 0 },
+      end: { x: -1, y: 1 },
+    },
+    Right_BottomLeft: {
+      begin: { x: 1, y: 0 },
+      end: { x: -1, y: -1 },
+    },
+  } as const;
 
   const curveType = curveTypeToPositionMap[lineType.curveType];
   const center = addVector(timesVector(position, CellWidth), {
@@ -287,18 +325,38 @@ function drawCurve(ctx: CanvasRenderingContext2D, mapContext: MapContext, positi
   const begin = addVector(center, timesVector(curveType.begin, CellWidth / 2));
   const end = addVector(center, timesVector(curveType.end, CellWidth / 2));
 
-  // カーブはとりあえず色は赤にする
-  ctx.strokeStyle = 'red';
+  drawStraightSub(
+    ctx,
+    mapContext,
+    begin,
+    center,
+    xyToLineDirection(curveTypeToPositionMap[lineType.curveType].begin),
+    false,
+    drawSleeper
+  );
+  drawStraightSub(
+    ctx,
+    mapContext,
+    center,
+    end,
+    xyToLineDirection(curveTypeToPositionMap[lineType.curveType].end),
+    true,
+    drawSleeper
+  );
 
-  drawStraightSub(ctx, mapContext, begin, center, 'Horizontal');
-  drawStraightSub(ctx, mapContext, center, end, 'TopBottom', true, false);
-
-  drawLine(ctx, mapContext, begin, center);
-  drawLine(ctx, mapContext, center, end);
-  ctx.strokeStyle = 'black';
+  // ctx.strokeStyle = 'red';
+  // drawLine(ctx, mapContext, begin, center);
+  // drawLine(ctx, mapContext, center, end);
+  // ctx.strokeStyle = 'black';
 }
 
-function drawBranch(ctx: CanvasRenderingContext2D, mapContext: MapContext, position: Point, lineType: LineTypeBranch) {
+function drawBranch(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  position: Point,
+  lineType: LineTypeBranch,
+  drawSleeper: boolean
+) {
   const branchTypeToPositionMap = {
     Horizontal_TopLeft: {
       begin: { x: 1, y: 0 },
@@ -391,33 +449,46 @@ function drawBranch(ctx: CanvasRenderingContext2D, mapContext: MapContext, posit
   const end1 = addVector(center, timesVector(curveType.end1, CellWidth / 2));
   const end2 = addVector(center, timesVector(curveType.end2, CellWidth / 2));
 
-  if (lineType.branchType === 'BottomTop_Right') {
-    const image = new Image();
-    image.src = './images/rail_s_45 - コピー.png';
-    ctx.drawImage(
-      image,
-      rx(center.x - image.width / 2, mapContext),
-      ry(center.y + image.height / 2, mapContext),
-      image.width * mapContext.scale,
-      image.height * mapContext.scale
-    );
-  } else {
-    ctx.strokeStyle = 'blue';
-    drawLine(ctx, mapContext, begin, end1);
-    drawLine(ctx, mapContext, center, end2);
-    ctx.strokeStyle = 'black';
-  }
+  drawStraightSub(
+    ctx,
+    mapContext,
+    begin,
+    end1,
+    xyToLineDirection(branchTypeToPositionMap[lineType.branchType].end1),
+    false,
+    drawSleeper
+  );
+  drawStraightSub(
+    ctx,
+    mapContext,
+    center,
+    end2,
+    xyToLineDirection(branchTypeToPositionMap[lineType.branchType].end2),
+    true,
+    drawSleeper
+  );
+
+  // ctx.strokeStyle = 'blue';
+  // drawLine(ctx, mapContext, begin, end1);
+  // drawLine(ctx, mapContext, center, end2);
+  // ctx.strokeStyle = 'black';
 }
 
-function drawLineType(ctx: CanvasRenderingContext2D, mapContext: MapContext, position: Point, lineType: LineType) {
+function drawLineType(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  position: Point,
+  lineType: LineType,
+  drawSleeper: boolean
+) {
   if (lineType.lineClass === 'Branch') {
-    drawBranch(ctx, mapContext, position, lineType as LineTypeBranch);
+    drawBranch(ctx, mapContext, position, lineType as LineTypeBranch, drawSleeper);
   } else if (lineType.lineClass === 'Straight') {
-    drawStraight(ctx, mapContext, position, lineType as LineTypeStraight);
+    drawStraight(ctx, mapContext, position, lineType as LineTypeStraight, drawSleeper);
   } else if (lineType.lineClass === 'Terminal') {
-    drawTerminal(ctx, mapContext, position, lineType as LineTypeTerminal);
+    drawTerminal(ctx, mapContext, position, lineType as LineTypeTerminal, drawSleeper);
   } else if (lineType.lineClass === 'Curve') {
-    drawCurve(ctx, mapContext, position, lineType as LineTypeCurve);
+    drawCurve(ctx, mapContext, position, lineType as LineTypeCurve, drawSleeper);
   }
 }
 
@@ -430,17 +501,26 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
     ctx.strokeStyle = 'gray';
     drawLine(ctx, mapContext, addVector(track.begin, { x: 1, y: 5 }), addVector(track.end, { x: 1, y: 5 }));
 
-    // 駅はtrackに対応するが、それは2セルにまたがるので、調整が必要。。。
     if (track.track.platform) {
       ctx.strokeStyle = 'red';
       drawLine(ctx, mapContext, track.begin, track.end);
       drawLine(ctx, mapContext, track.begin, track.end);
 
+      const image = new Image();
+      image.src = './images/platform.png';
+      ctx.drawImage(
+        image,
+        rx((track.begin.x + track.end.x) / 2 - image.width / 2, mapContext),
+        ry((track.begin.y + track.end.y) / 2 - 6, mapContext),
+        image.width * mapContext.scale,
+        image.height * mapContext.scale
+      );
+
       const name = track.track.platform.platformName;
       const metrics = ctx.measureText(name);
 
       // platformの名前を描画
-      ctx.font = '10px sans-serif';
+      ctx.font = '12px ' + fontName;
       ctx.fillText(
         name,
         rx((track.begin.x + track.end.x) / 2 - metrics.width / 2, mapContext),
@@ -457,7 +537,7 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
   }
 
   // 駅名を描画
-  ctx.font = fontSize.toString() + 'px sans-serif';
+  ctx.font = fontSize.toString() + 'px ' + fontName;
   ctx.fillStyle = '#aa0000';
   for (const [stationId, points] of drawnStationPoints) {
     const station = stations.find((station) => station.stationId === stationId)!;
@@ -604,7 +684,15 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     for (let y = 0; y < mapHeight; y++) {
       const cell = map[x][y];
       if (cell.lineType) {
-        drawLineType(ctx, mapContext, cell.position, cell.lineType);
+        drawLineType(ctx, mapContext, cell.position, cell.lineType, true);
+      }
+    }
+  }
+  for (let x = 0; x < mapWidth; x++) {
+    for (let y = 0; y < mapHeight; y++) {
+      const cell = map[x][y];
+      if (cell.lineType) {
+        drawLineType(ctx, mapContext, cell.position, cell.lineType, false);
       }
     }
   }
@@ -616,7 +704,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     for (const stop of appStates.currentRailwayLine.stops) {
       const midPoint = getMidPoint(stop.platformTrack.begin, stop.platformTrack.end);
 
-      ctx.font = 'bold 16px sans-serif';
+      ctx.font = 'bold 16px ' + fontName;
       ctx.fillStyle = 'orange';
       ctx.fillText('●', rx(midPoint.x - 8, mapContext), ry(midPoint.y, mapContext));
       ctx.fillStyle = 'black';
@@ -649,6 +737,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     ctx.fillStyle = 'black';
   }
 }
+
 function drawTrain(ctx: CanvasRenderingContext2D, mapContext: MapContext, train: PlacedTrain) {
   const position = train.position;
 

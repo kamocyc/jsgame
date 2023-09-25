@@ -28,7 +28,6 @@ import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { StoredTrain, TrainMove } from './trainMove';
-import { LineInfoPanel } from './LineInfoPanelComponent';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -104,7 +103,7 @@ function placeTrain(
   trainMove.placedTrains.push({
     ...selectedTrain,
     train: null,
-    speed: 10,  /* 加速す料にしたいところ*/
+    speed: 10 /* 加速す料にしたいところ*/,
     stationWaitTime: 0,
     stationStatus: 'NotArrived',
     track: hitTrack,
@@ -228,7 +227,7 @@ function placeStation(
 
 function getHitTracks(mapTotalHeight: number, cell: Cell, mousePoint: Point): Track[] {
   const hitStrokeWidth = CellWidth * 0.8;
-  
+
   const results: Track[] = [];
 
   if (cell.lineType?.lineClass != null) {
@@ -298,22 +297,24 @@ function onmousedown(
   setMouseStartCell: (cell: Cell | null) => void,
   setMouseStartPoint: (point: Point | null) => void,
   setMouseDragMode: (mode: MouseDragMode | null) => void,
-  setShowLineInfoPanel: (show: boolean) => void,
   setToast: (message: string) => void
 ) {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
   const x = rrx(e.clientX - rect.left, appStates.mapContext);
   const y = rry(e.clientY - rect.top, appStates.mapContext);
 
+  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
+
   // 右クリックでドラッグするときは、マップを移動させる
   if (e.button === 2) {
-    setMouseStartCell(null);
+    if (mapPosition != null) {
+      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    }
     setMouseStartPoint({ x, y });
     setMouseDragMode('MoveMap');
     return;
   }
 
-  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
   if (mapPosition != null) {
     if (appStates.editMode === 'Info') {
       showInfoPanel(
@@ -365,11 +366,10 @@ function onmousedown(
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'DepotCreate') {
       createDepot(appStates.map, mapPosition, appStates.mapWidth, appStates.mapHeight, setToast);
-    } else if (appStates.editMode === 'ShowLine') {
-      setShowLineInfoPanel(true);
     } else if (appStates.editMode === 'LineCreate') {
-           /* LineCreateは右クリックも使うため、mouseupで処理する */}
-    else {
+      /* LineCreateは右クリックも使うため、mouseupで処理する */
+      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    } else {
       console.error('editModeが不正');
     }
   }
@@ -538,26 +538,26 @@ function onmouseup(
           appStates.currentRailwayLine = null;
         }
       } else {
-      const trackAndPlatform = getPlatformOfCell(
-        appStates.mapContext.mapTotalHeight,
-        appStates.map[mapPosition.x][mapPosition.y],
-        { x, y }
-      );
-      if (trackAndPlatform === null) {
-        console.error('platformがnull');
-      } else {
-        const error = addPlatformToLine(
-          trackAndPlatform[0],
-          trackAndPlatform[1],
+        const trackAndPlatform = getPlatformOfCell(
+          appStates.mapContext.mapTotalHeight,
           appStates.map[mapPosition.x][mapPosition.y],
-          appStates
+          { x, y }
         );
-        if (error !== null) {
-          setToast(error.error);
+        if (trackAndPlatform === null) {
+          console.error('platformがnull');
         } else {
+          const error = addPlatformToLine(
+            trackAndPlatform[0],
+            trackAndPlatform[1],
+            appStates.map[mapPosition.x][mapPosition.y],
+            appStates
+          );
+          if (error !== null) {
+            setToast(error.error);
+          } else {
+          }
         }
       }
-    }
     }
 
     drawEditor(appStates);
@@ -646,7 +646,6 @@ export function CanvasComponent({
   const [mouseDragMode, setMouseDragMode] = useState<MouseDragMode | null>(null);
   const [dragMoved, setDragMoved] = useState<boolean>(false);
   const [selectedTrain, setSelectedTrain] = useState<StoredTrain>(appStates.storedTrains[0]);
-  const [showLineInfoPanel, setShowLineInfoPanel] = useState<boolean>(false);
 
   const setToast = (message: string) => {
     console.warn({ setToast: message });
@@ -678,7 +677,6 @@ export function CanvasComponent({
             setMouseStartCell,
             setMouseStartPoint,
             setMouseDragMode,
-            setShowLineInfoPanel,
             setToast
           );
           setDragMoved(false);
@@ -717,23 +715,14 @@ export function CanvasComponent({
         setPlatform={setPlatform}
         platform={platform}
       />
-      (showLineInfoPanel ? (
-        <div className='dialog'>
-          <LineInfoPanel
-            railwayLines={appStates.railwayLines}
-            selectedRailwayLineId={appStates.selectedRailwayLineId}
-            setSelectedRailwayLineId={(id) => {
-              appStates.selectedRailwayLineId = id;
-              update();
-            }}
-            />
-            </div>
-      ) : (<></>)
-      )
 
       <div>
         {appStates.editMode === 'PlaceTrain' ? (
-          <TrainSelector trains={appStates.storedTrains} selectedTrain={selectedTrain} setSelectedTrain={setSelectedTrain} />
+          <TrainSelector
+            trains={appStates.storedTrains}
+            selectedTrain={selectedTrain}
+            setSelectedTrain={setSelectedTrain}
+          />
         ) : (
           <> </>
         )}
@@ -806,6 +795,19 @@ export function commitRailwayLine(appStates: AppStates) {
   }
 }
 
+function searchTrackPath2(track1: Track, track2: Track): Track[] | undefined {
+  const path = searchTrackPath(track1, track2);
+  if (!path) return undefined;
+
+  if (path.length >= 2) {
+    if (path[0].end.x !== path[1].begin.x || path[0].end.y !== path[1].begin.y) {
+      path[0] = path[0].reverseTrack;
+    }
+  }
+
+  return path;
+}
+
 // まずはTFベースの仕組み。そのうち改良
 // 環状線はとりあえずは無いとする。（片側だけは無い）。駅単位で追加する。駅と駅の間の経路はどうするか。 => いずれか経路があればいいとする。いや、プラットフォーム指定。
 // 「路線」
@@ -833,17 +835,18 @@ export function addPlatformToLine(
     };
   } else {
     const stops = appStates.currentRailwayLine.stops;
-    const pathToNewStop = searchTrackPath(stops[stops.length - 1].platformTrack, platformTrack);
+    const pathToNewStop = searchTrackPath2(stops[stops.length - 1].platformTrack, platformTrack);
     if (pathToNewStop == null) {
       return {
         error: 'addPlatformToLine (no path)',
       };
     }
+
     // １つ前のパスを、現在の駅までのパスにする。
     stops[stops.length - 1].platformPaths = pathToNewStop;
 
     // 1周するパスを取得
-    const pathToLoop = searchTrackPath(platformTrack, stops[0].platformTrack);
+    const pathToLoop = searchTrackPath2(platformTrack, stops[0].platformTrack);
     stops.push({
       platform: platform,
       platformPaths: pathToLoop ?? null,

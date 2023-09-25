@@ -16,6 +16,7 @@ import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct } from '../extendedMapModel';
 import { toStringFromSeconds } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
+import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
 import { AgentManager, SearchPath } from './agentManager';
@@ -108,7 +109,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   }
   const extendedMap = obj['extendedMap'] as ExtendedGameMap;
 
-  const storedTrains: StoredTrain[]  = obj['storedTrains'] ?? [];
+  const storedTrains: StoredTrain[] = obj['storedTrains'] ?? [];
   const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
   const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable() };
@@ -196,6 +197,7 @@ export function TrackEditorComponent({
   const [numberOfPlatforms, setNumberOfPlatforms] = useState<number>(2);
   const [_, setUpdate_] = useState<never[]>([]);
   const [constructType, setConstructType] = useState<ConstructType>('House');
+  const [showLineInfoPanel, setShowLineInfoPanel] = useState<boolean>(false);
 
   const update = () => {
     setAppStates((s) => ({ ...s }));
@@ -242,6 +244,20 @@ export function TrackEditorComponent({
         numberOfPlatforms={numberOfPlatforms}
         constructType={constructType}
       />
+      {showLineInfoPanel ? (
+        <div className='dialog'>
+          <LineInfoPanel
+            railwayLines={appStates.railwayLines}
+            selectedRailwayLineId={appStates.selectedRailwayLineId}
+            setSelectedRailwayLineId={(id) => {
+              appStates.selectedRailwayLineId = id;
+              update();
+            }}
+          />
+        </div>
+      ) : (
+        <></>
+      )}
       <div id='control-div'>
         <div className='dialog'>
           <ModeOptionRadioComponent
@@ -279,7 +295,7 @@ export function TrackEditorComponent({
             text='列車を配置'
             checked={appStates.editMode === 'PlaceTrain'}
             setEditorMode={setEditMode}
-            />
+          />
           <ModeOptionRadioComponent
             mode='Info'
             text='情報を表示'
@@ -302,7 +318,10 @@ export function TrackEditorComponent({
             mode='ShowLine'
             text='路線を表示'
             checked={appStates.editMode === 'ShowLine'}
-            setEditorMode={setEditMode}
+            setEditorMode={(mode) => {
+              setEditMode(mode);
+              setShowLineInfoPanel(true);
+            }}
           />
           <div
             style={{
@@ -414,11 +433,12 @@ export function TrackEditorComponent({
           startTop(100);
         }}
       >
-        最初から開始
+        0:00から開始
       </button>
       {/* <button id='button-speed-fast' title={'早送り'}>
         ▸▸▸
       </button> */}
+      <div style={{ display: 'inline-block', margin: '3px' }}>{appStates.globalTimeManager.toStringGlobalTime()}</div>
       <br />
 
       <SeekBarComponent
@@ -429,8 +449,7 @@ export function TrackEditorComponent({
           setPositionPercentage(p);
         }}
       />
-      <div id='time'>{appStates.globalTimeManager.toStringGlobalTime()}</div>
-      <div>{positionPercentage}</div>
+      <div>{Math.round(positionPercentage * 100 * 100) / 100}%</div>
     </>
   );
 }

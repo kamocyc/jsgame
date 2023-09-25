@@ -524,7 +524,10 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
       // platformの名前を描画
       const name = track.track.platform.platformName;
       ctx.font = fontSize.toString() + 'px ' + fontName;
-      drawText(ctx, mapContext, name, { x: (track.begin.x + track.end.x) / 2, y: (track.begin.y + track.end.y) / 2 - 10 });
+      drawText(ctx, mapContext, name, {
+        x: (track.begin.x + track.end.x) / 2,
+        y: (track.begin.y + track.end.y) / 2 - 10,
+      });
 
       const station = stations.find((station) =>
         station.platforms.some((platform) => platform.platformId === track.track.platform!.platformId)
@@ -542,7 +545,7 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
     const name = station.stationName;
     const x = points.reduce((acc, p) => acc + p.x, 0) / points.length;
     const y = Math.max(...points.map((p) => p.y));
-    drawText(ctx, mapContext, name, { x: x, y: y + 10 }, fontSize);
+    drawText(ctx, mapContext, name, { x: x, y: y + 10 });
   }
 
   ctx.strokeStyle = 'black';
@@ -609,13 +612,83 @@ function drawBackground(ctx: CanvasRenderingContext2D, mapContext: MapContext) {
   ctx.fillStyle = 'rgb(0, 0, 0)';
 }
 
+function getAngle(begin: Point, end: Point) {
+  const dx = end.x - begin.x;
+  const dy = end.y - begin.y;
+  return (Math.atan2(dy, dx) * 180) / Math.PI;
+}
+
+function subVector(a: Point, b: Point): Point {
+  return { x: a.x - b.x, y: a.y - b.y };
+}
+
+function normalizeVector(a: Point): Point {
+  const length = Math.sqrt(a.x * a.x + a.y * a.y);
+  return { x: a.x / length, y: a.y / length };
+}
+
+function drawArrowedLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, begin: Point, end: Point) {
+  drawLine(ctx, mapContext, begin, end);
+
+  // どっちが見やすいのかな
+  if (true) {
+    // 一定間隔に矢印を描画
+    const arrowInterval = 16 / mapContext.scale;
+    const arrowSize = 10 / mapContext.scale;
+    const arrowAngle = 30;
+
+    const distance = getDistance(begin, end);
+    const angle = getAngle(begin, end);
+    const angle1 = angle + arrowAngle;
+    const angle2 = angle - arrowAngle;
+
+    for (let i = 0; i < distance / arrowInterval; i++) {
+      const p = addVector(begin, timesVector(normalizeVector(subVector(end, begin)), arrowInterval * i));
+      const end1 = addVector(p, {
+        x: -arrowSize * Math.cos((angle1 * Math.PI) / 180),
+        y: -arrowSize * Math.sin((angle1 * Math.PI) / 180),
+      });
+      const end2 = addVector(p, {
+        x: -arrowSize * Math.cos((angle2 * Math.PI) / 180),
+        y: -arrowSize * Math.sin((angle2 * Math.PI) / 180),
+      });
+      drawLine(ctx, mapContext, p, end1);
+      drawLine(ctx, mapContext, p, end2);
+    }
+  } else {
+    // 終点のみに矢印を描画
+    const arrowSize = 5 / mapContext.scale;
+    const arrowAngle = 30;
+
+    const angle = getAngle(begin, end);
+    const angle1 = angle + arrowAngle;
+    const angle2 = angle - arrowAngle;
+
+    const end1 = addVector(end, {
+      x: -arrowSize * Math.cos((angle1 * Math.PI) / 180),
+      y: -arrowSize * Math.sin((angle1 * Math.PI) / 180),
+    });
+    const end2 = addVector(end, {
+      x: -arrowSize * Math.cos((angle2 * Math.PI) / 180),
+      y: -arrowSize * Math.sin((angle2 * Math.PI) / 180),
+    });
+
+    drawLine(ctx, mapContext, end, end1);
+    drawLine(ctx, mapContext, end, end2);
+  }
+}
+
 function drawTrainLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, railwayLine: RailwayLine) {
   for (const stop of railwayLine.stops) {
     if (stop.platformPaths !== null) {
       for (const path of stop.platformPaths) {
         ctx.strokeStyle = 'rgb(255, 0, 0)';
         ctx.lineWidth = 2;
-        drawLine(ctx, mapContext, path.begin, path.end);
+        if (getDistance(path.begin, path.end) < 3) {
+          console.log({ path });
+          // drawLine(ctx, mapContext, path.begin, path.end);
+        }
+        drawArrowedLine(ctx, mapContext, path.begin, path.end);
         ctx.lineWidth = 1;
         ctx.strokeStyle = 'rgb(0, 0, 0)';
       }
@@ -753,7 +826,7 @@ function drawTrain(ctx: CanvasRenderingContext2D, mapContext: MapContext, train:
 
     // 車両名を表示
     ctx.fillStyle = 'red';
-    ctx.font =  '15px ' + fontName + ' bold';
+    ctx.font = '15px ' + fontName + ' bold';
     drawText(ctx, mapContext, train.placedTrainName, position);
   } else {
     // 塗りつぶした円を描画

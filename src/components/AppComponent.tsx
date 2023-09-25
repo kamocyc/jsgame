@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
-import { DetailedTimetable, Track } from '../model';
+import { DetailedTimetable } from '../model';
 import { Polygon, sat } from '../sat';
 import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
@@ -123,6 +123,7 @@ export function getInitialAppStates(): AppStates {
     message: null,
     currentRailwayLine: null,
     railwayLines: [],
+    selectedRailwayLineId: null,
   };
 }
 
@@ -131,7 +132,17 @@ export function App() {
 
   return (
     <>
-      <ToastComponent message={appStates.message} />
+      <ToastComponent
+        message={appStates.message}
+        setMessage={(message) => {
+          setAppStates((prev) => {
+            return {
+              ...prev,
+              message,
+            };
+          });
+        }}
+      />
       <SplitViewComponent
         splitViews={[
           {

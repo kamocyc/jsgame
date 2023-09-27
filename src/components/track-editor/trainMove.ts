@@ -1,7 +1,6 @@
 import { assert } from '../../common.js';
 import { CellWidth } from '../../mapEditorModel.js';
 import {
-  ArrivalAndDepartureStatus,
   BranchDirection,
   DetailedTimetable,
   Operation,
@@ -19,6 +18,7 @@ import {
   isTrainOutTrack,
 } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
+import { ITrainMove, PlacedTrain } from './trainMoveBase.js';
 
 function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | undefined {
   if (!stationTrack.track.platform) return undefined;
@@ -133,24 +133,6 @@ export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track)
   return candidatePatterns[0][1];
 }
 
-// 継承させるので名称はPlacedTrainに合わせた（それでいいのかは不明）
-export interface StoredTrain {
-  placedTrainId: string; // 車両ID（物理的な車両）
-  placedTrainName: string;
-  placedRailwayLineId: string | null;
-}
-
-export interface PlacedTrain extends StoredTrain {
-  train: Train | null; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
-  operation: Operation | null;
-  speed: number;
-  track: Track;
-  stopId: string | null;
-  position: Point;
-  stationWaitTime: number;
-  stationStatus: ArrivalAndDepartureStatus;
-}
-
 const TimeActionMode: 'Just' | 'After' = 'After';
 const StartIfNoTimetable = true;
 
@@ -159,11 +141,6 @@ export function getMinTimetableTime(timetable: DetailedTimetable): number {
     ...timetable.platformTTItems.filter((t) => t.departureTime !== null).map((t) => t.departureTime! - 60)
   );
   return minTimetableTime;
-}
-
-export interface ITrainMove {
-  tick(globalTimeManager: GlobalTimeManager): void;
-  getPlacedTrains(): PlacedTrain[];
 }
 export class TrainMove implements ITrainMove {
   placedTrains: PlacedTrain[] = [];
@@ -177,6 +154,13 @@ export class TrainMove implements ITrainMove {
 
   getPlacedTrains(): PlacedTrain[] {
     return this.placedTrains;
+  }
+
+  getTrainMoveType() {return 'TrainMove' as const;}
+  
+  resetTrainMove(globalTimeManager: GlobalTimeManager): void {
+    this.placedTrains = [];
+    globalTimeManager.resetGlobalTime(getMinTimetableTime(this.timetable));
   }
 
   private getNextTrack(track: Track, placedTrain: PlacedTrain): Track {

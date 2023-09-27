@@ -1,9 +1,10 @@
 import { assert, removeNull } from '../../common';
-import { CellHeight, CellWidth, ExtendedGameMap, GameMap } from '../../mapEditorModel';
+import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
-import { getDistance, getMidPoint } from '../../trackUtil';
+import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
-import { PlacedTrain, TrainMove } from './trainMove';
+import { TrainMove } from './trainMove';
+import { PlacedTrain } from './trainMoveBase';
 
 export type AgentStatus = 'Idle' | 'Move';
 
@@ -231,7 +232,8 @@ export function createAgentPath(
   // console.log({ nearestStationCellPosition });
   // console.log({ destinationNearestStationCellPosition });
 
-  const stationPath = SearchPath(nearestStation.station, currentTime, destinationNearestStation.station, timetable)[1];
+  // const stationPath = searchPath(nearestStation.station, currentTime, destinationNearestStation.station, timetable)[1];
+  const stationPath = searchPath2(nearestStation.station, destinationNearestStation.station)[1];
   if (stationPath === null) {
     return [];
   }
@@ -278,8 +280,92 @@ export function createAgentPath(
   return path;
 }
 
+type StationAndRailwayLine = {
+  station: Station,
+  railwayLine: RailwayLine,
+  stop: RailwayLineStop,
+}
+
+function getAdjacentStations2(sr: StationAndRailwayLine, railwayLines: RailwayLine[]): StationAndRailwayLine[] {
+  const candidates: StationAndRailwayLine[] = [];
+
+  // 1. 現在の路線の次の駅を取得
+  const stopIndex = sr.railwayLine.stops.findIndex(s => s.stopId === sr.stop.stopId);
+  if (stopIndex === -1) {
+    throw new Error('stopIndex is -1');
+  }
+  const nextStopIndex = stopIndex === sr.railwayLine.stops.length - 1 ? 0 : stopIndex + 1;
+  const nextStop = sr.railwayLine.stops[nextStopIndex];
+  const nextStation = nextStop.platform.station;
+  candidates.push({
+    station: nextStation,
+    railwayLine: sr.railwayLine,
+    stop: nextStop
+  });
+
+  // 2. 現在の駅の別の路線の駅を取得
+  const otherRailwayLineStops =
+    railwayLines
+    .filter(r => r.railwayLineId !== sr.railwayLine.railwayLineId)
+    .map(r => r.stops.map(s => ([r, s] as const)))
+    .flat()
+    .filter(([_, s]) => s.platform.station.stationId === sr.station.stationId);
+  candidates.push(...otherRailwayLineStops.map(([r, s]) => ({
+    station: sr.station,
+    railwayLine: r,
+    stop: s,
+  })));
+
+  return candidates;
+}
+
+function getDistanceBetweenStation2(sr1: StationAndRailwayLine, sr2: StationAndRailwayLine): number {
+  if (sr1.railwayLine.railwayLineId === sr2.railwayLine.railwayLineId) {
+    if (sr1.stop.platformPaths === null) {
+      throw new Error('sr1.stop.platformPaths === null');
+    }
+    // 同じ路線の場合 => pathの長さを利用
+    let length = 0;
+    for (const path of sr1.stop.platformPaths) {
+      if (path.track.platform?.station.stationId !== sr1.station.stationId && path.track.platform?.station.stationId !== sr2.station.stationId) {
+        length += getDistance(path.begin, path.end);
+      }
+      return length;
+    }
+  }
+
+  // 異なる路線の場合 => 同じ駅であるはず
+  if (sr1.station.stationId !== sr2.station.stationId) {
+    throw new Error('sr1.station.stationId !== sr2.station.stationId')
+  }
+
+  // 乗り換え時間として適当な固定値を返す
+  return 5;
+}
+
+export function searchPath2(
+  initialPosition: Station,
+  destination: Station,
+  railwayLine: RailwayLine,
+  stop: RailwayLineStop,
+  railwayLines: RailwayLine[],
+) {
+  
+  return abstractSearch<StationAndRailwayLine>(
+    {
+      station: initialPosition,
+      railwayLine: railwayLine,
+      stop: stop,
+    },
+    (sr) => sr.station.stationId + "__" + sr.railwayLine.railwayLineId + "__" + sr.stop.stopId,
+    (sr) => getAdjacentStations2(sr, railwayLines),
+    (sr1, sr2) => getDistanceBetweenStation2(sr1, sr2),
+    (sr) => sr.station.stationId === destination.stationId
+  )  
+}
+
 // 時刻表を元にしてダイクストラ法で探索する
-export function SearchPath(
+export function searchPath(
   initialPosition: Station,
   startTime: number,
   destination: Station,

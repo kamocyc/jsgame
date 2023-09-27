@@ -28,7 +28,7 @@ import { StoreTrainInfoPanel } from './StoredTrainInfoPanel';
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
-import { StoredTrain, TrainMove } from './trainMove';
+import { ITrainMove, StoredTrain } from './trainMoveBase';
 
 type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -81,7 +81,7 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
 }
 
 function placeTrain(
-  trainMove: TrainMove,
+  trainMove: ITrainMove,
   mapTotalHeight: number,
   cell: Cell,
   mousePoint: Point,
@@ -94,14 +94,15 @@ function placeTrain(
   }
   const hitTrack = hitTracks[0];
 
-  if (trainMove.placedTrains.some((placedTrain) => placedTrain.track.trackId === hitTrack.trackId)) {
+  if (trainMove.getPlacedTrains().some((placedTrain) => placedTrain.track.trackId === hitTrack.trackId)) {
     // すでに置かれているところには置けない
     return false;
   }
 
   const position = getMidPoint(hitTrack.begin, hitTrack.end);
 
-  trainMove.placedTrains.push({
+  // TODO: よくないが。
+  trainMove.getPlacedTrains().push({
     ...selectedTrain,
     train: null,
     speed: 10 /* 加速す料にしたいところ*/,

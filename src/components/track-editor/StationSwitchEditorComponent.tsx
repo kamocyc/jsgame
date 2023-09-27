@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { DetailedTimetable, Platform, Switch } from '../../model';
 import { TimeInputComponent } from '../timetable-editor/common-component';
-import { StoredTrain } from './trainMove';
+import { StoredTrain } from './trainMoveBase';
 
 export function TrainSelector({
   trains,

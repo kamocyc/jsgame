@@ -24,6 +24,7 @@ import { getInitialTimetable, reverseTimetableDirection } from './timetable-util
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 import { removeNull } from '../../common';
+import { createTrainMove } from '../track-editor/trainMoveBase';
 
 export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Station[] }) {
   return (
@@ -247,7 +248,7 @@ export function TimetableEditorComponent({
             //   .concat(timetable.switchTTItems.map((switchTTItem) => switchTTItem.train)))
             //   .filter((train, i, self) => self.findIndex((t) => t.trainId === train.trainId) === i);
 
-            const trainMove = new TrainMove(timetable);
+            const trainMove = createTrainMove(timetable, appStates.railwayLines, appStates.storedTrains);
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: trainMove,
@@ -256,7 +257,7 @@ export function TimetableEditorComponent({
                 timetableData.timetable.stations,
                 appStates.map,
                 timetableData.timetable,
-                trainMove
+                trainMove,
               ),
               detailedTimetable: timetable,
               // placedTrains: trains, // これは使っているのか？

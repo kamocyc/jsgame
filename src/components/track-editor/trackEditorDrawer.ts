@@ -19,7 +19,7 @@ import {
 import { Point, Station, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
-import { PlacedTrain } from './trainMove';
+import { PlacedTrain } from './trainMoveBase';
 
 const fontName = 'Meiryo';
 
@@ -794,7 +794,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 
   // 列車を描画
-  for (const train of trainMove.placedTrains) {
+  for (const train of trainMove.getPlacedTrains()) {
     drawTrain(ctx, mapContext, train);
   }
 

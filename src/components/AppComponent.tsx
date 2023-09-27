@@ -11,6 +11,7 @@ import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { AgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { TrainMove } from './track-editor/trainMove';
+import { createTrainMove } from './track-editor/trainMoveBase';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
@@ -92,23 +93,26 @@ export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
   const timetableData = getInitialTimetable();
-  const trainMove = new TrainMove(timetable);
+  const storedTrains = [
+    {
+      placedTrainId: '1',
+      placedTrainName: 'A',
+      placedRailwayLineId: null,
+    },
+    {
+      placedTrainId: '2',
+      placedTrainName: 'B',
+      placedRailwayLineId: null,
+    },
+  ];
+  const trainMove = createTrainMove(timetable, [], storedTrains);
   return {
     editMode: 'Create',
     globalTimeManager: new GlobalTimeManager(),
     detailedTimetable: timetable,
     timetableData: timetableData,
     operations: [],
-    storedTrains: [
-      {
-        placedTrainId: '1',
-        placedTrainName: 'A',
-      },
-      {
-        placedTrainId: '2',
-        placedTrainName: 'B',
-      },
-    ],
+    storedTrains: storedTrains,
     trainPlaceDirection: 'Up',
     map: gameMap,
     mapWidth: defaultMapWidth,
@@ -116,7 +120,7 @@ export function getInitialAppStates(): AppStates {
     mapContext: createMapContext(defaultMapWidth, defaultMapHeight),
     extendedMap: extendedMap,
     trainMove: trainMove,
-    agentManager: new AgentManager(extendedMap, [], gameMap, timetableData.timetable, trainMove),
+    agentManager: new AgentManager(extendedMap, [], gameMap, timetableData.timetable, trainMove as TrainMove),
     switches: [],
     stations: [],
     tracks: [],

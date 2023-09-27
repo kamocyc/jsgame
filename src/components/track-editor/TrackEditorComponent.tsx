@@ -19,9 +19,10 @@ import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
-import { AgentManager, SearchPath } from './agentManager';
+import { AgentManager, searchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
-import { PlacedTrain, StoredTrain, TrainMove, getMinTimetableTime } from './trainMove';
+import { TrainMove, getMinTimetableTime } from './trainMove';
+import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -87,7 +88,7 @@ function toStringEditorData(appStates: AppStates) {
     timetableData: appStates.timetableData,
     extendedMap: appStates.extendedMap,
     operations: appStates.operations,
-    placedTrains: appStates.trainMove.placedTrains,
+    placedTrains: appStates.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
   };
 
@@ -117,8 +118,8 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const operations = obj['operations'] ?? [];
   const railwayLines = obj['railwayLines'] ?? [];
 
-  const trainMove = new TrainMove(timetable);
-  trainMove.placedTrains = placedTrains;
+  const trainMove = createTrainMove(timetable, railwayLines, storedTrains);
+  // trainMove.placedTrains = placedTrains;
   const switches = mapData.flatMap(
     (row) =>
       row
@@ -358,6 +359,9 @@ export function TrackEditorComponent({
             checked={appStates.editMode === 'Road'}
             setEditorMode={setEditMode}
           />
+          <button onClick={() => {
+            appStates.placedTrains
+          }}>配置列車を削除</button>
         </div>
         <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
         <button onClick={() => loadEditorDataLocalStorage(setAppStates)}>読み込み</button>
@@ -398,7 +402,7 @@ export function TrackEditorComponent({
             const station2 = appStates.stations[3];
             const startTime = 0;
             const timetable = appStates.timetableData.timetable;
-            const result = SearchPath(station1, startTime, station2, timetable);
+            const result = searchPath(station1, startTime, station2, timetable);
             console.log({ result });
             console.log(result[0].map(([station, time]) => station.stationName + ': ' + toStringFromSeconds(time)));
           })();
@@ -432,8 +436,7 @@ export function TrackEditorComponent({
       <button
         onClick={() => {
           stopInterval();
-          appStates.trainMove.placedTrains = [];
-          appStates.globalTimeManager.resetGlobalTime(getMinTimetableTime(appStates.trainMove.timetable));
+          appStates.trainMove.resetTrainMove(appStates.globalTimeManager);
           startTop(100);
         }}
       >

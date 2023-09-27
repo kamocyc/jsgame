@@ -1,7 +1,7 @@
 import { RailwayLine } from '../../mapEditorModel';
 import { generateId } from '../../model';
 import { ListSettingCommonComponent } from './ListSettingCommonComponent';
-import { StoredTrain } from './trainMove';
+import { StoredTrain } from './trainMoveBase';
 
 export function StoreTrainInfoPanel({
   storedTrains,

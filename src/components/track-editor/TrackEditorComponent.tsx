@@ -206,6 +206,12 @@ export function TrackEditorComponent({
   };
 
   const setEditMode = (mode: EditMode) => {
+    if (mode === 'LineCreate') {
+      setShowLineInfoPanel(true);
+    } else {
+      setShowLineInfoPanel(false);
+      appStates.selectedRailwayLineId = null;
+    }
     setAppStates((appStates) => ({ ...appStates, editMode: mode }));
   };
 
@@ -251,6 +257,10 @@ export function TrackEditorComponent({
             selectedRailwayLineId={appStates.selectedRailwayLineId}
             setSelectedRailwayLineId={(id) => {
               appStates.selectedRailwayLineId = id;
+              update();
+            }}
+            setRailwayLines={(railwayLines) => {
+              appStates.railwayLines = railwayLines;
               update();
             }}
           />
@@ -313,15 +323,6 @@ export function TrackEditorComponent({
             text='車庫を作成'
             checked={appStates.editMode === 'DepotCreate'}
             setEditorMode={setEditMode}
-          />
-          <ModeOptionRadioComponent
-            mode='ShowLine'
-            text='路線を表示'
-            checked={appStates.editMode === 'ShowLine'}
-            setEditorMode={(mode) => {
-              setEditMode(mode);
-              setShowLineInfoPanel(true);
-            }}
           />
           <div
             style={{

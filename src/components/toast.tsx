@@ -8,7 +8,7 @@ export function ToastComponent({
   setMessage: (message: string | null) => void;
 }) {
   return (
-    <div className='toast'>
+    <div className='toast' style={{ display: 'flex', justifyContent: 'space-between' }}>
       {message === null ? (
         <></>
       ) : (
@@ -18,7 +18,13 @@ export function ToastComponent({
           </div>
           <div
             className='toast__close-button'
-            style={{ display: 'inline-block' }}
+            style={{
+              display: 'inline-block',
+              backgroundColor: 'red',
+              color: 'white',
+              padding: '0 5px',
+              cursor: 'pointer',
+            }}
             onClick={() => {
               setMessage(null);
             }}

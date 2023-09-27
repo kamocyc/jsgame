@@ -136,6 +136,7 @@ export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track)
 export interface StoredTrain {
   placedTrainId: string;
   placedTrainName: string;
+  placedRailwayLineId: string | null;
 }
 
 export interface PlacedTrain {

@@ -23,7 +23,8 @@ import {
 } from '../../model';
 import { getMidPoint, isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
-import { StationEditor, SwitchEditor, TrainSelector } from './StationSwitchEditorComponent';
+import { StationEditor, SwitchEditor } from './StationSwitchEditorComponent';
+import { StoreTrainInfoPanel } from './StoredTrainInfoPanel';
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
@@ -288,7 +289,7 @@ function createExtendedMapCell(mapCell: ExtendedCell, constructType: ConstructTy
 function onmousedown(
   e: MouseEvent,
   appStates: AppStates,
-  selectedTrain: StoredTrain,
+  selectedTrain: StoredTrain | null,
   numberOfPlatforms: number,
   constructType: ConstructType,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
@@ -327,14 +328,19 @@ function onmousedown(
       );
       return;
     } else if (appStates.editMode === 'PlaceTrain') {
-      placeTrain(
-        appStates.trainMove,
-        appStates.mapContext.mapTotalHeight,
-        appStates.map[mapPosition.x][mapPosition.y],
-        { x, y },
-        selectedTrain
-      );
-      return;
+      if (selectedTrain === null) {
+        console.error('selectedTrainがnull');
+        return;
+      } else {
+        placeTrain(
+          appStates.trainMove,
+          appStates.mapContext.mapTotalHeight,
+          appStates.map[mapPosition.x][mapPosition.y],
+          { x, y },
+          selectedTrain
+        );
+        return;
+      }
     } else if (appStates.editMode === 'SetPlatform') {
       setMouseDragMode('SetPlatform');
       const newPlatform = createPlatform(appStates.map[mapPosition.x][mapPosition.y]);
@@ -645,7 +651,7 @@ export function CanvasComponent({
   const [mouseStartPoint, setMouseStartPoint] = useState<Point | null>(null);
   const [mouseDragMode, setMouseDragMode] = useState<MouseDragMode | null>(null);
   const [dragMoved, setDragMoved] = useState<boolean>(false);
-  const [selectedTrain, setSelectedTrain] = useState<StoredTrain>(appStates.storedTrains[0]);
+  const [selectedTrain, setSelectedTrain] = useState<StoredTrain | null>(null);
 
   const setToast = (message: string) => {
     console.warn({ setToast: message });
@@ -718,10 +724,17 @@ export function CanvasComponent({
 
       <div>
         {appStates.editMode === 'PlaceTrain' ? (
-          <TrainSelector
-            trains={appStates.storedTrains}
-            selectedTrain={selectedTrain}
-            setSelectedTrain={setSelectedTrain}
+          <StoreTrainInfoPanel
+            storedTrains={appStates.storedTrains}
+            railwayLines={appStates.railwayLines}
+            setStoredTrains={(storedTrains) => {
+              appStates.storedTrains = storedTrains;
+              update();
+            }}
+            selectedPlacedTrainId={selectedTrain?.placedTrainId ?? null}
+            setSelectedPlacedTrainId={(id) => {
+              setSelectedTrain(appStates.storedTrains.find((train) => train.placedTrainId === id) ?? null);
+            }}
           />
         ) : (
           <> </>
@@ -824,7 +837,7 @@ export function addPlatformToLine(
     appStates.currentRailwayLine = {
       railwayLineId: id,
       railwayLineName: '路線' + id,
-      railwayLineColor: 'black',
+      railwayLineColor: '#ff8800', // orange
       stops: [
         {
           platform: platform,

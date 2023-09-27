@@ -27,7 +27,7 @@ function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | unde
   return midPoint;
 }
 
-function shouldStopTrain(train: PlacedTrain): false | Point {
+export function shouldStopTrain(train: PlacedTrain): false | Point {
   if (
     !train.track.track.platform ||
     train.stationStatus !== 'NotArrived' /*|| train.stationWaitTime >= this.maxStationWaitTime*/
@@ -133,19 +133,19 @@ export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track)
   return candidatePatterns[0][1];
 }
 
+// 継承させるので名称はPlacedTrainに合わせた（それでいいのかは不明）
 export interface StoredTrain {
-  placedTrainId: string;
+  placedTrainId: string; // 車両ID（物理的な車両）
   placedTrainName: string;
   placedRailwayLineId: string | null;
 }
 
-export interface PlacedTrain {
-  placedTrainId: string; // 車両ID（物理的な車両）
+export interface PlacedTrain extends StoredTrain {
   train: Train | null; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
-  placedTrainName: string;
   operation: Operation | null;
   speed: number;
   track: Track;
+  stopId: string | null;
   position: Point;
   stationWaitTime: number;
   stationStatus: ArrivalAndDepartureStatus;
@@ -161,7 +161,11 @@ export function getMinTimetableTime(timetable: DetailedTimetable): number {
   return minTimetableTime;
 }
 
-export class TrainMove {
+export interface ITrainMove {
+  tick(globalTimeManager: GlobalTimeManager): void;
+  getPlacedTrains(): PlacedTrain[];
+}
+export class TrainMove implements ITrainMove {
   placedTrains: PlacedTrain[] = [];
   timetable: DetailedTimetable;
   readonly trainOccupy = new TrainOccupy();
@@ -169,6 +173,10 @@ export class TrainMove {
 
   constructor(timetable: DetailedTimetable) {
     this.timetable = timetable;
+  }
+
+  getPlacedTrains(): PlacedTrain[] {
+    return this.placedTrains;
   }
 
   private getNextTrack(track: Track, placedTrain: PlacedTrain): Track {
@@ -469,6 +477,8 @@ export class TrainMoveWithTimetable {
         track: ttItem.track,
         position: getMidPoint(ttItem.track.begin, ttItem.track.end),
         operation: operation,
+        placedRailwayLineId: null,
+        stopId: null,
       });
     }
   }

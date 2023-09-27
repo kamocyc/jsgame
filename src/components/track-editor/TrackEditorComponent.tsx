@@ -49,15 +49,15 @@ export function ModeOptionRadioComponent({
   );
 }
 
-interface SerializedPlacedTrain {
-  trainId: string;
-  train: Train;
-  speed: number;
-  trackId: string;
-  position: Point;
-  stationWaitTime: number;
-  stationStatus: 'Arrived' | 'Departed' | 'NotArrived';
-}
+// interface SerializedPlacedTrain {
+//   trainId: string;
+//   train: Train;
+//   speed: number;
+//   trackId: string;
+//   position: Point;
+//   stationWaitTime: number;
+//   stationStatus: 'Arrived' | 'Departed' | 'NotArrived';
+// }
 
 function saveEditorDataLocalStorage(appStates: AppStates) {
   const buf = toStringEditorData(appStates);
@@ -88,6 +88,7 @@ function toStringEditorData(appStates: AppStates) {
     extendedMap: appStates.extendedMap,
     operations: appStates.operations,
     placedTrains: appStates.trainMove.placedTrains,
+    railwayLines: appStates.railwayLines,
   };
 
   return JSON.stringify(JSON_decycle(obj), null, 2);
@@ -114,6 +115,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
   const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable() };
   const operations = obj['operations'] ?? [];
+  const railwayLines = obj['railwayLines'] ?? [];
 
   const trainMove = new TrainMove(timetable);
   trainMove.placedTrains = placedTrains;
@@ -151,6 +153,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     mapWidth: mapWidth,
     mapHeight: mapHeight,
     timetableData: timetableData,
+    railwayLines: railwayLines,
     mapContext: createMapContext(mapWidth, mapHeight),
   }));
 }

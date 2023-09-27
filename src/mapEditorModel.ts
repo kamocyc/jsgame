@@ -124,6 +124,7 @@ export function createMapContext(mapWidth: number, mapHeight: number): MapContex
 }
 
 export interface RailwayLineStop {
+  stopId: string;
   platform: Platform;
   platformTrack: Track;
   platformPaths: Track[] | null;

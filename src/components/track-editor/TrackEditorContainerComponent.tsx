@@ -107,6 +107,7 @@ function placeTrain(
     speed: 10 /* 加速す料にしたいところ*/,
     stationWaitTime: 0,
     stationStatus: 'NotArrived',
+    stopId: null,
     track: hitTrack,
     position: position,
     operation: null,
@@ -840,6 +841,7 @@ export function addPlatformToLine(
       railwayLineColor: '#ff8800', // orange
       stops: [
         {
+          stopId: generateId(),
           platform: platform,
           platformPaths: null,
           platformTrack: platformTrack,
@@ -861,6 +863,7 @@ export function addPlatformToLine(
     // 1周するパスを取得
     const pathToLoop = searchTrackPath2(platformTrack, stops[0].platformTrack);
     stops.push({
+      stopId: generateId(),
       platform: platform,
       platformPaths: pathToLoop ?? null,
       platformTrack: platformTrack,

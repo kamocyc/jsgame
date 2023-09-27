@@ -428,7 +428,7 @@ export class AgentManager {
               .concat(this.timetable.outboundTrains)
               .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
             assert(train !== undefined, 'train is undefined');
-            const placedTrain = this.trainMove.placedTrains.find((t) => t.train?.trainId === train.trainId);
+            const placedTrain = this.trainMove.getPlacedTrains().find((t) => t.train?.trainId === train.trainId);
             if (placedTrain === undefined) {
               console.error('placedTrain is undefined');
               return;

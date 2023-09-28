@@ -11,7 +11,7 @@ import {
   createMapContext,
   timesVector,
 } from '../../mapEditorModel';
-import { DetailedTimetable, Point, Station, Switch, Train } from '../../model';
+import { DetailedTimetable, Station, Switch } from '../../model';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct } from '../extendedMapModel';
 import { toStringFromSeconds } from '../timetable-editor/common-component';
@@ -21,7 +21,6 @@ import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
 import { AgentManager, searchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
-import { TrainMove, getMinTimetableTime } from './trainMove';
 import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
 
 export function ModeOptionRadioComponent({
@@ -169,10 +168,10 @@ function loadEditorDataLocalStorage(setAppStates: StateUpdater<AppStates>) {
 
 function addAgents(appStates: AppStates) {
   // 目的地に到着したら消す
-  const agents = [...appStates.agentManager.agents];
+  const agents = [...appStates.agentManager.getAgents()];
   for (const agent of agents) {
     if (agent.inDestination) {
-      appStates.agentManager.remove(agent);
+      appStates.agentManager.remove(agent.id);
     }
   }
 
@@ -188,6 +187,8 @@ function addAgents(appStates: AppStates) {
     }
   }
 }
+
+const SearchMode: 'TimetableBased' | 'RailwayLineBased' = 'RailwayLineBased';
 
 export function TrackEditorComponent({
   appStates,
@@ -239,7 +240,7 @@ export function TrackEditorComponent({
       appStates.globalTimeManager.tick();
       appStates.trainMove.tick(appStates.globalTimeManager);
       addAgents(appStates);
-      appStates.agentManager.tick(appStates.globalTimeManager.globalTime);
+      appStates.agentManager.tick(appStates.globalTimeManager.globalTime, [], []);
       setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
     }, interval);
@@ -359,9 +360,6 @@ export function TrackEditorComponent({
             checked={appStates.editMode === 'Road'}
             setEditorMode={setEditMode}
           />
-          <button onClick={() => {
-            appStates.placedTrains
-          }}>配置列車を削除</button>
         </div>
         <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
         <button onClick={() => loadEditorDataLocalStorage(setAppStates)}>読み込み</button>

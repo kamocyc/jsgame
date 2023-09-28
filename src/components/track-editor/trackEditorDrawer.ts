@@ -799,7 +799,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 
   // エージェントを描画
-  for (const agent of agentManager.agents) {
+  for (const agent of agentManager.getAgents()) {
     const position = agent.position;
 
     // 塗りつぶした円を描画

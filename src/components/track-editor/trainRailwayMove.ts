@@ -1,9 +1,9 @@
-import { CellWidth, RailwayLine, RailwayLineStop } from "../../mapEditorModel";
-import { Track } from "../../model";
-import { getDistance, getMidPoint, getTrackDirection, isTrainOutTrack } from "../../trackUtil";
-import { GlobalTimeManager } from "./globalTimeManager";
-import { shouldStopTrain } from "./trainMove";
-import { ITrainMove, PlacedTrain, StoredTrain } from "./trainMoveBase";
+import { RailwayLine, RailwayLineStop } from '../../mapEditorModel';
+import { Track } from '../../model';
+import { getDistance, getMidPoint, getTrackDirection, isTrainOutTrack } from '../../trackUtil';
+import { GlobalTimeManager } from './globalTimeManager';
+import { shouldStopTrain } from './trainMove';
+import { ITrainMove, PlacedTrain, StoredTrain } from './trainMoveBase';
 
 function getAllPathOfRailwayLine(railwayLine: RailwayLine) {
   const paths: (readonly [Track, string])[] = [];
@@ -19,7 +19,7 @@ function getAllPathOfRailwayLine(railwayLine: RailwayLine) {
         newPath = newPath.slice(1);
       }
     }
-    paths.push(...newPath.map(p => [p, stop.stopId] as const));
+    paths.push(...newPath.map((p) => [p, stop.stopId] as const));
   }
   return paths;
 }
@@ -33,39 +33,65 @@ function isTrackOccupied(track: Track, placedTrains: PlacedTrain[]): boolean {
   return false;
 }
 
+export function getRailwayLineAndStopOfPlacedTrain(
+  placedTrain: PlacedTrain,
+  railwayLines: RailwayLine[]
+): readonly [RailwayLine, RailwayLineStop] {
+  if (placedTrain.placedRailwayLineId == null) {
+    throw new Error('placedRailwayLineId is null');
+  }
+  if (placedTrain.stopId == null) {
+    throw new Error('stopId is null');
+  }
+  const railwayLine = railwayLines.find((r) => r.railwayLineId === placedTrain.placedRailwayLineId);
+  if (railwayLine === undefined) {
+    throw new Error('railwayLine is undefined');
+  }
+  const stop = railwayLine.stops.find((stop) => stop.stopId === placedTrain.stopId);
+  if (stop === undefined) {
+    throw new Error('stop is undefined');
+  }
+  return [railwayLine, stop] as const;
+}
+
 export class TrainRailwayMove implements ITrainMove {
   readonly maxStationWaitTime: number = 3;
 
-  placedTrains: PlacedTrain[] = []
+  placedTrains: PlacedTrain[] = [];
 
-  constructor(private railwayLines: RailwayLine[], private storedTrains: StoredTrain[]) {
-  }
+  constructor(private railwayLines: RailwayLine[], private storedTrains: StoredTrain[]) {}
   getTrainMoveType() {
-    return 'TrainRailwayMove' as const
+    return 'TrainRailwayMove' as const;
   }
 
   getPlacedTrains(): PlacedTrain[] {
     return this.placedTrains;
   }
   resetTrainMove(globalTimeManager: GlobalTimeManager): void {
-    throw new Error("Method not implemented.");
+    this.placedTrains = []; // TODO: ここで初期化するのはおかしい？
+    globalTimeManager.resetGlobalTime(0);
   }
-  
+
   tick() {
     // TODO: 毎回は求めないようにすべき
-    const notPlacedTrains = this.storedTrains.filter(train => this.placedTrains.find(p => p.placedTrainId === train.placedTrainId) == null);
+    const notPlacedTrains = this.storedTrains.filter(
+      (train) => this.placedTrains.find((p) => p.placedTrainId === train.placedTrainId) == null
+    );
     for (const train of notPlacedTrains) {
-      const railwayLine = this.railwayLines.find(r => r.railwayLineId === train.placedRailwayLineId);
+      const railwayLine = this.railwayLines.find((r) => r.railwayLineId === train.placedRailwayLineId);
       if (railwayLine === undefined) continue;
-      
+
       if (railwayLine.stops.length === 0) {
         throw new Error('railwayLine.stops.length === 0');
       }
 
-
       // 配置済みの車両と衝突しないなら配置する
       const firstTrack = railwayLine.stops[0].platformTrack;
-      if (this.placedTrains.find(p => p.track.trackId === firstTrack.trackId || p.track.reverseTrack.trackId === firstTrack.trackId) != null) {
+      if (
+        this.placedTrains.find(
+          (p) => p.track.trackId === firstTrack.trackId || p.track.reverseTrack.trackId === firstTrack.trackId
+        ) != null
+      ) {
         // 同じtrackにいるならスキップ（位置で判定するべき？）
         continue;
       }
@@ -91,7 +117,12 @@ export class TrainRailwayMove implements ITrainMove {
     }
   }
 
-  private getNextTrack(track: Track, placedTrain: PlacedTrain, railwayLine: RailwayLine, stop: RailwayLineStop): readonly [Track, string] {
+  private getNextTrack(
+    track: Track,
+    placedTrain: PlacedTrain,
+    railwayLine: RailwayLine,
+    stop: RailwayLineStop
+  ): readonly [Track, string] {
     // if (nextTracks.length === 0) {
     //   console.warn('逆方向')  // TODO?
     //   // 進行方向に進めるトラックがない場合、逆方向に進む
@@ -107,20 +138,24 @@ export class TrainRailwayMove implements ITrainMove {
     }
 
     const allPaths = getAllPathOfRailwayLine(railwayLine);
-    const trackIndexInPath = allPaths.findIndex(([t, stopId]) => t.trackId === track.trackId && stopId === placedTrain.stopId);
+    const trackIndexInPath = allPaths.findIndex(
+      ([t, stopId]) => t.trackId === track.trackId && stopId === placedTrain.stopId
+    );
     if (trackIndexInPath === -1) {
       throw new Error('trackIndexInPath is -1');
     }
 
-    const nextTrackIndex = trackIndexInPath === allPaths.length - 1 ? 0 : trackIndexInPath + 1;      
+    const nextTrackIndex = trackIndexInPath === allPaths.length - 1 ? 0 : trackIndexInPath + 1;
     const nextTrack = allPaths[nextTrackIndex];
 
     {
       // デバッグ用。折り返すときとかはnextに無い
       const currentSwitch = track.nextSwitch;
-      const nextTracks = currentSwitch.switchPatterns.filter(([t, _]) => t.trackId === track.trackId).map(([_, t]) => t);
-      if (nextTracks.find(t => t.trackId === nextTrack[0].trackId) == null) {
-        console.warn({nextTrack});
+      const nextTracks = currentSwitch.switchPatterns
+        .filter(([t, _]) => t.trackId === track.trackId)
+        .map(([_, t]) => t);
+      if (nextTracks.find((t) => t.trackId === nextTrack[0].trackId) == null) {
+        console.warn({ nextTrack });
       }
     }
     return nextTrack;
@@ -133,18 +168,21 @@ export class TrainRailwayMove implements ITrainMove {
     if (placedTrain.stopId == null) {
       throw new Error('stopId is null');
     }
-    const railwayLine = this.railwayLines.find(r => r.railwayLineId === placedTrain.placedRailwayLineId);
+    const railwayLine = this.railwayLines.find((r) => r.railwayLineId === placedTrain.placedRailwayLineId);
     if (railwayLine === undefined) {
       throw new Error('railwayLine is undefined');
     }
-    const stop = railwayLine.stops.find(stop => stop.stopId === placedTrain.stopId);
+    const stop = railwayLine.stops.find((stop) => stop.stopId === placedTrain.stopId);
     if (stop === undefined) {
       throw new Error('stop is undefined');
     }
 
+    const result = getRailwayLineAndStopOfPlacedTrain(placedTrain, this.railwayLines);
+    const [railwayLine2, stop2] = result;
+
     if (placedTrain.stationStatus === 'Arrived' && placedTrain.track.track.platform !== null) {
       if (placedTrain.stationWaitTime < this.maxStationWaitTime) {
-        placedTrain.stationWaitTime ++;
+        placedTrain.stationWaitTime++;
         return;
       }
 
@@ -176,11 +214,11 @@ export class TrainRailwayMove implements ITrainMove {
 
         if (isTrackOccupied(nextTrack, this.placedTrains)) {
           // 次の線路がすでに占有されていたら、移動せずに止まる
-          console.log('stop: ' + placedTrain.track.end.x + ', ' + placedTrain.track.end.y)
+          console.log('stop: ' + placedTrain.track.end.x + ', ' + placedTrain.track.end.y);
           placedTrain.position = previousPosition;
           break;
         }
-        placedTrain.stopId = nextTrackAndStopId[1]
+        placedTrain.stopId = nextTrackAndStopId[1];
 
         // trackの終点から行き過ぎた距離を求める
         const distance = getDistance(placedTrain.track.end, placedTrain.position);
@@ -200,11 +238,11 @@ export class TrainRailwayMove implements ITrainMove {
         placedTrain.position.x = stopPosition.x;
         placedTrain.position.y = stopPosition.y;
         placedTrain.stationStatus = 'Arrived';
-        
+
         // 次の線路がreverseのときは、reverseの線路にうつる
         const nextTrackAndStopId = this.getNextTrack(placedTrain.track, placedTrain, railwayLine, stop);
         if (nextTrackAndStopId[0].trackId === placedTrain.track.reverseTrack.trackId) {
-          console.log('reverse')
+          console.log('reverse');
           placedTrain.stopId = nextTrackAndStopId[1];
           placedTrain.track = placedTrain.track.reverseTrack;
         }
@@ -216,7 +254,6 @@ export class TrainRailwayMove implements ITrainMove {
     }
   }
 
-  
   // private isCollidedWithSomeTrain(train1: PlacedTrain): boolean {
   //   const collisionDistance = (CellWidth * Math.SQRT2) / 4;
   //   function isCollided(train1: PlacedTrain, train2: PlacedTrain): boolean {

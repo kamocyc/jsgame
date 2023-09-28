@@ -12,7 +12,7 @@ import {
   Train,
   TrainType,
 } from '../../model';
-import { AgentManager } from '../track-editor/agentManager';
+import { AgentManager, createAgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { TrainMove } from '../track-editor/trainMove';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
@@ -252,13 +252,7 @@ export function TimetableEditorComponent({
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: trainMove,
-              agentManager: new AgentManager(
-                appStates.extendedMap,
-                timetableData.timetable.stations,
-                appStates.map,
-                timetableData.timetable,
-                trainMove,
-              ),
+              agentManager: createAgentManager(),
               detailedTimetable: timetable,
               // placedTrains: trains, // これは使っているのか？
             }));

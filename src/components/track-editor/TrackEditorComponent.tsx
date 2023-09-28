@@ -19,9 +19,10 @@ import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
-import { AgentManager, searchPath } from './agentManager';
+import { AgentManager, createAgentManager, searchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
 import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
+import { TrainMove } from './trainMove';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -149,7 +150,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     storedTrains: storedTrains,
     detailedTimetable: timetable,
     stations: stations,
-    agentManager: new AgentManager(appStates.extendedMap, stations, mapData, timetableData.timetable, trainMove),
+    agentManager: createAgentManager(),
     mapWidth: mapWidth,
     mapHeight: mapHeight,
     timetableData: timetableData,
@@ -240,7 +241,16 @@ export function TrackEditorComponent({
       appStates.globalTimeManager.tick();
       appStates.trainMove.tick(appStates.globalTimeManager);
       addAgents(appStates);
-      appStates.agentManager.tick(appStates.globalTimeManager.globalTime, [], []);
+      appStates.agentManager.tick({
+        currentTime: appStates.globalTimeManager.globalTime,
+        extendedMap: appStates.extendedMap,
+        stations: appStates.stations,
+        gameMap: appStates.map,
+        placedTrains: appStates.trainMove.getPlacedTrains(),
+        railwayLines : appStates.railwayLines,
+        timetable: appStates.timetableData.timetable,
+        trainMove: appStates.trainMove as TrainMove,
+      });
       setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
     }, interval);

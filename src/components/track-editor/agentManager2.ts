@@ -307,11 +307,19 @@ function toPoint(cellPoint: CellPoint): Point {
   };
 }
 
+export interface AgentManager2Props {
+  extendedMap: ExtendedGameMap;
+  stations: Station[];
+  gameMap: GameMap;
+  railwayLines: RailwayLine[];
+  placedTrains: PlacedTrain[]
+}
+
 // 時刻表ベースの実装
-export class AgentManager implements AgentManagerBase {
+export class AgentManager2 implements AgentManagerBase {
   agents: Agent[];
 
-  constructor(private extendedMap: ExtendedGameMap, private stations: Station[], private gameMap: GameMap) {
+  constructor() {
     this.agents = [];
   }
 
@@ -340,8 +348,8 @@ export class AgentManager implements AgentManagerBase {
     this.agents = this.agents.filter((a) => a.id !== agentId);
   }
 
-  getRandomDestination(agent: Agent): ExtendedCellConstruct {
-    const candidates = this.extendedMap.flatMap((row) =>
+  getRandomDestination(agent: Agent, props: AgentManager2Props): ExtendedCellConstruct {
+    const candidates = props.extendedMap.flatMap((row) =>
       row.filter(
         (cell) =>
           cell.type === 'Construct' && getDistance(toPixelPosition(cell.position), agent.position) > CellHeight * 1.4
@@ -350,16 +358,16 @@ export class AgentManager implements AgentManagerBase {
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
-  actAgent(agent: Agent, railwayLines: RailwayLine[], placedTrains: PlacedTrain[]) {
+  actAgent(agent: Agent, props: AgentManager2Props) {
     if (agent.status === 'Idle') {
       // ランダムに目的地を決める
       if (Math.random() < 0.1) {
-        const destination = this.getRandomDestination(agent);
+        const destination = this.getRandomDestination(agent, props);
         if (destination) {
           agent.destination = destination;
           agent.inDestination = false;
           agent.status = 'Move';
-          agent.path = createAgentPath(this.stations, agent, this.gameMap, railwayLines);
+          agent.path = createAgentPath(props.stations, agent, props.gameMap, props.railwayLines);
         }
       }
     } else if (agent.status === 'Move') {
@@ -378,20 +386,20 @@ export class AgentManager implements AgentManagerBase {
         // 駅に到着している
         if (agent.placedTrain === null) {
           // 列車のstopが同一であるものを探す
-          const foundTrains = placedTrains.filter((t) => t.stopId === step.stationPathStep.station.stationId);
+          const foundTrains = props.placedTrains.filter((t) => t.stationStatus === 'Arrived' && t.track.track.platform?.station.stationId === step.stationPathStep.station.stationId);
           if (foundTrains.length > 0) {
             const foundTrain = foundTrains[0];
             agent.placedTrain = foundTrain;
+            agent.path.shift();
           }
-        }
-
-        // 電車に乗っている途中
-        if (agent.placedTrain !== null) {
+        } else if (agent.placedTrain !== null) {
+          // 電車に乗っている途中
           agent.position = { ...agent.placedTrain.position };
 
           // 電車から降りる
           if (
             agent.placedTrain.stationStatus === 'Arrived' &&
+            // TODO: stepが１つずれている気がする
             agent.placedTrain.track.track.platform?.station.stationId === step.stationPathStep.station.stationId
           ) {
             agent.placedTrain = null;
@@ -417,9 +425,9 @@ export class AgentManager implements AgentManagerBase {
     }
   }
 
-  tick(currentTime: number, railwayLines: RailwayLine[], placedTrains: PlacedTrain[]) {
+  tick(props: AgentManager2Props) {
     for (const agent of this.agents) {
-      this.actAgent(agent, railwayLines, placedTrains);
+      this.actAgent(agent, props);
     }
   }
 }

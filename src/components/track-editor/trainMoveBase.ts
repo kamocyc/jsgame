@@ -50,6 +50,6 @@ export function createTrainMove(detailedTimetable: DetailedTimetable | null, rai
     if (detailedTimetable === null) {
       throw new Error('detailedTimetable === null');
     }
-    return new TrainMove(detailedTimetable);
+    return new TrainMove(detailedTimetable!);
   }
 }

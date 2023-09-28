@@ -8,7 +8,7 @@ import { TimetableEditorComponent } from './timetable-editor/timetable-editor-co
 import { getInitialTimetable } from './timetable-editor/timetable-util';
 import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
-import { AgentManager } from './track-editor/agentManager';
+import { AgentManager, createAgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { TrainMove } from './track-editor/trainMove';
 import { createTrainMove } from './track-editor/trainMoveBase';
@@ -120,7 +120,7 @@ export function getInitialAppStates(): AppStates {
     mapContext: createMapContext(defaultMapWidth, defaultMapHeight),
     extendedMap: extendedMap,
     trainMove: trainMove,
-    agentManager: new AgentManager(extendedMap, [], gameMap, timetableData.timetable, trainMove as TrainMove),
+    agentManager: createAgentManager(),
     switches: [],
     stations: [],
     tracks: [],

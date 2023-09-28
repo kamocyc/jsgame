@@ -3,6 +3,7 @@ import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLi
 import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
+import { AgentManager2, AgentManager2Props } from './agentManager2';
 import { TrainMove } from './trainMove';
 import { PlacedTrain } from './trainMoveBase';
 
@@ -132,6 +133,16 @@ export function getStationPositions(stations: Station[], gameMap: GameMap) {
     };
   });
   return stations_;
+}
+
+export function getRandomDestination(agent: Agent, extendedMap: ExtendedGameMap): ExtendedCellConstruct {
+  const candidates = extendedMap.flatMap((row) =>
+    row.filter(
+      (cell) =>
+        cell.type === 'Construct' && getDistance(toPixelPosition(cell.position), agent.position) > CellHeight * 1.4
+    )
+  ) as ExtendedCellConstruct[];
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 export function createAgentPath(
@@ -442,12 +453,31 @@ function toPoint(cellPoint: CellPoint): Point {
   };
 }
 
+export interface AgentManagerProps {
+  extendedMap: ExtendedGameMap;
+  stations: Station[];
+  gameMap: GameMap;
+  timetable: OutlinedTimetable;
+  trainMove: TrainMove;
+  currentTime: number;
+}
+
+export type AgentManagerCommonProps = AgentManagerProps & AgentManager2Props;
+
 export interface AgentManagerBase {
   clear(): void;
   add(position: Point): void;
   remove(agentId: string): void;
-  tick(currentTime: number, railwayLines: RailwayLine[], placedTrains: PlacedTrain[]): void;
+  tick(props: AgentManagerCommonProps): void;
   getAgents(): AgentBase[];
+}
+
+export function createAgentManager() : AgentManagerBase {
+  if (true) {
+    return new AgentManager2();
+  } else {
+    return new AgentManager();
+  }
 }
 
 // 時刻表ベースの実装
@@ -455,11 +485,6 @@ export class AgentManager implements AgentManagerBase {
   agents: Agent[];
 
   constructor(
-    private extendedMap: ExtendedGameMap,
-    private stations: Station[],
-    private gameMap: GameMap,
-    private timetable: OutlinedTimetable,
-    private trainMove: TrainMove
   ) {
     this.agents = [];
   }
@@ -489,26 +514,17 @@ export class AgentManager implements AgentManagerBase {
     this.agents = this.agents.filter((a) => a.id !== agentId);
   }
 
-  private getRandomDestination(agent: Agent): ExtendedCellConstruct {
-    const candidates = this.extendedMap.flatMap((row) =>
-      row.filter(
-        (cell) =>
-          cell.type === 'Construct' && getDistance(toPixelPosition(cell.position), agent.position) > CellHeight * 1.4
-      )
-    ) as ExtendedCellConstruct[];
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  }
 
-  private actAgent(agent: Agent, currentTime: number) {
+  private actAgent(agent: Agent, props: AgentManagerProps) {
     if (agent.status === 'Idle') {
       // ランダムに目的地を決める
       if (Math.random() < 0.1) {
-        const destination = this.getRandomDestination(agent);
+        const destination = getRandomDestination(agent, props.extendedMap);
         if (destination) {
           agent.destination = destination;
           agent.inDestination = false;
           agent.status = 'Move';
-          agent.path = createAgentPath(this.stations, agent, this.gameMap, currentTime, this.timetable);
+          agent.path = createAgentPath(props.stations, agent, props.gameMap, props.currentTime, props.timetable);
         }
       }
     } else if (agent.status === 'Move') {
@@ -528,14 +544,14 @@ export class AgentManager implements AgentManagerBase {
         if (agent.placedTrain === null) {
           const diaTime = step.stationPathStep.diaTime;
           assert(diaTime.departureTime !== null, 'diaTime.departureTime is null');
-          if (currentTime >= diaTime.departureTime) {
+          if (props.currentTime >= diaTime.departureTime) {
             // 時刻表の時間を過ぎたら、対応するtrainを探す
             // diaTime -> Train -> operations.train
-            const train = this.timetable.inboundTrains
-              .concat(this.timetable.outboundTrains)
+            const train = props.timetable.inboundTrains
+              .concat(props.timetable.outboundTrains)
               .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
             assert(train !== undefined, 'train is undefined');
-            const placedTrain = this.trainMove.getPlacedTrains().find((t) => t.train?.trainId === train.trainId);
+            const placedTrain = props.trainMove.getPlacedTrains().find((t) => t.train?.trainId === train.trainId);
             if (placedTrain === undefined) {
               console.error('placedTrain is undefined');
               return;
@@ -573,7 +589,7 @@ export class AgentManager implements AgentManagerBase {
           if (
             agent.path.length > 0 &&
             agent.path[0].stepType === 'station' &&
-            currentTime >= (agent.path[0].stationPathStep.diaTime.departureTime ?? 0)
+            props.currentTime >= (agent.path[0].stationPathStep.diaTime.departureTime ?? 0)
           ) {
             console.error('時間が過ぎている');
             console.log({ agent });
@@ -588,9 +604,9 @@ export class AgentManager implements AgentManagerBase {
     }
   }
 
-  tick(currentTime: number) {
+  tick(props: AgentManagerProps) {
     for (const agent of this.agents) {
-      this.actAgent(agent, currentTime);
+      this.actAgent(agent, props);
     }
   }
 }

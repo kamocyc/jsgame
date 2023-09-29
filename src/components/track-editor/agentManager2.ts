@@ -34,6 +34,7 @@ interface Agent {
   destination: ExtendedCellConstruct | null;
   inDestination: boolean;
   path: AgentPath;
+  pathIndex: number;
   placedTrain: PlacedTrain | null;
 }
 
@@ -153,7 +154,7 @@ export function createAgentPath(
     }
     const availableRailwayLine = availableRailwayLines[0]; // TODO: とりあえず最初の路線を使う
     const stop = availableRailwayLine.stops.find(
-      (stop) => stop.platform.station.stationId === destinationStation.stationId
+      (stop) => stop.platform.station.stationId === startStation.stationId
     );
     assert(stop !== undefined, 'stop is undefined');
 
@@ -265,7 +266,7 @@ function getDistanceBetweenStation2(sr1: StationAndRailwayLine, sr2: StationAndR
         path.track.platform?.station.stationId !== sr1.station.stationId &&
         path.track.platform?.station.stationId !== sr2.station.stationId
       ) {
-        length += getDistance(path.begin, path.end);
+        length += getDistance(path.begin, path.end) / CellWidth;
       }
       return length;
     }
@@ -331,6 +332,8 @@ export class AgentManager2 implements AgentManagerBase {
   }
 
   add(position: Point) {
+    if (this.agents.length > 5) return ;//debug
+
     const id = generateId();
     this.agents.push({
       id: 'agent-' + id,
@@ -340,6 +343,7 @@ export class AgentManager2 implements AgentManagerBase {
       destination: null,
       inDestination: false,
       path: [],
+      pathIndex: -1,
       placedTrain: null,
     });
   }
@@ -368,12 +372,13 @@ export class AgentManager2 implements AgentManagerBase {
           agent.inDestination = false;
           agent.status = 'Move';
           agent.path = createAgentPath(props.stations, agent, props.gameMap, props.railwayLines);
+          agent.pathIndex = 0;
         }
       }
     } else if (agent.status === 'Move') {
       assert(agent.destination !== null, 'agent.destination is null');
 
-      if (agent.path.length === 0) {
+      if (agent.pathIndex >= agent.path.length) {
         // 目的地に到着したら
         agent.destination = null;
         agent.inDestination = true;
@@ -381,7 +386,7 @@ export class AgentManager2 implements AgentManagerBase {
         return;
       }
 
-      const step = agent.path[0];
+      const step = agent.path[agent.pathIndex];
       if (step.stepType === 'station') {
         // 駅に到着している
         if (agent.placedTrain === null) {
@@ -390,7 +395,7 @@ export class AgentManager2 implements AgentManagerBase {
           if (foundTrains.length > 0) {
             const foundTrain = foundTrains[0];
             agent.placedTrain = foundTrain;
-            agent.path.shift();
+            agent.pathIndex ++;
           }
         } else if (agent.placedTrain !== null) {
           // 電車に乗っている途中
@@ -403,7 +408,7 @@ export class AgentManager2 implements AgentManagerBase {
             agent.placedTrain.track.track.platform?.station.stationId === step.stationPathStep.station.stationId
           ) {
             agent.placedTrain = null;
-            agent.path.shift();
+            // agent.pathIndex ++;
           }
         }
       } else if (step.stepType === 'walk') {
@@ -414,7 +419,7 @@ export class AgentManager2 implements AgentManagerBase {
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < 5) {
           agent.position = destination;
-          agent.path.shift();
+          agent.pathIndex ++;
         } else {
           agent.position = {
             x: agent.position.x + (dx / distance) * 5,

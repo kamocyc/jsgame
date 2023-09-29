@@ -58,8 +58,10 @@ export class TrainRailwayMove implements ITrainMove {
   readonly maxStationWaitTime: number = 3;
 
   placedTrains: PlacedTrain[] = [];
+  lastPlacedTimeOfRailwayLine: Map<string, number> = new Map();
 
   constructor(private railwayLines: RailwayLine[], private storedTrains: StoredTrain[]) {}
+  
   getTrainMoveType() {
     return 'TrainRailwayMove' as const;
   }
@@ -72,7 +74,7 @@ export class TrainRailwayMove implements ITrainMove {
     globalTimeManager.resetGlobalTime(0);
   }
 
-  tick() {
+  tick(globalTimeManager: GlobalTimeManager) {
     // TODO: 毎回は求めないようにすべき
     const notPlacedTrains = this.storedTrains.filter(
       (train) => this.placedTrains.find((p) => p.placedTrainId === train.placedTrainId) == null
@@ -85,31 +87,35 @@ export class TrainRailwayMove implements ITrainMove {
         throw new Error('railwayLine.stops.length === 0');
       }
 
-      // 配置済みの車両と衝突しないなら配置する
-      const firstTrack = railwayLine.stops[0].platformTrack;
-      if (
-        this.placedTrains.find(
-          (p) => p.track.trackId === firstTrack.trackId || p.track.reverseTrack.trackId === firstTrack.trackId
-        ) != null
-      ) {
-        // 同じtrackにいるならスキップ（位置で判定するべき？）
-        continue;
-      }
+      if (!this.lastPlacedTimeOfRailwayLine.has(railwayLine.railwayLineId) || this.lastPlacedTimeOfRailwayLine.get(railwayLine.railwayLineId)! + railwayLine.stops.length * 50 <= globalTimeManager.globalTime) {
+        // 配置済みの車両と衝突しないなら配置する
+        const firstTrack = railwayLine.stops[0].platformTrack;
+        if (
+          this.placedTrains.find(
+            (p) => p.track.trackId === firstTrack.trackId || p.track.reverseTrack.trackId === firstTrack.trackId
+          ) != null
+        ) {
+          // 同じtrackにいるならスキップ（位置で判定するべき？）
+          continue;
+        }
 
-      const placedTrain: PlacedTrain = {
-        placedTrainId: train.placedTrainId,
-        placedTrainName: train.placedTrainName,
-        placedRailwayLineId: train.placedRailwayLineId,
-        train: null,
-        operation: null,
-        speed: 10,
-        track: firstTrack,
-        stopId: railwayLine.stops[0].stopId,
-        position: getMidPoint(firstTrack.begin, firstTrack.end),
-        stationWaitTime: 0,
-        stationStatus: 'Arrived',
-      };
-      this.placedTrains.push(placedTrain);
+        this.lastPlacedTimeOfRailwayLine.set(railwayLine.railwayLineId, globalTimeManager.globalTime);
+
+        const placedTrain: PlacedTrain = {
+          placedTrainId: train.placedTrainId,
+          placedTrainName: train.placedTrainName,
+          placedRailwayLineId: train.placedRailwayLineId,
+          train: null,
+          operation: null,
+          speed: 10,
+          track: firstTrack,
+          stopId: railwayLine.stops[0].stopId,
+          position: getMidPoint(firstTrack.begin, firstTrack.end),
+          stationWaitTime: 0,
+          stationStatus: 'Arrived',
+        };
+        this.placedTrains.push(placedTrain);
+      }
     }
 
     for (const placedTrain of this.placedTrains) {

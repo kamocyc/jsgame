@@ -2,7 +2,7 @@ import { assert, removeNull } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
-import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
+import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManager2, AgentManager2Props } from './agentManager2';
 import { TrainMove } from './trainMove';
 import { PlacedTrain } from './trainMoveBase';
@@ -166,13 +166,6 @@ export function createAgentPath(
     return {
       x: position.x,
       y: position.y - CellHeight / 2,
-    };
-  }
-
-  function toCellPosition(position: Point): CellPoint {
-    return {
-      cx: Math.floor(position.x / CellWidth),
-      cy: Math.floor(position.y / CellHeight),
     };
   }
 
@@ -488,7 +481,6 @@ export class AgentManager implements AgentManagerBase {
   ) {
     this.agents = [];
   }
-
   clear() {
     this.agents = [];
   }

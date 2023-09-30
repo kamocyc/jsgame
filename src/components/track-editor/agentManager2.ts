@@ -2,7 +2,7 @@ import { assert } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance } from '../../trackUtil';
-import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
+import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManagerBase, getStationPositions } from './agentManager';
 import { PlacedTrain } from './trainMoveBase';
 
@@ -58,13 +58,6 @@ export function createAgentPath(
     return {
       x: position.x,
       y: position.y - CellHeight / 2,
-    };
-  }
-
-  function toCellPosition(position: Point): CellPoint {
-    return {
-      cx: Math.floor(position.x / CellWidth),
-      cy: Math.floor(position.y / CellHeight),
     };
   }
 

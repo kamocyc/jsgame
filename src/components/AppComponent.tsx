@@ -12,6 +12,7 @@ import { AgentManager, createAgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { TrainMove } from './track-editor/trainMove';
 import { createTrainMove } from './track-editor/trainMoveBase';
+import { MapManager } from './track-editor/mapManager';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
@@ -128,6 +129,7 @@ export function getInitialAppStates(): AppStates {
     currentRailwayLine: null,
     railwayLines: [],
     selectedRailwayLineId: null,
+    mapManager: new MapManager(),
   };
 }
 

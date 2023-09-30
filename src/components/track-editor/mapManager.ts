@@ -21,6 +21,9 @@ function getTile(extendedMap: ExtendedGameMap, x: number, y: number) {
   return extendedMap[x][y];
 }
 
+/**
+ * マップの自動発展とかを管理するクラス
+ */
 export class MapManager {
   readonly affectedArea = 3;
 
@@ -61,6 +64,9 @@ export class MapManager {
   }
 }
 
+/**
+ * 町の発展を決める。ガウス分布とかでやりたいが、とりあえずは距離に応じて確率を変える
+ */
 export function getCreateConstructType(x: number, y: number, frequency: number): ConstructType | 'None' {
   const r = Math.random();
 

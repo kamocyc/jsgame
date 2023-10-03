@@ -239,6 +239,11 @@ export function TrackEditorComponent({
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
       appStates.globalTimeManager.tick();
+      const updated = appStates.mapManager.tick(
+        appStates.extendedMap,
+        appStates.railwayLines,
+        appStates.trainMove.getPlacedTrains()
+      );
       appStates.trainMove.tick({
         globalTimeManager: appStates.globalTimeManager,
         railwayLines: appStates.railwayLines,
@@ -257,6 +262,9 @@ export function TrackEditorComponent({
       });
       setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
+      if (updated) {
+        update();
+      }
     }, interval);
     setRunningIntervalId(intervalId);
   }

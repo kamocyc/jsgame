@@ -41,3 +41,10 @@ export function toPixelPosition(position: CellPoint): Point {
     y: position.cy * CellHeight,
   };
 }
+
+export function toCellPosition(position: Point): CellPoint {
+  return {
+    cx: Math.floor(position.x / CellWidth),
+    cy: Math.floor(position.y / CellHeight),
+  };
+}

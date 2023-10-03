@@ -1,6 +1,7 @@
 import { ExtendedCell } from './components/extendedMapModel';
 import { AgentManagerBase } from './components/track-editor/agentManager';
 import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
+import { MapManager } from './components/track-editor/mapManager';
 import { ITrainMove, StoredTrain } from './components/track-editor/trainMoveBase';
 import { DetailedTimetable, Operation, Platform, Point, Station, Switch, TimetableData, Track } from './model';
 
@@ -162,4 +163,5 @@ export interface AppStates {
   currentRailwayLine: RailwayLine | null;
   railwayLines: RailwayLine[];
   selectedRailwayLineId: string | null;
+  mapManager: MapManager;
 }

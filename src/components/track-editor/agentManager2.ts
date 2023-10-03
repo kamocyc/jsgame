@@ -1,7 +1,7 @@
 import { assert } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { Point, Station, generateId } from '../../model';
-import { abstractSearch, getDistance } from '../../trackUtil';
+import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
 import { AgentManagerBase, getStationPositions } from './agentManager';
 import { PlacedTrain } from './trainMoveBase';
@@ -45,7 +45,7 @@ export function createAgentPath(
   railwayLines: RailwayLine[]
 ): AgentPath {
   // 現在地から最も近い駅を探す
-  const stationPositions = getStationPositions(stations, gameMap);
+  const [stationPositions, platforms] = getStationPositions(stations, gameMap);
 
   function addTopPosition(position: Point): Point {
     return {
@@ -134,14 +134,6 @@ export function createAgentPath(
     return getWalkOnlyPath();
   }
 
-  // 横、縦の順で移動する。
-  const nearestStationCellPosition = toCellPosition(nearestStation.topPosition);
-  const destinationNearestStationCellPosition = toCellPosition(destinationNearestStation.topPosition);
-  // console.log({ nearestStation });
-  // console.log({ destinationNearestStation });
-  // console.log({ nearestStationCellPosition });
-  // console.log({ destinationNearestStationCellPosition });
-
   const searchFunc = (startStation: Station, destinationStation: Station) => {
     const availableRailwayLines = railwayLines.filter((line) =>
       line.stops.some((stop) => stop.platform.station.stationId === startStation.stationId)
@@ -153,9 +145,7 @@ export function createAgentPath(
       return null;
     }
     const availableRailwayLine = availableRailwayLines[0]; // TODO: とりあえず最初の路線を使う
-    const stop = availableRailwayLine.stops.find(
-      (stop) => stop.platform.station.stationId === startStation.stationId
-    );
+    const stop = availableRailwayLine.stops.find((stop) => stop.platform.station.stationId === startStation.stationId);
     assert(stop !== undefined, 'stop is undefined');
 
     const stationAndRailwayLinePath = searchPath2(
@@ -174,9 +164,20 @@ export function createAgentPath(
   };
 
   const stationPath = searchFunc(nearestStation.station, destinationNearestStation.station);
-  if (stationPath == null) {
-    return [];
+  if (stationPath == null || stationPath.length === 0) {
+    return getWalkOnlyPath();
   }
+
+  // 横、縦の順で移動する。
+  const platformTrack = platforms.find((p) => p.track.platform?.platformId === stationPath[0].stop.platform.platformId);
+  assert(platformTrack !== undefined, 'platformTrack is undefined');
+  const platformPosition = getMidPoint(platformTrack.begin, platformTrack.end);
+  const nearestStationCellPosition = toCellPosition({ x: platformPosition.x, y: platformPosition.y });
+  const destinationNearestStationCellPosition = toCellPosition(destinationNearestStation.topPosition);
+  // console.log({ nearestStation });
+  // console.log({ destinationNearestStation });
+  // console.log({ nearestStationCellPosition });
+  // console.log({ destinationNearestStationCellPosition });
 
   const path: AgentPath = [
     {
@@ -313,7 +314,7 @@ export interface AgentManager2Props {
   stations: Station[];
   gameMap: GameMap;
   railwayLines: RailwayLine[];
-  placedTrains: PlacedTrain[]
+  placedTrains: PlacedTrain[];
 }
 
 // 時刻表ベースの実装
@@ -332,7 +333,7 @@ export class AgentManager2 implements AgentManagerBase {
   }
 
   add(position: Point) {
-    if (this.agents.length > 5) return ;//debug
+    if (this.agents.length > 30) return; //debug
 
     const id = generateId();
     this.agents.push({
@@ -391,11 +392,15 @@ export class AgentManager2 implements AgentManagerBase {
         // 駅に到着している
         if (agent.placedTrain === null) {
           // 列車のstopが同一であるものを探す
-          const foundTrains = props.placedTrains.filter((t) => t.stationStatus === 'Arrived' && t.track.track.platform?.station.stationId === step.stationPathStep.station.stationId);
+          const foundTrains = props.placedTrains.filter(
+            (t) =>
+              t.stationStatus === 'Arrived' &&
+              t.track.track.platform?.station.stationId === step.stationPathStep.station.stationId
+          );
           if (foundTrains.length > 0) {
             const foundTrain = foundTrains[0];
             agent.placedTrain = foundTrain;
-            agent.pathIndex ++;
+            agent.pathIndex++;
           }
         } else if (agent.placedTrain !== null) {
           // 電車に乗っている途中
@@ -419,7 +424,7 @@ export class AgentManager2 implements AgentManagerBase {
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < 5) {
           agent.position = destination;
-          agent.pathIndex ++;
+          agent.pathIndex++;
         } else {
           agent.position = {
             x: agent.position.x + (dx / distance) * 5,

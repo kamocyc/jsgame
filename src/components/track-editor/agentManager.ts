@@ -39,6 +39,8 @@ export interface AgentBase {
   name: string;
   position: Point;
   inDestination: boolean;
+  placedTrain: PlacedTrain | null;
+  status: AgentStatus;
 }
 
 interface Agent {
@@ -132,7 +134,7 @@ export function getStationPositions(stations: Station[], gameMap: GameMap) {
       bottomPosition: getMidPoint(bottomPlatform.begin, bottomPlatform.begin),
     };
   });
-  return stations_;
+  return [stations_, platforms] as const;
 }
 
 export function getRandomDestination(agent: Agent, extendedMap: ExtendedGameMap): ExtendedCellConstruct {
@@ -153,7 +155,7 @@ export function createAgentPath(
   timetable: OutlinedTimetable
 ): AgentPath {
   // 現在地から最も近い駅を探す
-  const stationPositions = getStationPositions(stations, gameMap);
+  const [stationPositions, _] = getStationPositions(stations, gameMap);
 
   function addTopPosition(position: Point): Point {
     return {
@@ -472,7 +474,7 @@ export interface AgentManagerBase {
   getAgents(): AgentBase[];
 }
 
-export function createAgentManager() : AgentManagerBase {
+export function createAgentManager(): AgentManagerBase {
   if (true) {
     return new AgentManager2();
   } else {
@@ -484,8 +486,7 @@ export function createAgentManager() : AgentManagerBase {
 export class AgentManager implements AgentManagerBase {
   agents: Agent[];
 
-  constructor(
-  ) {
+  constructor() {
     this.agents = [];
   }
 
@@ -513,7 +514,6 @@ export class AgentManager implements AgentManagerBase {
   remove(agentId: string) {
     this.agents = this.agents.filter((a) => a.id !== agentId);
   }
-
 
   private actAgent(agent: Agent, props: AgentManagerProps) {
     if (agent.status === 'Idle') {

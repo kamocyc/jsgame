@@ -481,6 +481,7 @@ function deleteVariousThings(
     appStates.extendedMap[mouseStartCell.position.x][mouseStartCell.position.y] = {
       position: { ...extendedCell.position },
       type: 'None',
+      terrain: extendedCell.terrain,
     };
     return;
   }

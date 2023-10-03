@@ -54,14 +54,20 @@ export function getRailwayLineAndStopOfPlacedTrain(
   return [railwayLine, stop] as const;
 }
 
+export interface TrainRailwayMoveProps {
+  railwayLines: RailwayLine[];
+  storedTrains: StoredTrain[];
+  globalTimeManager: GlobalTimeManager;
+}
+
 export class TrainRailwayMove implements ITrainMove {
   readonly maxStationWaitTime: number = 3;
 
   placedTrains: PlacedTrain[] = [];
   lastPlacedTimeOfRailwayLine: Map<string, number> = new Map();
 
-  constructor(private railwayLines: RailwayLine[], private storedTrains: StoredTrain[]) {}
-  
+  constructor() {}
+
   getTrainMoveType() {
     return 'TrainRailwayMove' as const;
   }
@@ -74,20 +80,24 @@ export class TrainRailwayMove implements ITrainMove {
     globalTimeManager.resetGlobalTime(0);
   }
 
-  tick(globalTimeManager: GlobalTimeManager) {
+  placeNewTrain(props: TrainRailwayMoveProps): void {
     // TODO: 毎回は求めないようにすべき
-    const notPlacedTrains = this.storedTrains.filter(
+    const notPlacedTrains = props.storedTrains.filter(
       (train) => this.placedTrains.find((p) => p.placedTrainId === train.placedTrainId) == null
     );
     for (const train of notPlacedTrains) {
-      const railwayLine = this.railwayLines.find((r) => r.railwayLineId === train.placedRailwayLineId);
+      const railwayLine = props.railwayLines.find((r) => r.railwayLineId === train.placedRailwayLineId);
       if (railwayLine === undefined) continue;
 
       if (railwayLine.stops.length === 0) {
         throw new Error('railwayLine.stops.length === 0');
       }
 
-      if (!this.lastPlacedTimeOfRailwayLine.has(railwayLine.railwayLineId) || this.lastPlacedTimeOfRailwayLine.get(railwayLine.railwayLineId)! + railwayLine.stops.length * 50 <= globalTimeManager.globalTime) {
+      if (
+        !this.lastPlacedTimeOfRailwayLine.has(railwayLine.railwayLineId) ||
+        this.lastPlacedTimeOfRailwayLine.get(railwayLine.railwayLineId)! + railwayLine.stops.length * 50 <=
+          props.globalTimeManager.globalTime
+      ) {
         // 配置済みの車両と衝突しないなら配置する
         const firstTrack = railwayLine.stops[0].platformTrack;
         if (
@@ -99,7 +109,7 @@ export class TrainRailwayMove implements ITrainMove {
           continue;
         }
 
-        this.lastPlacedTimeOfRailwayLine.set(railwayLine.railwayLineId, globalTimeManager.globalTime);
+        this.lastPlacedTimeOfRailwayLine.set(railwayLine.railwayLineId, props.globalTimeManager.globalTime);
 
         const placedTrain: PlacedTrain = {
           placedTrainId: train.placedTrainId,
@@ -117,9 +127,12 @@ export class TrainRailwayMove implements ITrainMove {
         this.placedTrains.push(placedTrain);
       }
     }
+  }
 
+  tick(props: TrainRailwayMoveProps) {
+    this.placeNewTrain(props);
     for (const placedTrain of this.placedTrains) {
-      this.moveTrain(placedTrain);
+      this.moveTrain(props, placedTrain);
     }
   }
 
@@ -167,14 +180,14 @@ export class TrainRailwayMove implements ITrainMove {
     return nextTrack;
   }
 
-  private moveTrain(placedTrain: PlacedTrain) {
+  private moveTrain(props: TrainRailwayMoveProps, placedTrain: PlacedTrain) {
     if (placedTrain.placedRailwayLineId == null) {
       throw new Error('placedRailwayLineId is null');
     }
     if (placedTrain.stopId == null) {
       throw new Error('stopId is null');
     }
-    const railwayLine = this.railwayLines.find((r) => r.railwayLineId === placedTrain.placedRailwayLineId);
+    const railwayLine = props.railwayLines.find((r) => r.railwayLineId === placedTrain.placedRailwayLineId);
     if (railwayLine === undefined) {
       throw new Error('railwayLine is undefined');
     }
@@ -183,7 +196,7 @@ export class TrainRailwayMove implements ITrainMove {
       throw new Error('stop is undefined');
     }
 
-    const result = getRailwayLineAndStopOfPlacedTrain(placedTrain, this.railwayLines);
+    const result = getRailwayLineAndStopOfPlacedTrain(placedTrain, props.railwayLines);
     const [railwayLine2, stop2] = result;
 
     if (placedTrain.stationStatus === 'Arrived' && placedTrain.track.track.platform !== null) {

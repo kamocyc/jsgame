@@ -19,10 +19,10 @@ import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
-import { AgentManager, createAgentManager, searchPath } from './agentManager';
+import { createAgentManager, searchPath } from './agentManager';
 import { drawEditor } from './trackEditorDrawer';
-import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
 import { TrainMove } from './trainMove';
+import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -118,7 +118,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const operations = obj['operations'] ?? [];
   const railwayLines = obj['railwayLines'] ?? [];
 
-  const trainMove = createTrainMove(timetable, railwayLines, storedTrains);
+  const trainMove = createTrainMove(timetable);
   // trainMove.placedTrains = placedTrains;
   const switches = mapData.flatMap(
     (row) =>
@@ -239,7 +239,11 @@ export function TrackEditorComponent({
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
       appStates.globalTimeManager.tick();
-      appStates.trainMove.tick(appStates.globalTimeManager);
+      appStates.trainMove.tick({
+        globalTimeManager: appStates.globalTimeManager,
+        railwayLines: appStates.railwayLines,
+        storedTrains: appStates.storedTrains,
+      });
       addAgents(appStates);
       appStates.agentManager.tick({
         currentTime: appStates.globalTimeManager.globalTime,
@@ -247,7 +251,7 @@ export function TrackEditorComponent({
         stations: appStates.stations,
         gameMap: appStates.map,
         placedTrains: appStates.trainMove.getPlacedTrains(),
-        railwayLines : appStates.railwayLines,
+        railwayLines: appStates.railwayLines,
         timetable: appStates.timetableData.timetable,
         trainMove: appStates.trainMove as TrainMove,
       });

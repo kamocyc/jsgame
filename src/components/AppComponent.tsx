@@ -8,9 +8,8 @@ import { TimetableEditorComponent } from './timetable-editor/timetable-editor-co
 import { getInitialTimetable } from './timetable-editor/timetable-util';
 import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
-import { AgentManager, createAgentManager } from './track-editor/agentManager';
+import { createAgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
-import { TrainMove } from './track-editor/trainMove';
 import { createTrainMove } from './track-editor/trainMoveBase';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
@@ -35,6 +34,7 @@ function initializeExtendedMap(mapWidth: number, mapHeight: number): ExtendedCel
       map[x].push({
         position: { cx: x, cy: y },
         type: 'None',
+        terrain: 'Grass',
       });
     }
   }
@@ -105,7 +105,7 @@ export function getInitialAppStates(): AppStates {
       placedRailwayLineId: null,
     },
   ];
-  const trainMove = createTrainMove(timetable, [], storedTrains);
+  const trainMove = createTrainMove(timetable);
   return {
     editMode: 'Create',
     globalTimeManager: new GlobalTimeManager(),

@@ -1,14 +1,6 @@
 import { assert } from '../../common.js';
 import { CellWidth } from '../../mapEditorModel.js';
-import {
-  BranchDirection,
-  DetailedTimetable,
-  Operation,
-  Point,
-  Switch,
-  Track,
-  Train,
-} from '../../model.js';
+import { BranchDirection, DetailedTimetable, Operation, Point, Switch, Track, Train } from '../../model.js';
 import {
   getDistance,
   getMidPoint,
@@ -142,6 +134,11 @@ export function getMinTimetableTime(timetable: DetailedTimetable): number {
   );
   return minTimetableTime;
 }
+
+export interface TrainMoveProps {
+  globalTimeManager: GlobalTimeManager;
+}
+
 export class TrainMove implements ITrainMove {
   placedTrains: PlacedTrain[] = [];
   timetable: DetailedTimetable;
@@ -156,8 +153,10 @@ export class TrainMove implements ITrainMove {
     return this.placedTrains;
   }
 
-  getTrainMoveType() {return 'TrainMove' as const;}
-  
+  getTrainMoveType() {
+    return 'TrainMove' as const;
+  }
+
   resetTrainMove(globalTimeManager: GlobalTimeManager): void {
     this.placedTrains = [];
     globalTimeManager.resetGlobalTime(getMinTimetableTime(this.timetable));
@@ -331,10 +330,10 @@ export class TrainMove implements ITrainMove {
   }
 
   // 1フレームごとに呼び出す関数
-  tick(globalTimeManager: GlobalTimeManager): void {
+  tick(props: TrainMoveProps): void {
     const placedTrains = [...this.placedTrains]; // 一応中で破壊的にremoveするので、コピーを作る
     for (const train of placedTrains) {
-      this.moveTrain(train, globalTimeManager);
+      this.moveTrain(train, props.globalTimeManager);
     }
 
     const collided = this.getCollidedTrains();
@@ -352,7 +351,7 @@ export class TrainMoveWithTimetable {
 
   tick(globalTimeManager: GlobalTimeManager): void {
     this.placeTrainFromPlatformTimetable(globalTimeManager);
-    this.trainMove.tick(globalTimeManager);
+    this.trainMove.tick({ globalTimeManager });
     for (const placedTrain of this.trainMove.placedTrains) {
       this.moveTrain(placedTrain);
     }

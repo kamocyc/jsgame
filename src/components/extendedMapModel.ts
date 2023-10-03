@@ -8,24 +8,30 @@ export interface CellPoint {
 
 export type CellType = 'Road' | 'Construct';
 
-export type ExtendedCellRoad = { position: CellPoint } & {
+export interface ExtendedCellBase {
+  position: CellPoint;
+  type: CellType | 'None';
+  terrain: 'Grass' | 'Water' | 'Sand' | 'Mountain';
+}
+
+export interface ExtendedCellRoad extends ExtendedCellBase {
   type: 'Road';
   rightRoad: boolean;
   leftRoad: boolean;
   topRoad: boolean;
   bottomRoad: boolean;
-};
+}
 
 export type ConstructType = 'House' | 'Shop' | 'Office';
 
-export type ExtendedCellConstruct = { position: CellPoint } & {
+export interface ExtendedCellConstruct extends ExtendedCellBase {
   type: 'Construct';
   constructType: ConstructType;
-};
+}
 
-export type ExtendedCellNone = { position: CellPoint } & {
+export interface ExtendedCellNone extends ExtendedCellBase {
   type: 'None';
-};
+}
 
 export type ExtendedCell = ExtendedCellNone | ExtendedCellRoad | ExtendedCellConstruct;
 

@@ -12,9 +12,9 @@ import {
   Train,
   TrainType,
 } from '../../model';
-import { AgentManager, createAgentManager } from '../track-editor/agentManager';
+import { createAgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
-import { TrainMove } from '../track-editor/trainMove';
+import { createTrainMove } from '../track-editor/trainMoveBase';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
@@ -23,8 +23,6 @@ import './timetable-editor.css';
 import { getInitialTimetable, reverseTimetableDirection } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
-import { removeNull } from '../../common';
-import { createTrainMove } from '../track-editor/trainMoveBase';
 
 export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Station[] }) {
   return (
@@ -248,7 +246,7 @@ export function TimetableEditorComponent({
             //   .concat(timetable.switchTTItems.map((switchTTItem) => switchTTItem.train)))
             //   .filter((train, i, self) => self.findIndex((t) => t.trainId === train.trainId) === i);
 
-            const trainMove = createTrainMove(timetable, appStates.railwayLines, appStates.storedTrains);
+            const trainMove = createTrainMove(timetable);
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: trainMove,

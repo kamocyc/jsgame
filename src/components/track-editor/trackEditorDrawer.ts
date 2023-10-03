@@ -19,6 +19,7 @@ import {
 import { Point, Station, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
+import { AgentManagerBase } from './agentManager';
 import { PlacedTrain } from './trainMoveBase';
 
 const fontName = 'Meiryo';
@@ -497,7 +498,19 @@ function drawText(ctx: CanvasRenderingContext2D, mapContext: MapContext, text: s
   ctx.fillText(text, rx(position.x - metrics.width / 2, mapContext), ry(position.y, mapContext));
 }
 
-function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, stations: Station[], tracks: Track[]) {
+function toCellPosition(position: Point): CellPoint {
+  return {
+    cx: Math.floor(position.x / CellWidth),
+    cy: Math.floor(position.y / CellHeight),
+  };
+}
+function drawStations(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  stations: Station[],
+  tracks: Track[],
+  agentManager: AgentManagerBase
+) {
   const fontSize = 15;
 
   const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
@@ -527,6 +540,20 @@ function drawStations(ctx: CanvasRenderingContext2D, mapContext: MapContext, sta
       drawText(ctx, mapContext, name, {
         x: (track.begin.x + track.end.x) / 2,
         y: (track.begin.y + track.end.y) / 2 - 10,
+      });
+
+      // platformにいるagentの数を描画
+      const numberOfAgents = agentManager
+        .getAgents()
+        .filter(
+          (agent) =>
+            getDistance(agent.position, getMidPoint(track.begin, track.end)) < CellHeight && agent.status === 'Idle'
+        ).length;
+
+      ctx.font = fontSize.toString() + 'px ' + fontName;
+      drawText(ctx, mapContext, numberOfAgents.toString(), {
+        x: (track.begin.x + track.end.x) / 2 + 10,
+        y: (track.begin.y + track.end.y) / 2,
       });
 
       const station = stations.find((station) =>
@@ -732,7 +759,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   ctx.strokeStyle = 'black';
 
   // 駅
-  drawStations(ctx, mapContext, stations, tracks);
+  drawStations(ctx, mapContext, stations, tracks, appStates.agentManager);
 
   // マウスがある場所
   if (mouseStartCell !== null) {
@@ -795,7 +822,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // 列車を描画
   for (const train of trainMove.getPlacedTrains()) {
-    drawTrain(ctx, mapContext, train);
+    drawTrain(ctx, mapContext, train, appStates.agentManager);
   }
 
   // エージェントを描画
@@ -815,7 +842,12 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 }
 
-function drawTrain(ctx: CanvasRenderingContext2D, mapContext: MapContext, train: PlacedTrain) {
+function drawTrain(
+  ctx: CanvasRenderingContext2D,
+  mapContext: MapContext,
+  train: PlacedTrain,
+  agentManager: AgentManagerBase
+) {
   const position = train.position;
 
   if (true) {
@@ -833,6 +865,13 @@ function drawTrain(ctx: CanvasRenderingContext2D, mapContext: MapContext, train:
     ctx.fillStyle = 'red';
     ctx.font = '15px ' + fontName + ' bold';
     drawText(ctx, mapContext, train.placedTrainName, position);
+
+    const numberOfAgents = agentManager
+      .getAgents()
+      .filter((agent) => agent.placedTrain?.placedTrainId === train.placedTrainId).length;
+    ctx.fillStyle = 'black';
+    ctx.font = '12px ' + fontName;
+    drawText(ctx, mapContext, numberOfAgents.toString(), { x: position.x, y: position.y + 15 });
   } else {
     // 塗りつぶした円を描画
     ctx.beginPath();

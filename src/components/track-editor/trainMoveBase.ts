@@ -1,16 +1,7 @@
-import { RailwayLine } from '../../mapEditorModel.js';
-import {
-  ArrivalAndDepartureStatus,
-  DetailedTimetable,
-  Operation,
-  Point,
-  Track,
-  Train,
-} from '../../model.js';
+import { ArrivalAndDepartureStatus, DetailedTimetable, Operation, Point, Track, Train } from '../../model.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
-import { TrainMove } from './trainMove.js';
-import { TrainRailwayMove } from './trainRailwayMove.js';
-
+import { TrainMove, TrainMoveProps } from './trainMove.js';
+import { TrainRailwayMove, TrainRailwayMoveProps } from './trainRailwayMove.js';
 
 // 継承させるので名称はPlacedTrainに合わせた（それでいいのかは不明）
 export interface StoredTrain {
@@ -30,22 +21,18 @@ export interface PlacedTrain extends StoredTrain {
   stationStatus: ArrivalAndDepartureStatus;
 }
 
+export type TrainMoveCommonProps = TrainMoveProps & TrainRailwayMoveProps;
+
 export interface ITrainMove {
-  tick(globalTimeManager: GlobalTimeManager): void;
+  tick(props: TrainMoveCommonProps): void;
   getPlacedTrains(): PlacedTrain[];
   resetTrainMove(globalTimeManager: GlobalTimeManager): void;
   getTrainMoveType(): 'TrainMove' | 'TrainRailwayMove';
 }
 
-export function createTrainMove(detailedTimetable: DetailedTimetable | null, railwayLines: RailwayLine[] | null, storedTrains: StoredTrain[] | null): ITrainMove {
+export function createTrainMove(detailedTimetable: DetailedTimetable | null) {
   if (true) {
-    if (railwayLines === null) {
-      throw new Error('railwayLines === null'); 
-    }
-    if (storedTrains === null) {
-      throw new Error('storedTrains === null');
-    }
-    return new TrainRailwayMove(railwayLines, storedTrains);
+    return new TrainRailwayMove();
   } else {
     if (detailedTimetable === null) {
       throw new Error('detailedTimetable === null');

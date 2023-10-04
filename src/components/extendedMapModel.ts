@@ -8,10 +8,27 @@ export interface CellPoint {
 
 export type CellType = 'Road' | 'Construct';
 
+export type TerrainType = 'Grass' | 'Water' | 'Mountain';
+export type TerrainDirection =
+  | 'Center'
+  | 'Top'
+  | 'Right'
+  | 'Bottom'
+  | 'Left'
+  | 'TopRight'
+  | 'BottomRight'
+  | 'BottomLeft'
+  | 'TopLeft'
+  | 'RevTopRight'
+  | 'RevBottomRight'
+  | 'RevBottomLeft'
+  | 'RevTopLeft';
+
 export interface ExtendedCellBase {
   position: CellPoint;
   type: CellType | 'None';
-  terrain: 'Grass' | 'Water' | 'Sand' | 'Mountain';
+  terrain: TerrainType;
+  terrainDirection: TerrainDirection;
 }
 
 export interface ExtendedCellRoad extends ExtendedCellBase {

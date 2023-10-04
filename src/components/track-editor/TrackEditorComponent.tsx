@@ -13,7 +13,7 @@ import {
 } from '../../mapEditorModel';
 import { DetailedTimetable, Station, Switch } from '../../model';
 import { getInitialAppStates } from '../AppComponent';
-import { ConstructType, ExtendedCellConstruct } from '../extendedMapModel';
+import { ConstructType, ExtendedCellConstruct, TerrainDirection, TerrainType } from '../extendedMapModel';
 import { toStringFromSeconds } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { LineInfoPanel } from './LineInfoPanelComponent';
@@ -111,6 +111,14 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   }
   const extendedMap = obj['extendedMap'] as ExtendedGameMap;
 
+  // for (let i = 0; i < mapWidth; i++) {
+  //   for (let j = 0; j < mapHeight; j++) {
+  //     const extendedCell = extendedMap[i][j];
+  //     extendedCell.terrainDirection = 'Center';
+  //     extendedCell.terrain = 'Grass';
+  //   }
+  // }
+
   const storedTrains: StoredTrain[] = obj['storedTrains'] ?? [];
   const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
@@ -203,6 +211,8 @@ export function TrackEditorComponent({
   const [numberOfPlatforms, setNumberOfPlatforms] = useState<number>(2);
   const [_, setUpdate_] = useState<never[]>([]);
   const [constructType, setConstructType] = useState<ConstructType>('House');
+  const [terrainType, setTerrainType] = useState<TerrainType>('Grass');
+  const [terrainDirection, setTerrainDirection] = useState<TerrainDirection>('Center');
   const [showLineInfoPanel, setShowLineInfoPanel] = useState<boolean>(false);
 
   const update = () => {
@@ -276,6 +286,8 @@ export function TrackEditorComponent({
         update={update}
         numberOfPlatforms={numberOfPlatforms}
         constructType={constructType}
+        terrainType={terrainType}
+        terrainDirection={terrainDirection}
       />
       {showLineInfoPanel ? (
         <div className='dialog'>
@@ -382,6 +394,46 @@ export function TrackEditorComponent({
             checked={appStates.editMode === 'Road'}
             setEditorMode={setEditMode}
           />
+          <div>
+            <ModeOptionRadioComponent
+              mode='SetTerrain'
+              text='地形を設定'
+              checked={appStates.editMode === 'SetTerrain'}
+              setEditorMode={setEditMode}
+            />
+            <select
+              value={terrainType}
+              onChange={(event) => {
+                const value = (event.target as HTMLSelectElement).value;
+                setTerrainType(value as TerrainType);
+              }}
+            >
+              <option value='Grass'>草原</option>
+              <option value='Water'>水</option>
+              <option value='Mountain'>山</option>
+            </select>
+            <select
+              value={terrainDirection}
+              onChange={(event) => {
+                const value = (event.target as HTMLSelectElement).value;
+                setTerrainDirection(value as TerrainDirection);
+              }}
+            >
+              <option value='Center'>■</option>
+              <option value='Left'>┫</option>
+              <option value='Right'>┣</option>
+              <option value='Top'>┻</option>
+              <option value='Bottom'>┳</option>
+              <option value='TopLeft'>┛</option>
+              <option value='TopRight'>┗</option>
+              <option value='BottomLeft'>┓</option>
+              <option value='BottomRight'>┏</option>
+              <option value='RevTopLeft'>!┛</option>
+              <option value='RevTopRight'>!┗</option>
+              <option value='RevBottomLeft'>!┓</option>
+              <option value='RevBottomRight'>!┏</option>
+            </select>
+          </div>
         </div>
         <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
         <button onClick={() => loadEditorDataLocalStorage(setAppStates)}>読み込み</button>

@@ -22,7 +22,14 @@ import {
   generateId,
 } from '../../model';
 import { getMidPoint, isHitLine } from '../../trackUtil';
-import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
+import {
+  ConstructType,
+  ExtendedCell,
+  ExtendedCellConstruct,
+  ExtendedCellRoad,
+  TerrainDirection,
+  TerrainType,
+} from '../extendedMapModel';
 import { StationEditor, SwitchEditor } from './StationSwitchEditorComponent';
 import { StoreTrainInfoPanel } from './StoredTrainInfoPanel';
 import { searchTrackPath } from './timetableConverter';
@@ -294,6 +301,8 @@ function onmousedown(
   selectedTrain: StoredTrain | null,
   numberOfPlatforms: number,
   constructType: ConstructType,
+  terrainType: TerrainType,
+  terrainDirection: TerrainDirection,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
   setPlatform: (platform: Platform | null) => void,
   setSwitch: (Switch: Switch | null) => void,
@@ -377,6 +386,8 @@ function onmousedown(
     } else if (appStates.editMode === 'LineCreate') {
       /* LineCreateは右クリックも使うため、mouseupで処理する */
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+    } else if (appStates.editMode === 'SetTerrain') {
+      setTerrain(appStates.extendedMap[mapPosition.x][mapPosition.y], terrainType, terrainDirection);
     } else {
       console.error('editModeが不正');
     }
@@ -482,6 +493,7 @@ function deleteVariousThings(
       position: { ...extendedCell.position },
       type: 'None',
       terrain: extendedCell.terrain,
+      terrainDirection: extendedCell.terrainDirection,
     };
     return;
   }
@@ -640,11 +652,15 @@ export function CanvasComponent({
   appStates,
   numberOfPlatforms,
   constructType,
+  terrainType,
+  terrainDirection,
   update,
 }: {
   appStates: AppStates;
   numberOfPlatforms: number;
   constructType: ConstructType;
+  terrainType: TerrainType;
+  terrainDirection: TerrainDirection;
   update: () => void;
 }) {
   const [editorDialogMode, setEditorDialogMode] = useState<EditorDialogMode | null>(null);
@@ -680,6 +696,8 @@ export function CanvasComponent({
             selectedTrain,
             numberOfPlatforms,
             constructType,
+            terrainType,
+            terrainDirection,
             setEditorDialogMode,
             setPlatform,
             setSwitch,
@@ -873,4 +891,11 @@ export function addPlatformToLine(
   }
 
   return null;
+}
+function setTerrain(extendedCell: ExtendedCell, terrainType: TerrainType, terrainDirection: TerrainDirection) {
+  if (terrainType === 'Grass') {
+    terrainDirection = 'Center';
+  }
+  extendedCell.terrain = terrainType;
+  extendedCell.terrainDirection = terrainDirection;
 }

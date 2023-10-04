@@ -10,8 +10,8 @@ import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { createAgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
-import { createTrainMove } from './track-editor/trainMoveBase';
 import { MapManager } from './track-editor/mapManager';
+import { createTrainMove } from './track-editor/trainMoveBase';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
@@ -36,6 +36,7 @@ function initializeExtendedMap(mapWidth: number, mapHeight: number): ExtendedCel
         position: { cx: x, cy: y },
         type: 'None',
         terrain: 'Grass',
+        terrainDirection: 'Center',
       });
     }
   }

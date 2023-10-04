@@ -17,6 +17,7 @@ import {
   timesVector,
 } from '../../mapEditorModel';
 import { Point, Station, Track } from '../../model';
+import { perlin2 } from '../../perlin';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
 import { AgentManagerBase } from './agentManager';
@@ -632,11 +633,167 @@ export function drawExtendedMap(
   }
 }
 
-function drawBackground(ctx: CanvasRenderingContext2D, mapContext: MapContext) {
-  // 草の色にする
-  ctx.fillStyle = 'rgb(200, 255, 200)';
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.fillStyle = 'rgb(0, 0, 0)';
+function drawTerrain(ctx: CanvasRenderingContext2D, extendedMap: ExtendedGameMap, mapContext: MapContext) {
+  console.log(perlin2(Math.random() * 10, Math.random() * 10));
+
+  for (let x = 0; x < extendedMap.length; x++) {
+    for (let y = 0; y < extendedMap[0].length; y++) {
+      if (extendedMap[x][y].terrain !== 'Grass' && extendedMap[x][y].terrainDirection !== 'Center') {
+        ctx.fillStyle = '#cfffcb';
+        ctx.fillRect(
+          rx(x * CellWidth, mapContext),
+          ry(y * CellHeight + CellHeight, mapContext),
+          CellWidth * mapContext.scale,
+          CellHeight * mapContext.scale
+        );
+      }
+
+      switch (extendedMap[x][y].terrain) {
+        case 'Grass':
+          ctx.fillStyle = '#cfffcb';
+          break;
+        case 'Water':
+          ctx.fillStyle = '#5fc8e5';
+          break;
+        case 'Mountain':
+          ctx.fillStyle = '#b77f2f';
+          break;
+        default:
+          throw new Error('drawTerrain: invalid terrain (' + extendedMap[x][y].terrain + ')');
+      }
+
+      switch (extendedMap[x][y].terrainDirection) {
+        case 'Center':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            CellWidth * mapContext.scale,
+            CellHeight * mapContext.scale
+          );
+          break;
+        case 'Top':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            CellWidth * mapContext.scale,
+            (CellHeight * mapContext.scale) / 2
+          );
+          break;
+        case 'Bottom':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight / 2, mapContext),
+            CellWidth * mapContext.scale,
+            (CellHeight * mapContext.scale) / 2
+          );
+          break;
+        case 'Left':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            CellHeight * mapContext.scale
+          );
+          break;
+        case 'Right':
+          ctx.fillRect(
+            rx(x * CellWidth + CellWidth / 2, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            CellHeight * mapContext.scale
+          );
+          break;
+        case 'TopLeft':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            (CellHeight * mapContext.scale) / 2
+          );
+          break;
+        case 'TopRight':
+          ctx.fillRect(
+            rx(x * CellWidth + CellWidth / 2, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            (CellHeight * mapContext.scale) / 2
+          );
+          break;
+        case 'BottomLeft':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight / 2, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            (CellHeight * mapContext.scale) / 2
+          );
+          break;
+        case 'BottomRight':
+          ctx.fillRect(
+            rx(x * CellWidth + CellWidth / 2, mapContext),
+            ry(y * CellHeight + CellHeight / 2, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            (CellHeight * mapContext.scale) / 2
+          );
+          break;
+        case 'RevTopLeft':
+          ctx.fillRect(
+            rx(x * CellWidth + CellWidth / 2, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            CellHeight * mapContext.scale
+          );
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight / 2, mapContext),
+            CellWidth * mapContext.scale,
+            (CellHeight * mapContext.scale) / 2
+          );
+          break;
+        case 'RevTopRight':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight / 2, mapContext),
+            CellWidth * mapContext.scale,
+            (CellHeight * mapContext.scale) / 2
+          );
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            CellHeight * mapContext.scale
+          );
+          break;
+        case 'RevBottomLeft':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            CellWidth * mapContext.scale,
+            (CellHeight * mapContext.scale) / 2
+          );
+          ctx.fillRect(
+            rx(x * CellWidth + CellWidth / 2, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            CellHeight * mapContext.scale
+          );
+          break;
+        case 'RevBottomRight':
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            CellWidth * mapContext.scale,
+            (CellHeight * mapContext.scale) / 2
+          );
+          ctx.fillRect(
+            rx(x * CellWidth, mapContext),
+            ry(y * CellHeight + CellHeight, mapContext),
+            (CellWidth * mapContext.scale) / 2,
+            CellHeight * mapContext.scale
+          );
+          break;
+      }
+    }
+  }
 }
 
 function getAngle(begin: Point, end: Point) {
@@ -742,7 +899,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // 背景色を描画
-  drawBackground(ctx, mapContext);
+  drawTerrain(ctx, extendedMap, mapContext);
 
   // extended Mapを描画
   drawExtendedMap(mapContext, ctx, mapWidth, mapHeight, extendedMap);

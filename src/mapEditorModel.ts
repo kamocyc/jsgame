@@ -104,7 +104,8 @@ export type EditMode =
   | 'Road'
   | 'LineCreate'
   | 'DepotCreate'
-  | 'ShowLine';
+  | 'ShowLine'
+  | 'SetTerrain';
 
 export interface MapContext {
   scale: number;

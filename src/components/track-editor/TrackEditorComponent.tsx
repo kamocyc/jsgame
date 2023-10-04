@@ -13,13 +13,14 @@ import {
 } from '../../mapEditorModel';
 import { DetailedTimetable, Station, Switch } from '../../model';
 import { getInitialAppStates } from '../AppComponent';
-import { ConstructType, ExtendedCellConstruct, TerrainDirection, TerrainType } from '../extendedMapModel';
+import { ConstructType, ExtendedCellConstruct, TerrainType } from '../extendedMapModel';
 import { toStringFromSeconds } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
 import { createAgentManager, searchPath } from './agentManager';
+import { generateTerrain } from './generateExtendedMap';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove } from './trainMove';
 import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
@@ -49,16 +50,6 @@ export function ModeOptionRadioComponent({
     </label>
   );
 }
-
-// interface SerializedPlacedTrain {
-//   trainId: string;
-//   train: Train;
-//   speed: number;
-//   trackId: string;
-//   position: Point;
-//   stationWaitTime: number;
-//   stationStatus: 'Arrived' | 'Departed' | 'NotArrived';
-// }
 
 function saveEditorDataLocalStorage(appStates: AppStates) {
   const buf = toStringEditorData(appStates);
@@ -212,7 +203,6 @@ export function TrackEditorComponent({
   const [_, setUpdate_] = useState<never[]>([]);
   const [constructType, setConstructType] = useState<ConstructType>('House');
   const [terrainType, setTerrainType] = useState<TerrainType>('Grass');
-  const [terrainDirection, setTerrainDirection] = useState<TerrainDirection>('Center');
   const [showLineInfoPanel, setShowLineInfoPanel] = useState<boolean>(false);
 
   const update = () => {
@@ -287,7 +277,6 @@ export function TrackEditorComponent({
         numberOfPlatforms={numberOfPlatforms}
         constructType={constructType}
         terrainType={terrainType}
-        terrainDirection={terrainDirection}
       />
       {showLineInfoPanel ? (
         <div className='dialog'>
@@ -412,28 +401,15 @@ export function TrackEditorComponent({
               <option value='Water'>水</option>
               <option value='Mountain'>山</option>
             </select>
-            <select
-              value={terrainDirection}
-              onChange={(event) => {
-                const value = (event.target as HTMLSelectElement).value;
-                setTerrainDirection(value as TerrainDirection);
-              }}
-            >
-              <option value='Center'>■</option>
-              <option value='Left'>┫</option>
-              <option value='Right'>┣</option>
-              <option value='Top'>┻</option>
-              <option value='Bottom'>┳</option>
-              <option value='TopLeft'>┛</option>
-              <option value='TopRight'>┗</option>
-              <option value='BottomLeft'>┓</option>
-              <option value='BottomRight'>┏</option>
-              <option value='RevTopLeft'>!┛</option>
-              <option value='RevTopRight'>!┗</option>
-              <option value='RevBottomLeft'>!┓</option>
-              <option value='RevBottomRight'>!┏</option>
-            </select>
           </div>
+          <button
+            onClick={() => {
+              generateTerrain(appStates.extendedMap);
+              update();
+            }}
+          >
+            地形を生成
+          </button>
         </div>
         <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
         <button onClick={() => loadEditorDataLocalStorage(setAppStates)}>読み込み</button>

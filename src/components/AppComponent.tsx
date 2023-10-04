@@ -36,7 +36,6 @@ function initializeExtendedMap(mapWidth: number, mapHeight: number): ExtendedCel
         position: { cx: x, cy: y },
         type: 'None',
         terrain: 'Grass',
-        terrainDirection: 'Center',
       });
     }
   }

@@ -139,6 +139,8 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     (s1, s2) => s1.stationId === s2.stationId
   );
 
+  generateTerrain(extendedMap);
+
   setAppStates((appStates) => ({
     ...appStates,
     map: mapData,

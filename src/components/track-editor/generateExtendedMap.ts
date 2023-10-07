@@ -1,7 +1,8 @@
+import { assert } from '../../common';
 import { ExtendedGameMap } from '../../mapEditorModel';
 import { Point } from '../../model';
 import { perlin2, seed } from '../../perlin';
-import { ExtendedCellConstruct } from '../extendedMapModel';
+import { ExtendedCellConstruct, ExtendedCellRoad } from '../extendedMapModel';
 
 // オクターブをする (https://qiita.com/keny30827/items/f4e29a4a90779cf94da6#%E3%82%AA%E3%82%AF%E3%82%BF%E3%83%BC%E3%83%96%E3%83%90%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%8E%E3%82%A4%E3%82%BA のコードの移植)
 function perlin2Octave(x: number, y: number): number {
@@ -37,6 +38,7 @@ export function generateTerrain(extendedMap: ExtendedGameMap) {
   }
 
   generateTowns(extendedMap);
+  // generateByWFC(extendedMap);
 }
 
 const ChunkSize = 30;
@@ -147,4 +149,249 @@ function generateTown(extendedMap: ExtendedGameMap, center: Point, townSize: num
 // 正規分布の確率密度関数
 function normalDistribution(x: number, mu: number, sigma: number) {
   return (1 / (Math.sqrt(2 * Math.PI) * sigma)) * Math.exp(-Math.pow(x - mu, 2) / (2 * Math.pow(sigma, 2)));
+}
+
+type CandidateCell = {
+  v: boolean;
+  h: boolean;
+  c: boolean;
+  point: Point;
+};
+
+type CandidateCellProbabilities = {
+  v: number;
+  h: number;
+  c: number;
+};
+
+function getEntropy(prob: CandidateCellProbabilities): number {
+  const sum = prob.v + prob.h + prob.c;
+  if (sum === 0) return 0;
+  prob.v = prob.v / sum;
+  prob.h = prob.h / sum;
+  prob.c = prob.c / sum;
+  return -prob.v * Math.log(prob.v) - prob.h * Math.log(prob.h) - prob.c * Math.log(prob.c);
+}
+
+function getMinEntropyCell(candidateMap: CandidateCell[][], extendedMap: ExtendedGameMap): CandidateCell | undefined {
+  let minEntropy = Infinity;
+  let minEntropyCells: CandidateCell[] = [];
+  for (let x = 0; x < candidateMap.length; x++) {
+    for (let y = 0; y < candidateMap[0].length; y++) {
+      if (extendedMap[x][y].type === 'Road') continue;
+
+      const cell = candidateMap[x][y];
+      const prob = {
+        v: cell.v ? 1 : 0,
+        h: cell.h ? 1 : 0,
+        c: cell.c ? 1 : 0,
+      };
+      if (!cell.v && !cell.h && !cell.c) continue;
+
+      const entropy = getEntropy(prob);
+      if (entropy < minEntropy) {
+        minEntropy = entropy;
+        minEntropyCells = [cell];
+      } else if (entropy === minEntropy) {
+        minEntropyCells.push(cell);
+      }
+    }
+  }
+
+  const minEntropyCell = minEntropyCells[Math.floor(Math.random() * minEntropyCells.length)];
+  return minEntropyCell;
+}
+
+function generateByWFC(extendedMap: ExtendedGameMap) {
+  const candidateMap: CandidateCell[][] = [];
+  for (let x = 0; x < extendedMap.length; x++) {
+    const column = [];
+    for (let y = 0; y < extendedMap[0].length; y++) {
+      column.push({
+        v: true,
+        h: true,
+        c: true,
+        point: { x, y },
+      });
+    }
+    candidateMap.push(column);
+  }
+
+  while (true) {
+    const minEntropyCell = getMinEntropyCell(candidateMap, extendedMap);
+    if (!minEntropyCell) break;
+
+    const { x, y } = minEntropyCell.point;
+    const cell = extendedMap[x][y] as ExtendedCellRoad;
+
+    if (minEntropyCell.v && minEntropyCell.h && minEntropyCell.c) {
+      cell.type = 'Road';
+      const r = Math.random();
+      if (r < 0.3) {
+        cell.crossRoad = true;
+      } else if (r < 0.6) {
+        cell.rightRoad = true;
+        cell.leftRoad = true;
+      } else {
+        cell.topRoad = true;
+        cell.bottomRoad = true;
+      }
+    } else if (minEntropyCell.v) {
+      cell.type = 'Road';
+      cell.topRoad = true;
+      cell.bottomRoad = true;
+    } else if (minEntropyCell.h) {
+      cell.type = 'Road';
+      cell.rightRoad = true;
+      cell.leftRoad = true;
+    } else if (minEntropyCell.c) {
+      cell.type = 'Road';
+      cell.crossRoad = true;
+    } else {
+      assert(false);
+    }
+
+    // 制約を更新
+    const queue: Point[] = [];
+    queue.push({ x: x - 1, y });
+    queue.push({ x: x + 1, y });
+    queue.push({ x, y: y - 1 });
+    queue.push({ x, y: y + 1 });
+
+    const seen = new Set<string>();
+
+    while (queue.length > 0) {
+      const point = queue.shift()!;
+      if (point.x < 0 || point.y < 0 || point.x >= extendedMap.length || point.y >= extendedMap[0].length) continue;
+      const cell = extendedMap[point.x][point.y];
+      if (cell.type === 'Road') continue;
+
+      const candidateCell = candidateMap[point.x][point.y];
+
+      {
+        const eCell = getCell(extendedMap, point.x - 1, point.y);
+        const cCell = getCell(candidateMap, point.x - 1, point.y);
+        if (eCell && cCell) {
+          if (eCell.type === 'Road' && (eCell.rightRoad || eCell.leftRoad)) {
+            candidateCell.v = false;
+          }
+          if (eCell.type === 'Road' && (eCell.bottomRoad || eCell.topRoad)) {
+            candidateCell.h = false;
+            candidateCell.c = false;
+          }
+          if (eCell.type === 'Road' && eCell.crossRoad) {
+            candidateCell.v = false;
+          }
+          if (cCell.v && !cCell.h && !cCell.c) {
+            candidateCell.h = false;
+            candidateCell.c = false;
+          }
+          if (!cCell.v && cCell.h && !cCell.c) {
+            candidateCell.v = false;
+          }
+          if (!cCell.v && !cCell.h && cCell.c) {
+            candidateCell.v = false;
+          }
+        }
+      }
+
+      {
+        const eCell = getCell(extendedMap, point.x + 1, point.y);
+        const cCell = getCell(candidateMap, point.x + 1, point.y);
+        if (eCell && cCell) {
+          if (eCell.type === 'Road' && (eCell.rightRoad || eCell.leftRoad)) {
+            candidateCell.v = false;
+          }
+          if (eCell.type === 'Road' && (eCell.bottomRoad || eCell.topRoad)) {
+            candidateCell.h = false;
+            candidateCell.c = false;
+          }
+          if (eCell.type === 'Road' && eCell.crossRoad) {
+            candidateCell.v = false;
+          }
+          if (cCell.v && !cCell.h && !cCell.c) {
+            candidateCell.h = false;
+            candidateCell.c = false;
+          }
+          if (!cCell.v && cCell.h && !cCell.c) {
+            candidateCell.v = false;
+          }
+          if (!cCell.v && !cCell.h && cCell.c) {
+            candidateCell.v = false;
+          }
+        }
+      }
+
+      {
+        const eCell = getCell(extendedMap, point.x, point.y - 1);
+        const cCell = getCell(candidateMap, point.x, point.y - 1);
+        if (eCell && cCell) {
+          if (eCell.type === 'Road' && (eCell.rightRoad || eCell.leftRoad)) {
+            candidateCell.v = false;
+            candidateCell.c = false;
+          }
+          if (eCell.type === 'Road' && (eCell.bottomRoad || eCell.topRoad)) {
+            candidateCell.h = false;
+          }
+          if (eCell.type === 'Road' && eCell.crossRoad) {
+            candidateCell.h = false;
+          }
+          if (cCell.v && !cCell.h && !cCell.c) {
+            candidateCell.h = false;
+          }
+          if (!cCell.v && cCell.h && !cCell.c) {
+            candidateCell.v = false;
+            candidateCell.c = false;
+          }
+          if (!cCell.v && !cCell.h && cCell.c) {
+            candidateCell.h = false;
+          }
+        }
+      }
+      {
+        const eCell = getCell(extendedMap, point.x, point.y + 1);
+        const cCell = getCell(candidateMap, point.x, point.y + 1);
+        if (eCell && cCell) {
+          if (eCell.type === 'Road' && (eCell.rightRoad || eCell.leftRoad)) {
+            candidateCell.v = false;
+            candidateCell.c = false;
+          }
+          if (eCell.type === 'Road' && (eCell.bottomRoad || eCell.topRoad)) {
+            candidateCell.h = false;
+          }
+          if (eCell.type === 'Road' && eCell.crossRoad) {
+            candidateCell.h = false;
+          }
+          if (cCell.v && !cCell.h && !cCell.c) {
+            candidateCell.h = false;
+          }
+          if (!cCell.v && cCell.h && !cCell.c) {
+            candidateCell.v = false;
+            candidateCell.c = false;
+          }
+          if (!cCell.v && !cCell.h && cCell.c) {
+            candidateCell.h = false;
+          }
+        }
+      }
+
+      if (!seen.has(`${point.x - 1},${point.y}`)) {
+        seen.add(`${point.x - 1},${point.y}`);
+      }
+      if (!seen.has(`${point.x + 1},${point.y}`)) {
+        seen.add(`${point.x + 1},${point.y}`);
+      }
+      if (!seen.has(`${point.x},${point.y - 1}`)) {
+        seen.add(`${point.x},${point.y - 1}`);
+      }
+      if (!seen.has(`${point.x},${point.y + 1}`)) {
+        seen.add(`${point.x},${point.y + 1}`);
+      }
+    }
+  }
+}
+
+function getCell<T>(map: T[][], x: number, y: number): T | undefined {
+  if (x < 0 || y < 0 || x >= map.length || y >= map[0].length) return undefined;
+  return map[x][y];
 }

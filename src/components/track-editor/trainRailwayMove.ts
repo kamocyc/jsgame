@@ -2,6 +2,7 @@ import { RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { Track } from '../../model';
 import { getDistance, getMidPoint, getTrackDirection, isTrainOutTrack } from '../../trackUtil';
 import { GlobalTimeManager } from './globalTimeManager';
+import { MoneyManager } from './moneyManager';
 import { shouldStopTrain } from './trainMove';
 import { ITrainMove, PlacedTrain, StoredTrain } from './trainMoveBase';
 
@@ -58,6 +59,7 @@ export interface TrainRailwayMoveProps {
   railwayLines: RailwayLine[];
   storedTrains: StoredTrain[];
   globalTimeManager: GlobalTimeManager;
+  moneyManager: MoneyManager;
 }
 
 export class TrainRailwayMove implements ITrainMove {
@@ -133,6 +135,8 @@ export class TrainRailwayMove implements ITrainMove {
     this.placeNewTrain(props);
     for (const placedTrain of this.placedTrains) {
       this.moveTrain(props, placedTrain);
+      // 運行費を消費する
+      props.moneyManager.addMoney(-10);
     }
   }
 

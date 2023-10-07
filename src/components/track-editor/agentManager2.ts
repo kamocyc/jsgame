@@ -4,6 +4,7 @@ import { Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManagerBase, getStationPositions } from './agentManager';
+import { MoneyManager } from './moneyManager';
 import { PlacedTrain } from './trainMoveBase';
 
 export type AgentStatus = 'Idle' | 'Move';
@@ -308,6 +309,7 @@ export interface AgentManager2Props {
   gameMap: GameMap;
   railwayLines: RailwayLine[];
   placedTrains: PlacedTrain[];
+  moneyManager: MoneyManager;
 }
 
 // 時刻表ベースの実装
@@ -346,14 +348,30 @@ export class AgentManager2 implements AgentManagerBase {
     this.agents = this.agents.filter((a) => a.id !== agentId);
   }
 
-  getRandomDestination(agent: Agent, props: AgentManager2Props): ExtendedCellConstruct {
+  private getDestinationCandidates(agent: Agent, props: AgentManager2Props) {
     const candidates = props.extendedMap.flatMap((row) =>
       row.filter(
         (cell) =>
           cell.type === 'Construct' && getDistance(toPixelPosition(cell.position), agent.position) > CellHeight * 1.4
       )
     ) as ExtendedCellConstruct[];
-    return candidates[Math.floor(Math.random() * candidates.length)];
+    return candidates;
+  }
+
+  // ランダムな目的地を決める
+  // もっとうまくやりたいところ
+  getRandomDestination(agent: Agent, props: AgentManager2Props): ExtendedCellConstruct {
+    const [stationPositions, platforms] = getStationPositions(props.stations, props.gameMap);
+
+    const candidates = this.getDestinationCandidates(agent, props);
+    // 今いる場所に近いか、駅の近くのみ選択可能とする
+    const candidates2 = candidates.filter(
+      (c) =>
+        getDistance(toPixelPosition(c.position), agent.position) < CellHeight * 5 ||
+        (stationPositions.some((s) => getDistance(agent.position, s.topPosition) < CellHeight * 5) &&
+          stationPositions.some((s) => getDistance(toPixelPosition(c.position), s.topPosition) < CellHeight * 5))
+    );
+    return candidates2[Math.floor(Math.random() * candidates2.length)];
   }
 
   actAgent(agent: Agent, props: AgentManager2Props) {
@@ -388,6 +406,7 @@ export class AgentManager2 implements AgentManagerBase {
           const foundTrains = props.placedTrains.filter(
             (t) =>
               t.stationStatus === 'Arrived' &&
+              t.placedRailwayLineId === step.stationPathStep.railwayLine.railwayLineId &&
               t.track.track.platform?.station.stationId === step.stationPathStep.station.stationId
           );
           if (foundTrains.length > 0) {
@@ -402,11 +421,23 @@ export class AgentManager2 implements AgentManagerBase {
           // 電車から降りる
           if (
             agent.placedTrain.stationStatus === 'Arrived' &&
-            // TODO: stepが１つずれている気がする
             agent.placedTrain.track.track.platform?.station.stationId === step.stationPathStep.station.stationId
           ) {
             agent.placedTrain = null;
-            // agent.pathIndex ++;
+            // 距離に応じた運賃を払う
+            const startPosition = step.stationPathStep.stop.platformPaths![0].begin;
+            const distance = getDistance(startPosition, agent.position);
+            props.moneyManager.addMoney((distance / CellHeight) * 100);
+
+            // 乗り換える場合は次の列車のホームに移動
+            const nextPath = agent.path[agent.pathIndex + 1];
+            if (nextPath.stepType === 'station') {
+              const nextPlatformTrack = nextPath.stationPathStep.stop.platformTrack;
+              const position = getMidPoint(nextPlatformTrack.begin, nextPlatformTrack.end);
+              agent.position = { x: position.x, y: position.y - CellHeight / 4 };
+            }
+
+            agent.pathIndex++;
           }
         }
       } else if (step.stepType === 'walk') {

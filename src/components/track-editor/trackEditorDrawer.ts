@@ -23,6 +23,7 @@ import { AgentManagerBase } from './agentManager';
 import { PlacedTrain } from './trainMoveBase';
 
 const fontName = 'Meiryo';
+const imageCache = new Map<string, HTMLImageElement>();
 
 function toCY(cellPoint: CellPoint): Point {
   return {
@@ -255,11 +256,7 @@ function drawStraight(
     timesVector(straightType.end, CellWidth / 2)
   );
 
-  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType, false, drawMode);
-
-  // ctx.strokeStyle = 'green';
-  // drawLine(ctx, mapContext, begin, end);
-  // ctx.strokeStyle = 'black';
+  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType, false, drawSleeper);
 }
 
 function xyToLineDirection(xy: Point): LineDirection {
@@ -313,7 +310,6 @@ function drawTerminal(
     false,
     drawMode
   );
-  // drawLine(ctx, mapContext, begin, end);
 }
 
 function drawCurve(
@@ -384,11 +380,6 @@ function drawCurve(
     true,
     drawMode
   );
-
-  // ctx.strokeStyle = 'red';
-  // drawLine(ctx, mapContext, begin, center);
-  // drawLine(ctx, mapContext, center, end);
-  // ctx.strokeStyle = 'black';
 }
 
 function drawBranch(
@@ -508,11 +499,6 @@ function drawBranch(
     true,
     drawMode
   );
-
-  // ctx.strokeStyle = 'blue';
-  // drawLine(ctx, mapContext, begin, end1);
-  // drawLine(ctx, mapContext, center, end2);
-  // ctx.strokeStyle = 'black';
 }
 
 function drawLineType(
@@ -646,20 +632,17 @@ export function drawExtendedMap(
         } else if (extendedCell.leftRoad || extendedCell.rightRoad) {
           image.src = './images/road_h.png';
           drawCellImage(mapContext, ctx, image, toCY(position));
+        } else if (extendedCell.crossRoad) {
+          image.src = './images/road_cross.png';
+          drawCellImage(mapContext, ctx, image, toCY(position));
         }
       } else if (extendedCell.type === 'Construct') {
         if (extendedCell.constructType === 'House') {
-          const image = new Image();
-          image.src = './images/house.png';
-          drawCellImage(mapContext, ctx, image, toCY(position));
+          drawCellImage(mapContext, ctx, imageCache.get('house')!, toCY(position));
         } else if (extendedCell.constructType === 'Shop') {
-          const image = new Image();
-          image.src = './images/shop.png';
-          drawCellImage(mapContext, ctx, image, toCY(position));
+          drawCellImage(mapContext, ctx, imageCache.get('shop')!, toCY(position));
         } else if (extendedCell.constructType === 'Office') {
-          const image = new Image();
-          image.src = './images/office.png';
-          drawCellImage(mapContext, ctx, image, toCY(position));
+          drawCellImage(mapContext, ctx, imageCache.get('office')!, toCY(position));
         }
       }
     }
@@ -790,6 +773,16 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
+
+  if (imageCache.size === 0) {
+    // 画像をキャッシュ
+    const imageNames = ['house', 'shop', 'office', 'platform', 'train'];
+    for (const imageName of imageNames) {
+      const image = new Image();
+      image.src = './images/' + imageName + '.png';
+      imageCache.set(imageName, image);
+    }
+  }
 
   // clear
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -927,6 +920,7 @@ function drawTrain(
     ctx.font = '15px ' + fontName + ' bold';
     drawText(ctx, mapContext, train.placedTrainName, position);
 
+    // 乗っている人数
     const numberOfAgents = agentManager
       .getAgents()
       .filter((agent) => agent.placedTrain?.placedTrainId === train.placedTrainId).length;

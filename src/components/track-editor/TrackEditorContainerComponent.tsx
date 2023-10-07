@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { deepEqual } from '../../common';
+import { deepEqual, generatePlaceName, getNewName, getRandomColor } from '../../common';
 import {
   AppStates,
   Cell,
@@ -119,6 +119,7 @@ function placeTrain(
 
 function createDepot(
   map: GameMap,
+  extendedMap: ExtendedGameMap,
   position: Point,
   mapWidth: number,
   mapHeight: number,
@@ -137,7 +138,7 @@ function createDepot(
 
   const cell1 = map[position.x][position.y];
   const cell2 = map[position.x + 1][position.y];
-  const result = createLine(map, cell1, cell2);
+  const result = createLine(map, cell1, cell2, extendedMap);
   if ('error' in result) {
     setToast(result.error);
     return null;
@@ -160,6 +161,7 @@ function createDepot(
 
 function placeStation(
   map: GameMap,
+  extendedMap: ExtendedGameMap,
   position: Point,
   mapWidth: number,
   mapHeight: number,
@@ -172,7 +174,7 @@ function placeStation(
 
   const newStation = {
     stationId: generateId(),
-    stationName: '-',
+    stationName: generatePlaceName(),
     platforms: [],
   } as unknown as Station;
 
@@ -192,7 +194,7 @@ function placeStation(
   for (let i = 0; i < numberOfPlatforms; i++) {
     const cell1 = map[position.x][position.y + i];
     const cell2 = map[position.x + 1][position.y + i];
-    const result = createLine(map, cell1, cell2);
+    const result = createLine(map, cell1, cell2, extendedMap);
     if ('error' in result) {
       setToast(result.error);
       return null;
@@ -350,6 +352,7 @@ function onmousedown(
     } else if (appStates.editMode === 'Station') {
       const result = placeStation(
         appStates.map,
+        appStates.extendedMap,
         mapPosition,
         appStates.mapWidth,
         appStates.mapHeight,
@@ -374,7 +377,7 @@ function onmousedown(
       setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'DepotCreate') {
-      createDepot(appStates.map, mapPosition, appStates.mapWidth, appStates.mapHeight, setToast);
+      createDepot(appStates.map, appStates.extendedMap, mapPosition, appStates.mapWidth, appStates.mapHeight, setToast);
     } else if (appStates.editMode === 'LineCreate') {
       /* LineCreateは右クリックも使うため、mouseupで処理する */
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
@@ -523,12 +526,13 @@ function onmouseup(
     const mouseEndCell = appStates.map[mapPosition.x][mapPosition.y];
 
     if (mouseDragMode === 'Create') {
-      const result = createLine(appStates.map, mouseStartCell, mouseEndCell);
+      const result = createLine(appStates.map, mouseStartCell, mouseEndCell, appStates.extendedMap);
       // console.warn(result?.error);
       if ('error' in result) {
         setToast(result.error);
       } else {
-        const [_tracks, switches] = result;
+        const [tracks, switches] = result;
+        appStates.moneyManager.addMoney(-tracks.length * 10000);
         appStates.tracks = getAllTracks(appStates.map);
         appStates.switches.push(...switches);
         validateAppState(appStates);
@@ -843,10 +847,14 @@ export function addPlatformToLine(
   if (appStates.currentRailwayLine === null) {
     const id = generateId();
 
+    const newName = getNewName(
+      appStates.railwayLines.map((line) => line.railwayLineName),
+      '路線'
+    );
     appStates.currentRailwayLine = {
       railwayLineId: id,
-      railwayLineName: '路線' + id,
-      railwayLineColor: '#ff8800', // orange
+      railwayLineName: newName,
+      railwayLineColor: getRandomColor(),
       stops: [
         {
           stopId: generateId(),
@@ -880,6 +888,7 @@ export function addPlatformToLine(
 
   return null;
 }
+
 function setTerrain(extendedCell: ExtendedCell, terrainType: TerrainType) {
   extendedCell.terrain = terrainType;
 }

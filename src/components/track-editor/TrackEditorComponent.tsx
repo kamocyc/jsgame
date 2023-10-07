@@ -21,6 +21,7 @@ import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
 import { createAgentManager, searchPath } from './agentManager';
 import { generateTerrain } from './generateExtendedMap';
+import { MoneyManager } from './moneyManager';
 import { drawEditor } from './trackEditorDrawer';
 import { TrainMove } from './trainMove';
 import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
@@ -102,13 +103,14 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   }
   const extendedMap = obj['extendedMap'] as ExtendedGameMap;
 
-  // for (let i = 0; i < mapWidth; i++) {
-  //   for (let j = 0; j < mapHeight; j++) {
-  //     const extendedCell = extendedMap[i][j];
-  //     extendedCell.terrainDirection = 'Center';
-  //     extendedCell.terrain = 'Grass';
-  //   }
-  // }
+  for (let i = 0; i < mapWidth; i++) {
+    for (let j = 0; j < mapHeight; j++) {
+      const extendedCell = extendedMap[i][j];
+      if (mapData[i][j].lineType) {
+        extendedCell.type = 'Railway';
+      }
+    }
+  }
 
   const storedTrains: StoredTrain[] = obj['storedTrains'] ?? [];
   const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
@@ -139,7 +141,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     (s1, s2) => s1.stationId === s2.stationId
   );
 
-  generateTerrain(extendedMap);
+  // generateTerrain(extendedMap);
 
   setAppStates((appStates) => ({
     ...appStates,
@@ -157,6 +159,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     timetableData: timetableData,
     railwayLines: railwayLines,
     mapContext: createMapContext(mapWidth, mapHeight),
+    moneyManager: new MoneyManager(),
   }));
 }
 
@@ -250,6 +253,7 @@ export function TrackEditorComponent({
         globalTimeManager: appStates.globalTimeManager,
         railwayLines: appStates.railwayLines,
         storedTrains: appStates.storedTrains,
+        moneyManager: appStates.moneyManager,
       });
       addAgents(appStates);
       appStates.agentManager.tick({
@@ -261,6 +265,7 @@ export function TrackEditorComponent({
         railwayLines: appStates.railwayLines,
         timetable: appStates.timetableData.timetable,
         trainMove: appStates.trainMove as TrainMove,
+        moneyManager: appStates.moneyManager,
       });
       setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
@@ -496,6 +501,7 @@ export function TrackEditorComponent({
         ▸▸▸
       </button> */}
       <div style={{ display: 'inline-block', margin: '3px' }}>{appStates.globalTimeManager.toStringGlobalTime()}</div>
+      <div>¥{appStates.moneyManager.toStringMoney()}</div>
       <br />
 
       <SeekBarComponent

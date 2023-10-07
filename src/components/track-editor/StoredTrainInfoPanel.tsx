@@ -1,3 +1,4 @@
+import { getNewName } from '../../common';
 import { RailwayLine } from '../../mapEditorModel';
 import { generateId } from '../../model';
 import { ListSettingCommonComponent } from './ListSettingCommonComponent';
@@ -76,9 +77,13 @@ export function StoreTrainInfoPanel({
           }}
           getNewData={() => {
             const id = generateId();
+            const newName = getNewName(
+              storedTrains.map((train) => train.placedTrainName),
+              '新しい車両'
+            );
             return {
               placedTrainId: id,
-              placedTrainName: '新しい車両',
+              placedTrainName: newName,
               placedRailwayLineId: null,
             };
           }}

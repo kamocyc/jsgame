@@ -10,6 +10,7 @@ import {
   isTrainOutTrack,
 } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
+import { MoneyManager } from './moneyManager.js';
 import { ITrainMove, PlacedTrain } from './trainMoveBase.js';
 
 function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | undefined {
@@ -137,6 +138,7 @@ export function getMinTimetableTime(timetable: DetailedTimetable): number {
 
 export interface TrainMoveProps {
   globalTimeManager: GlobalTimeManager;
+  moneyManager: MoneyManager;
 }
 
 export class TrainMove implements ITrainMove {
@@ -334,6 +336,8 @@ export class TrainMove implements ITrainMove {
     const placedTrains = [...this.placedTrains]; // 一応中で破壊的にremoveするので、コピーを作る
     for (const train of placedTrains) {
       this.moveTrain(train, props.globalTimeManager);
+      // 運行費を消費する
+      props.moneyManager.addMoney(-10);
     }
 
     const collided = this.getCollidedTrains();
@@ -349,9 +353,9 @@ export class TrainMove implements ITrainMove {
 export class TrainMoveWithTimetable {
   constructor(private trainMove: TrainMove, private operations: Operation[]) {}
 
-  tick(globalTimeManager: GlobalTimeManager): void {
+  tick(globalTimeManager: GlobalTimeManager, moneyManager: MoneyManager): void {
     this.placeTrainFromPlatformTimetable(globalTimeManager);
-    this.trainMove.tick({ globalTimeManager });
+    this.trainMove.tick({ globalTimeManager }, moneyManager);
     for (const placedTrain of this.trainMove.placedTrains) {
       this.moveTrain(placedTrain);
     }

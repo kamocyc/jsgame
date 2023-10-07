@@ -6,18 +6,19 @@ export interface CellPoint {
   cy: number;
 }
 
-export type CellType = 'Road' | 'Construct';
+export type CellType = 'Road' | 'Construct' | 'Railway' | 'None';
 
 export type TerrainType = 'Grass' | 'Water' | 'Mountain';
 
 export interface ExtendedCellBase {
   position: CellPoint;
-  type: CellType | 'None';
+  type: CellType;
   terrain: TerrainType;
 }
 
 export interface ExtendedCellRoad extends ExtendedCellBase {
   type: 'Road';
+  crossRoad: boolean;
   rightRoad: boolean;
   leftRoad: boolean;
   topRoad: boolean;
@@ -34,8 +35,11 @@ export interface ExtendedCellConstruct extends ExtendedCellBase {
 export interface ExtendedCellNone extends ExtendedCellBase {
   type: 'None';
 }
+export interface ExtendedCellRailway extends ExtendedCellBase {
+  type: 'Railway';
+}
 
-export type ExtendedCell = ExtendedCellNone | ExtendedCellRoad | ExtendedCellConstruct;
+export type ExtendedCell = ExtendedCellNone | ExtendedCellRoad | ExtendedCellConstruct | ExtendedCellRailway;
 
 export function toPixelPosition(position: CellPoint): Point {
   return {

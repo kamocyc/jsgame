@@ -11,6 +11,7 @@ import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { createAgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { MapManager } from './track-editor/mapManager';
+import { MoneyManager } from './track-editor/moneyManager';
 import { createTrainMove } from './track-editor/trainMoveBase';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
@@ -129,6 +130,7 @@ export function getInitialAppStates(): AppStates {
     currentRailwayLine: null,
     railwayLines: [],
     selectedRailwayLineId: null,
+    moneyManager: new MoneyManager(),
     mapManager: new MapManager(),
   };
 }

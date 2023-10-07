@@ -24,6 +24,7 @@ export function LineInfoPanel({
         >
           路線情報
         </h2>
+        <div>マップ上の駅をクリックで新規路線を作成</div>
         <button
           onClick={() => {
             setSelectedRailwayLineId('__ALL__');

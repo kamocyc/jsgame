@@ -59,6 +59,8 @@ function drawLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, begin: 
   ctx.stroke();
 }
 
+type DrawMode = 'Sleeper' | 'Rail' | 'Bridge';
+
 function drawStraightSub(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
@@ -66,12 +68,12 @@ function drawStraightSub(
   end: Point,
   lineDirection: LineDirection,
   isBeginCurve: boolean,
-  drawSleeper: boolean
+  drawMode: DrawMode
 ) {
-  // ここらへんの値は1セルの大きさに依存するので、CellWidthを使うほうがいいけど、とりあえず固定値で
+  // ここらへんの値は1セルの大きさに依存するので、CellWidthを使うほうがいいけど、調整が大変なのでとりあえず固定値で
   switch (lineDirection) {
     case 'Horizontal': {
-      if (drawSleeper) {
+      if (drawMode === 'Sleeper') {
         // 枕木
         ctx.lineWidth = 4 * mapContext.scale;
         ctx.strokeStyle = 'rgb(145, 145, 145)';
@@ -85,7 +87,16 @@ function drawStraightSub(
             { x: begin_.x + i * 8 + 4, y: begin_.y - 6 }
           );
         }
-      } else {
+      } else if (drawMode === 'Bridge') {
+        // 橋
+        ctx.fillStyle = 'rgb(230, 230, 230)';
+        ctx.beginPath();
+        ctx.moveTo(rx(begin.x, mapContext), ry(begin.y + 12, mapContext));
+        ctx.lineTo(rx(end.x, mapContext), ry(end.y + 12, mapContext));
+        ctx.lineTo(rx(end.x, mapContext), ry(end.y - 12, mapContext));
+        ctx.lineTo(rx(begin.x, mapContext), ry(begin.y - 12, mapContext));
+        ctx.fill();
+      } else if (drawMode === 'Rail') {
         // 線路
         ctx.lineWidth = 2 * mapContext.scale;
         ctx.strokeStyle = 'rgb(89, 47, 24)';
@@ -93,11 +104,13 @@ function drawStraightSub(
         drawLine(ctx, mapContext, { ...begin, y: begin.y - 3 }, { ...end, y: end.y - 3 });
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
+
+
       }
       break;
     }
     case 'Vertical': {
-      if (drawSleeper) {
+      if (drawMode === 'Sleeper') {
         // 枕木
         ctx.lineWidth = 4 * mapContext.scale;
         ctx.strokeStyle = 'rgb(145, 145, 145)';
@@ -111,7 +124,16 @@ function drawStraightSub(
             { x: begin_.x + 6, y: begin_.y + i * 8 + 4 }
           );
         }
-      } else {
+      } else if (drawMode === 'Bridge') {
+        // 橋
+        ctx.fillStyle = 'rgb(230, 230, 230)';
+        ctx.beginPath();
+        ctx.moveTo(rx(begin.x + 12, mapContext), ry(begin.y, mapContext));
+        ctx.lineTo(rx(end.x + 12, mapContext), ry(end.y, mapContext));
+        ctx.lineTo(rx(end.x - 12, mapContext), ry(end.y, mapContext));
+        ctx.lineTo(rx(begin.x - 12, mapContext), ry(begin.y, mapContext));
+        ctx.fill();
+      } else if (drawMode === 'Rail') {
         // 線路
         ctx.lineWidth = 2 * mapContext.scale;
         ctx.strokeStyle = 'rgb(89, 47, 24)';
@@ -123,7 +145,7 @@ function drawStraightSub(
       break;
     }
     case 'TopBottom': {
-      if (drawSleeper) {
+      if (drawMode === 'Sleeper') {
         // 枕木
         ctx.lineWidth = 4 * mapContext.scale;
         ctx.strokeStyle = 'rgb(145, 145, 145)';
@@ -137,7 +159,16 @@ function drawStraightSub(
             { x: begin_.x + i * 5 + 5 + 2, y: begin_.y - i * 5 + 5 - 2 }
           );
         }
-      } else {
+      } else if (drawMode === 'Bridge') {
+        // 橋
+        ctx.fillStyle = 'rgb(230, 230, 230)';
+        ctx.beginPath();
+        ctx.moveTo(rx(begin.x - 9, mapContext), ry(begin.y - 9, mapContext));
+        ctx.lineTo(rx(end.x - 9, mapContext), ry(end.y - 9, mapContext));
+        ctx.lineTo(rx(end.x + 9, mapContext), ry(end.y + 9, mapContext));
+        ctx.lineTo(rx(begin.x + 9, mapContext), ry(begin.y + 9, mapContext));
+        ctx.fill();
+      } else if (drawMode === 'Rail') {
         // 線路
         ctx.lineWidth = 2 * mapContext.scale;
         ctx.strokeStyle = 'rgb(89, 47, 24)';
@@ -153,7 +184,7 @@ function drawStraightSub(
       break;
     }
     case 'BottomTop': {
-      if (drawSleeper) {
+      if (drawMode === 'Sleeper') {
         // 枕木
         ctx.lineWidth = 4 * mapContext.scale;
         ctx.strokeStyle = 'rgb(145, 145, 145)';
@@ -167,7 +198,16 @@ function drawStraightSub(
             { x: begin_.x + i * 5 + 5 + 2, y: begin_.y + i * 5 - 5 + 2 }
           );
         }
-      } else {
+      } else if (drawMode === 'Bridge') {
+        // 橋
+        ctx.fillStyle = 'rgb(230, 230, 230)';
+        ctx.beginPath();
+        ctx.moveTo(rx(begin.x - 9, mapContext), ry(begin.y + 9, mapContext));
+        ctx.lineTo(rx(end.x - 9, mapContext), ry(end.y + 9, mapContext));
+        ctx.lineTo(rx(end.x + 9, mapContext), ry(end.y - 9, mapContext));
+        ctx.lineTo(rx(begin.x + 9, mapContext), ry(begin.y - 9, mapContext));
+        ctx.fill();
+      } else if (drawMode === 'Rail') {
         // 線路
         ctx.lineWidth = 2 * mapContext.scale;
         ctx.strokeStyle = 'rgb(89, 47, 24)';
@@ -190,7 +230,7 @@ function drawStraight(
   mapContext: MapContext,
   position: Point,
   lineType: LineTypeStraight,
-  drawSleeper: boolean
+  drawMode: DrawMode
 ) {
   const straightTypeToPositionMap = {
     Horizontal: { begin: { x: -1, y: 0 }, end: { x: 1, y: 0 } },
@@ -215,7 +255,7 @@ function drawStraight(
     timesVector(straightType.end, CellWidth / 2)
   );
 
-  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType, false, drawSleeper);
+  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType, false, drawMode);
 
   // ctx.strokeStyle = 'green';
   // drawLine(ctx, mapContext, begin, end);
@@ -240,7 +280,7 @@ function drawTerminal(
   mapContext: MapContext,
   position: Point,
   lineType: LineTypeTerminal,
-  drawSleeper: boolean
+  drawMode: DrawMode
 ) {
   const angleToPositionMap = {
     0: { x: 1, y: 0 },
@@ -271,7 +311,7 @@ function drawTerminal(
     end,
     xyToLineDirection(angleToPositionMap[lineType.angle]),
     false,
-    drawSleeper
+    drawMode
   );
   // drawLine(ctx, mapContext, begin, end);
 }
@@ -281,7 +321,7 @@ function drawCurve(
   mapContext: MapContext,
   position: Point,
   lineType: LineTypeCurve,
-  drawSleeper: boolean
+  drawMode: DrawMode
 ) {
   const curveTypeToPositionMap = {
     Bottom_TopLeft: {
@@ -333,7 +373,7 @@ function drawCurve(
     center,
     xyToLineDirection(curveTypeToPositionMap[lineType.curveType].begin),
     false,
-    drawSleeper
+    drawMode
   );
   drawStraightSub(
     ctx,
@@ -342,7 +382,7 @@ function drawCurve(
     end,
     xyToLineDirection(curveTypeToPositionMap[lineType.curveType].end),
     true,
-    drawSleeper
+    drawMode
   );
 
   // ctx.strokeStyle = 'red';
@@ -356,7 +396,7 @@ function drawBranch(
   mapContext: MapContext,
   position: Point,
   lineType: LineTypeBranch,
-  drawSleeper: boolean
+  drawMode: DrawMode
 ) {
   const branchTypeToPositionMap = {
     Horizontal_TopLeft: {
@@ -457,7 +497,7 @@ function drawBranch(
     end1,
     xyToLineDirection(branchTypeToPositionMap[lineType.branchType].end1),
     false,
-    drawSleeper
+    drawMode
   );
   drawStraightSub(
     ctx,
@@ -466,7 +506,7 @@ function drawBranch(
     end2,
     xyToLineDirection(branchTypeToPositionMap[lineType.branchType].end2),
     true,
-    drawSleeper
+    drawMode
   );
 
   // ctx.strokeStyle = 'blue';
@@ -480,16 +520,16 @@ function drawLineType(
   mapContext: MapContext,
   position: Point,
   lineType: LineType,
-  drawSleeper: boolean
+  drawMode: DrawMode
 ) {
   if (lineType.lineClass === 'Branch') {
-    drawBranch(ctx, mapContext, position, lineType as LineTypeBranch, drawSleeper);
+    drawBranch(ctx, mapContext, position, lineType as LineTypeBranch, drawMode);
   } else if (lineType.lineClass === 'Straight') {
-    drawStraight(ctx, mapContext, position, lineType as LineTypeStraight, drawSleeper);
+    drawStraight(ctx, mapContext, position, lineType as LineTypeStraight, drawMode);
   } else if (lineType.lineClass === 'Terminal') {
-    drawTerminal(ctx, mapContext, position, lineType as LineTypeTerminal, drawSleeper);
+    drawTerminal(ctx, mapContext, position, lineType as LineTypeTerminal, drawMode);
   } else if (lineType.lineClass === 'Curve') {
-    drawCurve(ctx, mapContext, position, lineType as LineTypeCurve, drawSleeper);
+    drawCurve(ctx, mapContext, position, lineType as LineTypeCurve, drawMode);
   }
 }
 
@@ -498,12 +538,6 @@ function drawText(ctx: CanvasRenderingContext2D, mapContext: MapContext, text: s
   ctx.fillText(text, rx(position.x - metrics.width / 2, mapContext), ry(position.y, mapContext));
 }
 
-function toCellPosition(position: Point): CellPoint {
-  return {
-    cx: Math.floor(position.x / CellWidth),
-    cy: Math.floor(position.y / CellHeight),
-  };
-}
 function drawStations(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
@@ -810,8 +844,8 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   for (let x = 0; x < mapWidth; x++) {
     for (let y = 0; y < mapHeight; y++) {
       const cell = map[x][y];
-      if (cell.lineType) {
-        drawLineType(ctx, mapContext, cell.position, cell.lineType, true);
+      if (cell.lineType && extendedMap[x][y].terrain === 'Water') {
+        drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Bridge');
       }
     }
   }
@@ -819,7 +853,15 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     for (let y = 0; y < mapHeight; y++) {
       const cell = map[x][y];
       if (cell.lineType) {
-        drawLineType(ctx, mapContext, cell.position, cell.lineType, false);
+        drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Sleeper');
+      }
+    }
+  }
+  for (let x = 0; x < mapWidth; x++) {
+    for (let y = 0; y < mapHeight; y++) {
+      const cell = map[x][y];
+      if (cell.lineType) {
+        drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Rail');
       }
     }
   }

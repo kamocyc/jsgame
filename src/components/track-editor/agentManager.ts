@@ -1,5 +1,5 @@
 import { assert, removeNull } from '../../common';
-import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
+import { AppStates, CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
@@ -460,8 +460,9 @@ export interface AgentManagerProps {
 export type AgentManagerCommonProps = AgentManagerProps & AgentManager2Props;
 
 export interface AgentManagerBase {
+  addAgentsRandomly(position: Point, cell: ExtendedCellConstruct, props: AgentManager2Props): unknown;
   clear(): void;
-  add(position: Point): void;
+  // add(position: Point, props: AgentManagerCommonProps): void;
   remove(agentId: string): void;
   tick(props: AgentManagerCommonProps): void;
   getAgents(): AgentBase[];

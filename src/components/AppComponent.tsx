@@ -49,47 +49,8 @@ const timetable: DetailedTimetable = {
   switchTTItems: [],
 };
 
-const defaultMapWidth = 200;
+const defaultMapWidth = 100;
 const defaultMapHeight = 20;
-
-function TestComponent() {
-  const poly1 = new Polygon([
-    { x: 0, y: 0 },
-    { x: 100, y: 0 },
-    { x: 100, y: 100 },
-    { x: 0, y: 100 },
-  ]);
-  const poly2 = new Polygon([
-    { x: 150, y: 50 },
-    { x: 50, y: 50 },
-  ]);
-
-  poly2.vertices.forEach((v) => {
-    v.x += 51;
-  });
-
-  useEffect(() => {
-    const canvas = document.getElementById('test-canvas') as HTMLCanvasElement;
-    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-
-    function drawPolygon(polygon: Polygon) {
-      ctx.beginPath();
-      ctx.moveTo(polygon.vertices[0].x, polygon.vertices[0].y);
-      for (let i = 1; i < polygon.vertices.length; i++) {
-        ctx.lineTo(polygon.vertices[i].x, polygon.vertices[i].y);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
-
-    drawPolygon(poly1);
-    drawPolygon(poly2);
-
-    const result = sat(poly1, poly2);
-    console.log(result);
-  }, []);
-  return <canvas width='1000' height='300' id='test-canvas'></canvas>;
-}
 
 export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);

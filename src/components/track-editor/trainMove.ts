@@ -355,7 +355,7 @@ export class TrainMoveWithTimetable {
 
   tick(globalTimeManager: GlobalTimeManager, moneyManager: MoneyManager): void {
     this.placeTrainFromPlatformTimetable(globalTimeManager);
-    this.trainMove.tick({ globalTimeManager }, moneyManager);
+    this.trainMove.tick({ globalTimeManager, moneyManager });
     for (const placedTrain of this.trainMove.placedTrains) {
       this.moveTrain(placedTrain);
     }

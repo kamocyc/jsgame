@@ -181,15 +181,16 @@ function addAgents(appStates: AppStates) {
   }
 
   // 追加
-  const houses = appStates.extendedMap
-    .map((row) => row.filter((cell) => cell.type === 'Construct' && cell.constructType === 'House'))
+  const constructs = appStates.extendedMap
+    .map((row) => row.filter((cell) => cell.type === 'Construct'))
     .flat() as ExtendedCellConstruct[];
   const agentManager = appStates.agentManager;
 
-  for (const house of houses) {
-    if (Math.random() < 0.1) {
-      agentManager.add(timesVector({ x: house.position.cx, y: house.position.cy }, CellHeight));
-    }
+  for (const construct of constructs) {
+    agentManager.addAgentsRandomly(timesVector({ x: construct.position.cx, y: construct.position.cy }, CellHeight), construct, {...appStates, gameMap: appStates.map, placedTrains: appStates.trainMove.getPlacedTrains()});
+    // if (Math.random() < 0.1) {
+    //   agentManager.add(timesVector({ x: house.position.cx, y: house.position.cy }, CellHeight));
+    // }
   }
 }
 
@@ -266,6 +267,7 @@ export function TrackEditorComponent({
         timetable: appStates.timetableData.timetable,
         trainMove: appStates.trainMove as TrainMove,
         moneyManager: appStates.moneyManager,
+        globalTimeManager: appStates.globalTimeManager,
       });
       setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
@@ -450,7 +452,7 @@ export function TrackEditorComponent({
           クリア
         </button>
       </div>
-      <button
+      {/* <button
         onClick={() => {
           (() => {
             const station1 = appStates.stations[0];
@@ -464,12 +466,12 @@ export function TrackEditorComponent({
           stopInterval();
           appStates.agentManager.clear();
           // appStates.agentManager.add({ x: 100, y: 400 });
-          appStates.agentManager.add({ x: 200, y: 400 });
+          appStates.agentManager.addAgentsRandomly({ x: 200, y: 400 }, );
           startTop(100);
         }}
       >
         agentManagerを開始
-      </button>
+      </button> */}
       <br />
       <button
         title={'一時停止'}

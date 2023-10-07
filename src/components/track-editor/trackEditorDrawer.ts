@@ -256,7 +256,7 @@ function drawStraight(
     timesVector(straightType.end, CellWidth / 2)
   );
 
-  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType, false, drawSleeper);
+  drawStraightSub(ctx, mapContext, begin, end, lineType.straightType, false, drawMode);
 }
 
 function xyToLineDirection(xy: Point): LineDirection {

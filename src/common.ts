@@ -139,3 +139,27 @@ export function generatePlaceName(): string {
   const name = names[Math.floor(Math.random() * names.length)];
   return name;
 }
+
+export type FuncDefinition = [number, number][];
+
+export function getInterpolatedFunctionValue(funcDefinition: FuncDefinition, x: number): number {
+  if (funcDefinition.length === 0) return 0;
+  if (funcDefinition.length === 1) return funcDefinition[0][1];
+
+  const xs = funcDefinition.map((p) => p[0]);
+  const ys = funcDefinition.map((p) => p[1]);
+
+  const i = xs.findIndex((x0) => x0 > x);
+  if (i === -1) {
+    return ys[ys.length - 1];
+  } else if (i === 0) {
+    return ys[0];
+  } else {
+    const x0 = xs[i - 1];
+    const x1 = xs[i];
+    const y0 = ys[i - 1];
+    const y1 = ys[i];
+    const t = (x - x0) / (x1 - x0);
+    return y0 + (y1 - y0) * t;
+  }
+}

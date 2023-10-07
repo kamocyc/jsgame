@@ -406,6 +406,7 @@ export class AgentManager2 implements AgentManagerBase {
           const foundTrains = props.placedTrains.filter(
             (t) =>
               t.stationStatus === 'Arrived' &&
+              t.placedRailwayLineId === step.stationPathStep.railwayLine.railwayLineId &&
               t.track.track.platform?.station.stationId === step.stationPathStep.station.stationId
           );
           if (foundTrains.length > 0) {
@@ -427,6 +428,16 @@ export class AgentManager2 implements AgentManagerBase {
             const startPosition = step.stationPathStep.stop.platformPaths![0].begin;
             const distance = getDistance(startPosition, agent.position);
             props.moneyManager.addMoney((distance / CellHeight) * 100);
+
+            // 乗り換える場合は次の列車のホームに移動
+            const nextPath = agent.path[agent.pathIndex + 1];
+            if (nextPath.stepType === 'station') {
+              const nextPlatformTrack = nextPath.stationPathStep.stop.platformTrack;
+              const position = getMidPoint(nextPlatformTrack.begin, nextPlatformTrack.end);
+              agent.position = { x: position.x, y: position.y - CellHeight / 4 };
+            }
+
+            agent.pathIndex++;
           }
         }
       } else if (step.stepType === 'walk') {

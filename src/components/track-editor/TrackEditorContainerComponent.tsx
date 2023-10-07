@@ -875,6 +875,7 @@ export function addPlatformToLine(
 
     // １つ前のパスを、現在の駅までのパスにする。
     stops[stops.length - 1].platformPaths = pathToNewStop;
+    stops[stops.length - 1].platformTrack = pathToNewStop[0];
 
     // 1周するパスを取得
     const pathToLoop = searchTrackPath2(platformTrack, stops[0].platformTrack);
@@ -882,7 +883,7 @@ export function addPlatformToLine(
       stopId: generateId(),
       platform: platform,
       platformPaths: pathToLoop ?? null,
-      platformTrack: platformTrack,
+      platformTrack: pathToLoop === undefined ? platformTrack : pathToLoop[0],
     });
   }
 

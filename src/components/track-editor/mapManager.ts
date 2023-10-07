@@ -1,18 +1,17 @@
-import { ExtendedGameMap, RailwayLine } from "../../mapEditorModel";
-import { getMidPoint } from "../../trackUtil";
-import { ConstructType, ExtendedCell, ExtendedCellConstruct, toCellPosition } from "../extendedMapModel";
-import { PlacedTrain } from "./trainMoveBase";
+import { ExtendedGameMap, RailwayLine } from '../../mapEditorModel';
+import { ConstructType, ExtendedCell, ExtendedCellConstruct, toCellPosition } from '../extendedMapModel';
+import { PlacedTrain } from './trainMoveBase';
 
 /**
  * 路線の運行頻度を取得する
  * 統計情報やダイヤを元にした値を取得したいとおろだが、とりあえずは路線長を運行中の車両数で割ったものを返す
- * @param railwayLine 
- * @param placedTrains 
- * @returns 
+ * @param railwayLine
+ * @param placedTrains
+ * @returns
  */
 export function getFrequencyOfRailwayLine(railwayLine: RailwayLine, placedTrains: PlacedTrain[]) {
-  const operatingTrains = placedTrains.filter(t => t.placedRailwayLineId === railwayLine.railwayLineId);
-  return operatingTrains.length / railwayLine.stops.map(s => s.platformPaths).flat().length;
+  const operatingTrains = placedTrains.filter((t) => t.placedRailwayLineId === railwayLine.railwayLineId);
+  return operatingTrains.length / railwayLine.stops.map((s) => s.platformPaths).flat().length;
 }
 
 function getTile(extendedMap: ExtendedGameMap, x: number, y: number) {
@@ -27,25 +26,30 @@ function getTile(extendedMap: ExtendedGameMap, x: number, y: number) {
 export class MapManager {
   readonly affectedArea = 3;
 
-  constructor(){ }
-  
+  constructor() {}
+
   tick(extendedMap: ExtendedGameMap, railwayLines: RailwayLine[], placedTrains: PlacedTrain[]): boolean {
+    return false;
     // railwayLineの駅の周辺を発展させる。
     // 産業の発展を基本として、そこへの到達時分で、とかやりたいが、難しそう。
     // 適当に町が自動発展して、ダイヤに応じて人が動けばおもしろいはず
     let updated = false;
-    
+
     for (const railwayLine of railwayLines) {
       const frequency = getFrequencyOfRailwayLine(railwayLine, placedTrains);
 
       for (const stop of railwayLine.stops) {
         const track = stop.platformTrack;
-        
+
         // stopの周囲が空き地なら一定確率で何かを立てる
         for (let x = -this.affectedArea; x <= this.affectedArea; x++) {
           for (let y = -this.affectedArea; y <= this.affectedArea; y++) {
             const trackCellPosition = toCellPosition(track.begin);
-            const tile: ExtendedCell | undefined = getTile(extendedMap, trackCellPosition.cx + x, trackCellPosition.cy + y);
+            const tile: ExtendedCell | undefined = getTile(
+              extendedMap,
+              trackCellPosition.cx + x,
+              trackCellPosition.cy + y
+            );
             if (tile === undefined) continue;
             if (tile.type !== 'None') continue;
 
@@ -74,7 +78,7 @@ export function getCreateConstructType(x: number, y: number, frequency: number):
     House: 0,
     Shop: 0,
     Office: 0,
-  }
+  };
   const distance = Math.max(Math.abs(x), Math.abs(y));
   if (distance === 0) {
     return 'None';
@@ -90,16 +94,16 @@ export function getCreateConstructType(x: number, y: number, frequency: number):
     thresholds.House = 0.8;
     thresholds.Shop = 0.2;
     thresholds.Office = 0.1;
-  // } else if (distance === 4) {
-  //   thresholds.House = 0.5;
-  //   thresholds.Shop = 0.05;
-  //   thresholds.Office = 0.05;
-  // } else if (distance === 5) {
-  //   thresholds.House = 0.2;
-  //   thresholds.Shop = 0;
-  //   thresholds.Office = 0;
+    // } else if (distance === 4) {
+    //   thresholds.House = 0.5;
+    //   thresholds.Shop = 0.05;
+    //   thresholds.Office = 0.05;
+    // } else if (distance === 5) {
+    //   thresholds.House = 0.2;
+    //   thresholds.Shop = 0;
+    //   thresholds.Office = 0;
   } else {
-    throw new Error()
+    throw new Error();
   }
 
   const createConstructs: ConstructType[] = [];

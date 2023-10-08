@@ -1,4 +1,4 @@
-import { assert } from '../../common';
+import { assert, sum } from '../../common';
 import {
   AppStates,
   Cell,
@@ -19,9 +19,11 @@ import {
 import { Point, Station, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
-import { AgentManagerBase } from './agentManager';
+import { AgentBase, AgentManagerBase } from './agentManager';
+import { AgentManager2 } from './agentManager2';
 import { PlacedTrain } from './trainMoveBase';
 
+const hideDraw = true;
 const fontName = 'Meiryo';
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -521,7 +523,20 @@ function drawLineType(
 
 function drawText(ctx: CanvasRenderingContext2D, mapContext: MapContext, text: string, position: Point) {
   const metrics = ctx.measureText(text);
-  ctx.fillText(text, rx(position.x - metrics.width / 2, mapContext), ry(position.y, mapContext));
+  
+  const fillColor = ctx.fillStyle;
+  ctx.fillStyle = 'rgb(64, 64, 64, 0.8)';
+  ctx.fillRect(rx(position.x, mapContext) - metrics.width / 2, ry(position.y, mapContext) - 15, metrics.width, 20);
+  ctx.fillStyle = fillColor;
+  ctx.fillText(text, rx(position.x, mapContext) - metrics.width / 2, ry(position.y, mapContext));
+}
+
+function getPlatformAgentNumber(agentManager_: AgentManagerBase, platformId: string) {
+  if (agentManager_.agentManagerType !== 'AgentManager2') return;
+  const agentManager = agentManager_ as AgentManager2;
+
+  const counts = agentManager.getNumberOfAgentsInPlatform();
+  return sum(counts.entries().filter(([keys, v]) => keys[1] === platformId).map(([keys, v]) => v));
 }
 
 function drawStations(
@@ -529,20 +544,21 @@ function drawStations(
   mapContext: MapContext,
   stations: Station[],
   tracks: Track[],
-  agentManager: AgentManagerBase
+  agentManager: AgentManagerBase,
+  showInfo: boolean,
 ) {
-  const fontSize = 15;
+  const fontSize = 14;
 
   const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
 
   for (const track of tracks) {
-    ctx.strokeStyle = 'gray';
-    drawLine(ctx, mapContext, addVector(track.begin, { x: 1, y: 5 }), addVector(track.end, { x: 1, y: 5 }));
+    // ctx.strokeStyle = 'gray';
+    // drawLine(ctx, mapContext, addVector(track.begin, { x: 1, y: 5 }), addVector(track.end, { x: 1, y: 5 }));
 
     if (track.track.platform) {
-      ctx.strokeStyle = 'red';
-      drawLine(ctx, mapContext, track.begin, track.end);
-      drawLine(ctx, mapContext, track.begin, track.end);
+      // ctx.strokeStyle = 'red';
+      // drawLine(ctx, mapContext, track.begin, track.end);
+      // drawLine(ctx, mapContext, track.begin, track.end);
 
       const image = new Image();
       image.src = './images/platform.png';
@@ -554,27 +570,27 @@ function drawStations(
         image.height * mapContext.scale
       );
 
-      // platformの名前を描画
-      const name = track.track.platform.platformName;
-      ctx.font = fontSize.toString() + 'px ' + fontName;
-      drawText(ctx, mapContext, name, {
-        x: (track.begin.x + track.end.x) / 2,
-        y: (track.begin.y + track.end.y) / 2 - 10,
-      });
+      if (showInfo) {
+        ctx.fillStyle = 'white';
 
-      // platformにいるagentの数を描画
-      const numberOfAgents = agentManager
-        .getAgents()
-        .filter(
-          (agent) =>
-            getDistance(agent.position, getMidPoint(track.begin, track.end)) < CellHeight && agent.status === 'Idle'
-        ).length;
+        // platformの名前を描画
+        const name = track.track.platform.platformName;
+        ctx.font = 'bold ' + fontSize.toString() + 'px ' + fontName;
+        drawText(ctx, mapContext, name, {
+          x: (track.begin.x + track.end.x) / 2 - 10,
+          y: (track.begin.y + track.end.y) / 2 - 5,
+        });
 
-      ctx.font = fontSize.toString() + 'px ' + fontName;
-      drawText(ctx, mapContext, numberOfAgents.toString(), {
-        x: (track.begin.x + track.end.x) / 2 + 10,
-        y: (track.begin.y + track.end.y) / 2,
-      });
+        // platformにいるagentの数を描画
+        const numberOfAgents = getPlatformAgentNumber(agentManager, track.track.platform.platformId);
+        if (numberOfAgents !== undefined) {
+          ctx.font = 'bold ' + fontSize.toString() + 'px ' + fontName;
+          drawText(ctx, mapContext, '(' + numberOfAgents.toString() + ')', {
+            x: (track.begin.x + track.end.x) / 2 + 10,
+            y: (track.begin.y + track.end.y) / 2 - 5,
+          });
+        }
+      }
 
       const station = stations.find((station) =>
         station.platforms.some((platform) => platform.platformId === track.track.platform!.platformId)
@@ -586,7 +602,7 @@ function drawStations(
   }
 
   // 駅名を描画
-  ctx.fillStyle = '#aa0000';
+  ctx.fillStyle = '#ffcccc';
   for (const [stationId, points] of drawnStationPoints) {
     const station = stations.find((station) => station.stationId === stationId)!;
     const name = station.stationName;
@@ -596,6 +612,7 @@ function drawStations(
   }
 
   ctx.strokeStyle = 'black';
+
 }
 
 function drawCellImage(
@@ -613,7 +630,7 @@ function drawCellImage(
   );
 }
 
-export function drawExtendedMap(
+function drawExtendedMap(
   mapContext: MapContext,
   ctx: CanvasRenderingContext2D,
   mapWidth: number,
@@ -638,11 +655,26 @@ export function drawExtendedMap(
         }
       } else if (extendedCell.type === 'Construct') {
         if (extendedCell.constructType === 'House') {
-          drawCellImage(mapContext, ctx, imageCache.get('house')!, toCY(position));
+          if (hideDraw) {
+            ctx.fillStyle = '#ffffff'
+            drawText(ctx, mapContext, '家', toCY(position))
+          } else {
+            drawCellImage(mapContext, ctx, imageCache.get('house')!, toCY(position));
+          }
         } else if (extendedCell.constructType === 'Shop') {
-          drawCellImage(mapContext, ctx, imageCache.get('shop')!, toCY(position));
+          if (hideDraw) {
+            ctx.fillStyle = '#ffffff'
+            drawText(ctx, mapContext, '店', toCY(position));
+          } else {
+            drawCellImage(mapContext, ctx, imageCache.get('shop')!, toCY(position));
+          }
         } else if (extendedCell.constructType === 'Office') {
-          drawCellImage(mapContext, ctx, imageCache.get('office')!, toCY(position));
+          if (hideDraw) {
+            ctx.fillStyle = '#ffffff'
+            drawText(ctx, mapContext, '職', toCY(position));
+          } else {
+            drawCellImage(mapContext, ctx, imageCache.get('office')!, toCY(position));
+          }
         }
       }
     }
@@ -768,6 +800,21 @@ function drawTrainLine(ctx: CanvasRenderingContext2D, mapContext: MapContext, ra
   }
 }
 
+function drawAgent(ctx: CanvasRenderingContext2D, mapContext: MapContext, agent: AgentBase) {
+  const position = agent.position;
+
+  // 塗りつぶした円を描画
+  ctx.beginPath();
+  ctx.strokeStyle = 'blue';
+  ctx.fillStyle = 'blue';
+  ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 5 * mapContext.scale, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.fill();
+
+  ctx.strokeStyle = 'black';
+  ctx.fillStyle = 'black';
+}
+
 export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
   const { stations, tracks, trainMove, map, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates;
 
@@ -793,19 +840,48 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   // extended Mapを描画
   drawExtendedMap(mapContext, ctx, mapWidth, mapHeight, extendedMap);
 
-  // 罫線を描画
-  ctx.strokeStyle = 'rgb(0, 0, 0, 0.2)';
-  for (let x = 0; x <= mapWidth; x++) {
-    drawLine(ctx, mapContext, { x: x * CellWidth, y: 0 }, { x: x * CellWidth, y: mapHeight * CellHeight });
-  }
-  for (let y = 0; y <= mapHeight; y++) {
-    drawLine(ctx, mapContext, { x: 0, y: y * CellHeight }, { x: mapWidth * CellWidth, y: y * CellHeight });
+  if (appStates.showInfo) {
+    // 罫線を描画
+    ctx.strokeStyle = 'rgb(0, 0, 0, 0.2)';
+    for (let x = 0; x <= mapWidth; x++) {
+      drawLine(ctx, mapContext, { x: x * CellWidth, y: 0 }, { x: x * CellWidth, y: mapHeight * CellHeight });
+    }
+    for (let y = 0; y <= mapHeight; y++) {
+      drawLine(ctx, mapContext, { x: 0, y: y * CellHeight }, { x: mapWidth * CellWidth, y: y * CellHeight });
+    }
+    ctx.strokeStyle = 'black';
   }
 
-  ctx.strokeStyle = 'black';
+  // マップを描画
+  for (let x = 0; x < mapWidth; x++) {
+    for (let y = 0; y < mapHeight; y++) {
+      const cell = map[x][y];
+      if (cell.lineType && (extendedMap[x][y].terrain === 'Water' || hideDraw)) {
+        drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Bridge');
+      }
+    }
+  }
+  if (!hideDraw) {
+    for (let x = 0; x < mapWidth; x++) {
+      for (let y = 0; y < mapHeight; y++) {
+        const cell = map[x][y];
+        if (cell.lineType) {
+          drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Sleeper');
+        }
+      }
+    }
+    for (let x = 0; x < mapWidth; x++) {
+      for (let y = 0; y < mapHeight; y++) {
+        const cell = map[x][y];
+        if (cell.lineType) {
+          drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Rail');
+        }
+      }
+    }
+  }
 
   // 駅
-  drawStations(ctx, mapContext, stations, tracks, appStates.agentManager);
+  drawStations(ctx, mapContext, stations, tracks, appStates.agentManager, appStates.showInfo);
 
   // マウスがある場所
   if (mouseStartCell !== null) {
@@ -831,34 +907,6 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
     );
   }
 
-  if (!map) return;
-
-  // マップを描画
-  for (let x = 0; x < mapWidth; x++) {
-    for (let y = 0; y < mapHeight; y++) {
-      const cell = map[x][y];
-      if (cell.lineType && extendedMap[x][y].terrain === 'Water') {
-        drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Bridge');
-      }
-    }
-  }
-  for (let x = 0; x < mapWidth; x++) {
-    for (let y = 0; y < mapHeight; y++) {
-      const cell = map[x][y];
-      if (cell.lineType) {
-        drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Sleeper');
-      }
-    }
-  }
-  for (let x = 0; x < mapWidth; x++) {
-    for (let y = 0; y < mapHeight; y++) {
-      const cell = map[x][y];
-      if (cell.lineType) {
-        drawLineType(ctx, mapContext, cell.position, cell.lineType, 'Rail');
-      }
-    }
-  }
-
   // 選択中の路線
   if (appStates.currentRailwayLine != null) {
     drawTrainLine(ctx, mapContext, appStates.currentRailwayLine);
@@ -876,23 +924,12 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // 列車を描画
   for (const train of trainMove.getPlacedTrains()) {
-    drawTrain(ctx, mapContext, train, appStates.agentManager);
+    drawTrain(ctx, mapContext, train, appStates.agentManager, appStates.showInfo);
   }
 
   // エージェントを描画
   for (const agent of agentManager.getAgents()) {
-    const position = agent.position;
-
-    // 塗りつぶした円を描画
-    ctx.beginPath();
-    ctx.strokeStyle = 'blue';
-    ctx.fillStyle = 'blue';
-    ctx.arc(rx(position.x, mapContext), ry(position.y, mapContext), 5, 0, 2 * Math.PI);
-    ctx.stroke();
-    ctx.fill();
-
-    ctx.strokeStyle = 'black';
-    ctx.fillStyle = 'black';
+    drawAgent(ctx, mapContext, agent);
   }
 }
 
@@ -900,11 +937,12 @@ function drawTrain(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
   train: PlacedTrain,
-  agentManager: AgentManagerBase
+  agentManager: AgentManagerBase,
+  showInfo: boolean
 ) {
   const position = train.position;
 
-  if (true) {
+  if (!hideDraw) {
     const image = new Image();
     image.src = './images/train.png';
     ctx.drawImage(
@@ -915,18 +953,20 @@ function drawTrain(
       image.height * mapContext.scale
     );
 
-    // 車両名を表示
-    ctx.fillStyle = 'red';
-    ctx.font = '15px ' + fontName + ' bold';
-    drawText(ctx, mapContext, train.placedTrainName, position);
+    if (showInfo) {
+      // 車両名を表示
+      ctx.fillStyle = '#ffcccc';
+      ctx.font = '15px ' + fontName + ' bold';
+      drawText(ctx, mapContext, train.placedTrainName, position);
 
-    // 乗っている人数
-    const numberOfAgents = agentManager
-      .getAgents()
-      .filter((agent) => agent.placedTrain?.placedTrainId === train.placedTrainId).length;
-    ctx.fillStyle = 'black';
-    ctx.font = '12px ' + fontName;
-    drawText(ctx, mapContext, numberOfAgents.toString(), { x: position.x, y: position.y + 15 });
+      // 乗っている人数
+      const numberOfAgents = agentManager
+        .getAgents()
+        .filter((agent) => agent.placedTrain?.placedTrainId === train.placedTrainId).length;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '12px ' + fontName;
+      drawText(ctx, mapContext, numberOfAgents.toString(), { x: position.x, y: position.y + 15 });
+    }
   } else {
     // 塗りつぶした円を描画
     ctx.beginPath();

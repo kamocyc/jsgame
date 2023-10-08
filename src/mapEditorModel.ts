@@ -147,6 +147,7 @@ export interface AppStates {
   operations: Operation[]; // DetailedTimetableのoperation
   timetableData: TimetableData;
   storedTrains: StoredTrain[];
+  showInfo: boolean;
   /**
    * 配置するときのほうこうの決定に使う予定
    */
@@ -156,6 +157,7 @@ export interface AppStates {
   tracks: Track[];
   map: GameMap;
   extendedMap: ExtendedGameMap;
+  shouldAutoGrow: boolean;
   mapWidth: number;
   mapHeight: number;
   mapContext: MapContext;

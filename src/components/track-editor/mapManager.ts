@@ -25,12 +25,11 @@ function getTile(extendedMap: ExtendedGameMap, x: number, y: number) {
  */
 export class MapManager {
   readonly affectedArea = 3;
-  readonly shouldAutoGrow = false;
 
   constructor() {}
 
-  tick(extendedMap: ExtendedGameMap, railwayLines: RailwayLine[], placedTrains: PlacedTrain[]): boolean {
-    if (!this.shouldAutoGrow) return false;
+  tick(extendedMap: ExtendedGameMap, railwayLines: RailwayLine[], placedTrains: PlacedTrain[], shouldAutoGrow: boolean): boolean {
+    if (!shouldAutoGrow) return false;
 
     // railwayLineの駅の周辺を発展させる。
     // 産業の発展を基本として、そこへの到達時分で、とかやりたいが、難しそう。

@@ -178,7 +178,7 @@ export class TrainRailwayMove implements ITrainMove {
         .filter(([t, _]) => t.trackId === track.trackId)
         .map(([_, t]) => t);
       if (nextTracks.find((t) => t.trackId === nextTrack[0].trackId) == null) {
-        console.warn({ nextTrack });
+        // console.warn({ nextTrack });
       }
     }
     return nextTrack;
@@ -265,7 +265,7 @@ export class TrainRailwayMove implements ITrainMove {
         // 次の線路がreverseのときは、reverseの線路にうつる
         const nextTrackAndStopId = this.getNextTrack(placedTrain.track, placedTrain, railwayLine, stop);
         if (nextTrackAndStopId[0].trackId === placedTrain.track.reverseTrack.trackId) {
-          console.log('reverse');
+          // console.log('reverse');
           placedTrain.stopId = nextTrackAndStopId[1];
           placedTrain.track = placedTrain.track.reverseTrack;
         }

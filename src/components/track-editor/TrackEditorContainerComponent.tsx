@@ -111,6 +111,7 @@ export function CanvasComponent({
       <canvas
         id='canvas'
         width='1010'
+        // width='600'
         height='310'
         onMouseDown={(e) => {
           onmousedown(

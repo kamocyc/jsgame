@@ -248,7 +248,8 @@ export function TrackEditorComponent({
       const updated = appStates.mapManager.tick(
         appStates.extendedMap,
         appStates.railwayLines,
-        appStates.trainMove.getPlacedTrains()
+        appStates.trainMove.getPlacedTrains(),
+        appStates.shouldAutoGrow
       );
       appStates.trainMove.tick({
         globalTimeManager: appStates.globalTimeManager,
@@ -339,13 +340,13 @@ export function TrackEditorComponent({
           />
           <ModeOptionRadioComponent
             mode='PlaceTrain'
-            text='列車を配置'
+            text='車両情報'
             checked={appStates.editMode === 'PlaceTrain'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='Info'
-            text='情報を表示'
+            text='クリックしたものの情報を表示'
             checked={appStates.editMode === 'Info'}
             setEditorMode={setEditMode}
           />
@@ -419,6 +420,14 @@ export function TrackEditorComponent({
           >
             地形を生成
           </button>
+          <label style={{ border: '1px solid #000'}}>情報を表示
+            <input type='checkbox' checked={appStates.showInfo} onChange={() => {appStates.showInfo = !appStates.showInfo}} />
+          </label>
+          <label style={{ border: '1px solid #000'}}>自動発展
+            <input type='checkbox' checked={appStates.shouldAutoGrow} onChange={() => {
+              appStates.shouldAutoGrow = !appStates.shouldAutoGrow;
+            }} />
+          </label>
         </div>
         <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
         <button onClick={() => loadEditorDataLocalStorage(setAppStates)}>読み込み</button>
@@ -499,9 +508,12 @@ export function TrackEditorComponent({
       >
         0:00から開始
       </button>
-      {/* <button id='button-speed-fast' title={'早送り'}>
+      <button title={'早送り'} onClick={() => {
+        stopInterval();
+        startTop(1);
+      }}>
         ▸▸▸
-      </button> */}
+      </button>
       <div style={{ display: 'inline-block', margin: '3px' }}>{appStates.globalTimeManager.toStringGlobalTime()}</div>
       <div>¥{appStates.moneyManager.toStringMoney()}</div>
       <br />

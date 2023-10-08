@@ -163,3 +163,29 @@ export function getInterpolatedFunctionValue(funcDefinition: FuncDefinition, x: 
     return y0 + (y1 - y0) * t;
   }
 }
+
+export class CountBag {
+  private counts: Map<string, number> = new Map<string, number>();
+  private readonly separator = '___';
+
+  add(keys: string[]) {
+    const key = keys.join(this.separator);
+    if (!this.counts.has(key)) {
+      this.counts.set(key, 0);
+    }
+    this.counts.set(key, this.counts.get(key)! + 1);
+  }
+
+  get(keys: string[]) {
+    const key = keys.join(this.separator);
+    return this.counts.get(key) ?? 0;
+  }
+
+  entries(): [string[], number][] {
+    return [...this.counts.entries()].map(([key, count]) => [key.split(this.separator), count]);
+  }
+}
+
+export function sum(arr: number[]): number {
+  return arr.reduce((a, b) => a + b, 0);
+}

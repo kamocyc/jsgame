@@ -1,4 +1,4 @@
-import { FuncDefinition, assert, getInterpolatedFunctionValue } from '../../common';
+import { CountBag, FuncDefinition, assert, getInterpolatedFunctionValue } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
@@ -151,8 +151,19 @@ export function createAgentPath(
       railwayLines
     )[0];
     if (stationAndRailwayLinePath == null) {
-      console.warn('a is null');
+      console.warn('stationAndRailwayLinePath is null');
       return null;
+    }
+
+    // 最初の路線の駅が1つだけの場合は、不要なので削除
+    if (stationAndRailwayLinePath.length >= 2 && stationAndRailwayLinePath[0].railwayLine.railwayLineId !== stationAndRailwayLinePath[1].railwayLine.railwayLineId) {
+      assert(stationAndRailwayLinePath[0].station.stationId === stationAndRailwayLinePath[1].station.stationId, 'stationAndRailwayLinePath[0].station.stationId === stationAndRailwayLinePath[1].station.stationId');
+      stationAndRailwayLinePath.shift();
+    }
+
+    // 駅が１つだけの場合は、列車を使わないので削除
+    if (stationAndRailwayLinePath.length === 1) {
+      stationAndRailwayLinePath.shift();
     }
 
     return stationAndRailwayLinePath;
@@ -356,9 +367,9 @@ const moveProbFuncs: MoveProbFunc = {
       [8, 100],
       [9, 80],
       [10, 30],
-      [12, 15],
-      [16, 15],
-      [19, 15],
+      [12, 10],
+      [16, 10],
+      [19, 10],
       [21, 5],
       [23, 5],
       [24, 0]
@@ -398,11 +409,11 @@ const moveProbFuncs: MoveProbFunc = {
       [8, 5],
       [9, 5],
       [10, 10],
-      [12, 10],
-      [16, 15],
-      [19, 40],
-      [21, 30],
-      [23, 10],
+      [12, 15],
+      [16, 20],
+      [19, 100],
+      [21, 80],
+      [23, 20],
       [24, 0]
     ],
     'Shop': [
@@ -448,9 +459,9 @@ function getMoveProbs(fromConstructType: ConstructType, globalTimeManager: Globa
   return probs;
 }
 
-
 // 時刻表ベースの実装
 export class AgentManager2 implements AgentManagerBase {
+  readonly agentManagerType = 'AgentManager2'
   readonly agentMax = 30;
 
   agents: Agent[];
@@ -467,7 +478,7 @@ export class AgentManager2 implements AgentManagerBase {
   }
 
   addAgentsRandomly(position: Point, cell: ExtendedCellConstruct, props: AgentManager2Props): boolean {
-    if (this.agents.length > this.agentMax) return false;
+    if (this.agents.length >= this.agentMax) return false;
 
     const probCoefficient = 1000;
     const probs = getMoveProbs(cell.constructType, props.globalTimeManager);
@@ -549,6 +560,18 @@ export class AgentManager2 implements AgentManagerBase {
     return candidates2[Math.floor(Math.random() * candidates2.length)];
   }
 
+  getNumberOfAgentsInPlatform() {
+    const counts = new CountBag();
+    for (const agent of this.agents) {
+      if (agent.status !== 'Move') continue;
+      const step = agent.path[agent.pathIndex];
+      if (step?.stepType === 'station' && agent.placedTrain === null) {
+        counts.add([step.stationPathStep.railwayLine.railwayLineId, step.stationPathStep.stop.platform.platformId]);
+      }
+    }
+    return counts;
+  }
+
   actAgent(agent: Agent, props: AgentManager2Props): boolean {
     // if (agent.status === 'Idle') {
     //   // ランダムに目的地を決める
@@ -603,7 +626,7 @@ export class AgentManager2 implements AgentManagerBase {
             // 距離に応じた運賃を払う
             const startPosition = step.stationPathStep.stop.platformPaths![0].begin;
             const distance = getDistance(startPosition, agent.position);
-            props.moneyManager.addMoney(Math.round((distance / CellHeight) * 100));
+            props.moneyManager.addMoney(Math.round((distance / CellHeight) * 200));
 
             // 乗り換える場合は次の列車のホームに移動
             const nextPath = agent.path[agent.pathIndex + 1];

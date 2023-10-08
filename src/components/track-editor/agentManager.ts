@@ -460,6 +460,7 @@ export interface AgentManagerProps {
 export type AgentManagerCommonProps = AgentManagerProps & AgentManager2Props;
 
 export interface AgentManagerBase {
+  agentManagerType: 'AgentManager' | 'AgentManager2';
   addAgentsRandomly(position: Point, cell: ExtendedCellConstruct, props: AgentManager2Props): unknown;
   clear(): void;
   // add(position: Point, props: AgentManagerCommonProps): void;
@@ -479,6 +480,7 @@ export function createAgentManager(): AgentManagerBase {
 // 時刻表ベースの実装
 export class AgentManager implements AgentManagerBase {
   agents: Agent[];
+  readonly agentManagerType = 'AgentManager'
 
   constructor() {
     this.agents = [];

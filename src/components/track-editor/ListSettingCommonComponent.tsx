@@ -9,6 +9,7 @@ export function ListSettingCommonComponent<T>({
   getDisplayName,
   excludeFromDatas,
   getNewData,
+  settingColumnWidth
 }: {
   datas: T[];
   setDatas: (datas: T[]) => void;
@@ -17,6 +18,7 @@ export function ListSettingCommonComponent<T>({
   getDisplayName: (data: T) => string;
   excludeFromDatas: (datas: T[], data: T) => T[];
   getNewData: (() => T) | null;
+  settingColumnWidth?: string;
 }) {
   const [settingData, setSettingData] = useState<T | null>(null);
 
@@ -65,7 +67,7 @@ export function ListSettingCommonComponent<T>({
       {settingData == null ? (
         <></>
       ) : (
-        <SettingColumnComponent setSettingData={setSettingData}>
+        <SettingColumnComponent setSettingData={setSettingData} width={settingColumnWidth ?? '250px'}>
           {settingData != null ? getSettingComponent(settingData) : <></>}
         </SettingColumnComponent>
       )}

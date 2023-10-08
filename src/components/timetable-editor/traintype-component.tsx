@@ -106,7 +106,7 @@ export function TrainTypeSettingComponent({
       {settingData == null ? (
         <></>
       ) : (
-        <SettingColumnComponent setSettingData={setSettingData}>
+        <SettingColumnComponent setSettingData={setSettingData} width='250px'>
           {settingData != null &&
           settingData.settingType === 'TrainTypeSetting' &&
           trainTypes.find((t) => t.trainTypeId === settingData.trainTypeId) ? (

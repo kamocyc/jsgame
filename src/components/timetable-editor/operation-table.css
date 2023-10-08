@@ -1,0 +1,9 @@
+table.operation-table {
+  border-collapse: collapse;
+}
+
+.operation-table th, .operation-table td {
+  border: 1px solid #000000;
+  border-collapse: collapse;
+  padding: 2px;
+}

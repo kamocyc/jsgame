@@ -2,29 +2,7 @@ import { ComponentChild } from 'preact';
 import { Ref, useEffect, useRef, useState } from 'preact/hooks';
 import { ContextData } from '../../model';
 import './timetable-editor.css';
-
-export function toStringFromSeconds(timeSeconds: number): string {
-  const m = Math.floor((timeSeconds / 60) % 60);
-  return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);
-}
-
-export function parseTime(text: string): number | undefined {
-  if (text === '') {
-    return undefined;
-  }
-  if (text.length === 3) {
-    text = '0' + text;
-  }
-  const hour = parseInt(text.substring(0, 2));
-  const minute = parseInt(text.substring(2));
-
-  // 1日の範囲害ならundefinedを返す
-  if (hour >= 24 || minute >= 60 || hour < 0 || minute < 0) {
-    return undefined;
-  }
-
-  return hour * 60 * 60 + minute * 60;
-}
+import { parseTime, toStringFromSeconds } from '../../common';
 
 function parseInputTextAsTime(text: string): string | undefined {
   text = text.replace(/[^0-9]/g, '');
@@ -203,12 +181,14 @@ export function ContextMenuComponent({
 export function SettingColumnComponent({
   children,
   setSettingData,
+  width
 }: {
   children: ComponentChild;
   setSettingData: (settingData: null) => void;
+  width?: string
 }) {
   return (
-    <div style={{ width: '250px', borderLeft: '2px solid #000', padding: '5px' }}>
+    <div style={{ width: width ?? '250px', borderLeft: '2px solid #000', padding: '5px' }}>
       <div>
         {/* 右上に閉じるボタンを設置 */}
         <div>

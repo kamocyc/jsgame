@@ -3,7 +3,6 @@ import { Stage } from 'konva/lib/Stage';
 import { DiaTime, Operation, Train, generateId } from '../../model';
 import { fillMissingTimes } from '../../oudParser';
 import { createOperations, getReasonOfNotConnected } from '../track-editor/timetableConverter';
-import { toStringFromSeconds } from './common-component';
 import {
   DiagramProps,
   StationPosition,
@@ -14,6 +13,7 @@ import {
 } from './drawer-util';
 import { StationKonvaManager } from './station-konva';
 import { getDefaultPlatform } from './timetable-util';
+import { deepEqual, toStringFromSeconds } from '../../common';
 
 const canvasHeight = 600;
 const canvasWidth = 600; // dummy width (will be set by initializeKonva)
@@ -557,8 +557,7 @@ export function initializeKonva(
     drawTrain(train);
   }
 
-  const operations = createOperations(props.inboundTrains, props.outboundTrains);
-  drawOperations(operations);
+  drawOperations(props.operations);
 
   function fitStageIntoParentContainer() {
     const clientWidth = document.documentElement.clientWidth - 30; /* この値はなんとかして設定する */
@@ -653,6 +652,14 @@ export function initializeKonva(
 
   stage.on('mouseup', function (e) {
     if (diagramState.dragStartPoint == null || diagramState.dragRect == null) return;
+
+    const currentPointerPoint = getPointerPosition(stage);
+    if (deepEqual(currentPointerPoint, diagramState.dragStartPoint)) {
+      diagramState.dragStartPoint = null;
+      diagramState.dragRect?.destroy();
+      diagramState.dragRect = null;
+      return;
+    }
 
     destroySelections(diagramState.selections);
 

@@ -189,3 +189,26 @@ export class CountBag {
 export function sum(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0);
 }
+
+export function toStringFromSeconds(timeSeconds: number): string {
+  const m = Math.floor((timeSeconds / 60) % 60);
+  return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);
+}
+
+export function parseTime(text: string): number | undefined {
+  if (text === '') {
+    return undefined;
+  }
+  if (text.length === 3) {
+    text = '0' + text;
+  }
+  const hour = parseInt(text.substring(0, 2));
+  const minute = parseInt(text.substring(2));
+
+  // 1日の範囲害ならundefinedを返す
+  if (hour >= 24 || minute >= 60 || hour < 0 || minute < 0) {
+    return undefined;
+  }
+
+  return hour * 60 * 60 + minute * 60;
+}

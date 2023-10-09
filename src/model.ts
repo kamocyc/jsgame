@@ -21,6 +21,14 @@ export interface Platform {
 
 export interface Depot {
   depotId: string;
+  depotName: string;
+  depotLines: DepotLine[];
+}
+
+export interface DepotLine {
+  depotLineId: string;
+  depotLineName: string;
+  depot: Depot;
 }
 
 export interface Station {
@@ -46,7 +54,7 @@ export interface Track {
 
 export interface TrackProperty {
   platform: Platform | null;
-  depot: Depot | null;
+  depotLine: DepotLine | null;
 }
 
 export type ArrivalAndDepartureStatus = 'NotArrived' | 'Arrived' | 'Departed';

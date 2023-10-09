@@ -467,6 +467,17 @@ export function getReasonOfNotConnected(train1: Train, train2: Train): string[] 
   return reasons;
 }
 
+function generateOperationCode(operations: Operation[]) {
+  const operationCodes = operations.map((o) => o.operationCode);
+  for (let i = 1; i < 1000; i++) {
+    const operationCode = 'O' + i.toString().padStart(3, '0');
+    if (!operationCodes.includes(operationCode)) {
+      return operationCode;
+    }
+  }
+  return Math.random().toString().replace('.', '');
+}
+
 export function createOperations(inboundTrains: Train[], outboundTrains: Train[]): Operation[] {
   const usedTrains = new Set<string>();
   const operations: Operation[] = [];
@@ -517,7 +528,7 @@ export function createOperations(inboundTrains: Train[], outboundTrains: Train[]
     if (train.firstStationOperation?.operationType !== 'Connection') {
       const operation: Operation = {
         operationId: generateId(),
-        operationCode: train.firstStationOperation?.operationCode ?? generateId(),
+        operationCode: train.firstStationOperation?.operationCode ?? generateOperationCode(operations),
         trains: [],
       };
 

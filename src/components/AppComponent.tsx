@@ -74,7 +74,6 @@ export function getInitialAppStates(): AppStates {
     globalTimeManager: new GlobalTimeManager(),
     detailedTimetable: timetable,
     timetableData: timetableData,
-    operations: [],
     storedTrains: storedTrains,
     showInfo: true,
     trainPlaceDirection: 'Up',

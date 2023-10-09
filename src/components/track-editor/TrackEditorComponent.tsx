@@ -78,7 +78,6 @@ function toStringEditorData(appStates: AppStates) {
     timetable: appStates.detailedTimetable,
     timetableData: appStates.timetableData,
     extendedMap: appStates.extendedMap,
-    operations: appStates.operations,
     placedTrains: appStates.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
   };
@@ -115,7 +114,6 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
   const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable() };
-  const operations = obj['operations'] ?? [];
   const railwayLines = obj['railwayLines'] ?? [];
 
   const trainMove = createTrainMove(timetable);
@@ -205,6 +203,7 @@ export function TrackEditorComponent({
   const [runningIntervalId, setRunningIntervalId] = useState<number | null>(null);
   const [positionPercentage, setPositionPercentage] = useState<number>(0);
   const [numberOfPlatforms, setNumberOfPlatforms] = useState<number>(2);
+  const [numberOfLines, setNumberOfLines] = useState<number>(5);
   const [_, setUpdate_] = useState<never[]>([]);
   const [constructType, setConstructType] = useState<ConstructType>('House');
   const [terrainType, setTerrainType] = useState<TerrainType>('Grass');
@@ -284,6 +283,7 @@ export function TrackEditorComponent({
         appStates={appStates}
         update={update}
         numberOfPlatforms={numberOfPlatforms}
+        numberOfLines={numberOfLines}
         constructType={constructType}
         terrainType={terrainType}
       />
@@ -360,6 +360,18 @@ export function TrackEditorComponent({
             text='車庫を作成'
             checked={appStates.editMode === 'DepotCreate'}
             setEditorMode={setEditMode}
+          />
+          <input
+            title={'車庫の線路数'}
+            style={{ width: '30px' }}
+            type='number'
+            value={numberOfLines}
+            onChange={(event) => {
+              const value = parseInt((event.target as HTMLInputElement).value);
+              if (value > 0) {
+                setNumberOfLines(value);
+              }
+            }}
           />
           <div
             style={{

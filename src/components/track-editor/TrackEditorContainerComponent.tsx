@@ -76,12 +76,14 @@ export function EditorContainer({
 export function CanvasComponent({
   appStates,
   numberOfPlatforms,
+  numberOfLines,
   constructType,
   terrainType,
   update,
 }: {
   appStates: AppStates;
   numberOfPlatforms: number;
+  numberOfLines: number;
   constructType: ConstructType;
   terrainType: TerrainType;
   update: () => void;
@@ -119,6 +121,7 @@ export function CanvasComponent({
             appStates,
             selectedTrain,
             numberOfPlatforms,
+            numberOfLines,
             constructType,
             terrainType,
             setEditorDialogMode,

@@ -13,6 +13,7 @@ import {
 import {
   DefaultStationDistance,
   Depot,
+  DepotLine,
   DetailedTimetable,
   Platform,
   Point,
@@ -128,38 +129,56 @@ function createDepot(
   position: Point,
   mapWidth: number,
   mapHeight: number,
+  numberOfLines: number,
   setToast: (message: string) => void
 ): [Track[], Switch[], Depot] | null {
   const newTracks: Track[] = [];
   const newSwitches: Switch[] = [];
-  // const newDepot: Depot[] = [];
+  const newDepotLines: DepotLine[] = [];
 
-  position = { x: position.x, y: position.y };
+  const newDepot: Depot = {
+    depotId: generateId(),
+    depotName: generatePlaceName(),
+    depotLines: [],
+  };
 
-  if (position.x < 0 || position.x >= mapWidth - 1 || position.y < 0 || position.y >= mapHeight - 1) {
+  position = { x: position.x, y: position.y - numberOfLines + 1 };
+
+  if (
+    position.x < 0 ||
+    position.x >= mapWidth - 1 ||
+    position.y < 0 ||
+    position.y >= mapHeight + numberOfLines - 1
+  ) {
     setToast('positionが範囲外');
     return null;
   }
 
-  const cell1 = map[position.x][position.y];
-  const cell2 = map[position.x + 1][position.y];
-  const result = createLine(map, cell1, cell2, extendedMap);
-  if ('error' in result) {
-    setToast(result.error);
-    return null;
+  for (let i = 0; i < numberOfLines; i++) {
+    const cell1 = map[position.x][position.y + i];
+    const cell2 = map[position.x + 1][position.y + i];
+    const result = createLine(map, cell1, cell2, extendedMap);
+    if ('error' in result) {
+      setToast(result.error);
+      return null;
+    }
+
+    const [tracks, switches] = result;
+
+    const newDepotLine = {
+      depotLineId: generateId(),
+      depotLineName: (i + 1).toString(),
+      depot: newDepot,
+    };
+    tracks[0].track.depotLine = newDepotLine;
+    tracks[0].reverseTrack.track.depotLine = tracks[0].track.depotLine;
+
+    newDepot.depotLines.push(newDepotLine);
+
+    newTracks.push(...tracks);
+    newSwitches.push(...switches);
+    newDepotLines.push(newDepotLine);
   }
-
-  const [tracks, switches] = result;
-
-  const newDepot: Depot = {
-    depotId: generateId(),
-  };
-
-  tracks[0].track.depot = newDepot;
-  tracks[0].reverseTrack.track.depot = tracks[0].track.depot;
-
-  newTracks.push(...tracks);
-  newSwitches.push(...switches);
 
   return [newTracks, newSwitches, newDepot];
 }
@@ -300,6 +319,7 @@ export function onmousedown(
   appStates: AppStates,
   selectedTrain: StoredTrain | null,
   numberOfPlatforms: number,
+  numberOfLines: number,
   constructType: ConstructType,
   terrainType: TerrainType,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
@@ -382,7 +402,12 @@ export function onmousedown(
       setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'DepotCreate') {
-      createDepot(appStates.map, appStates.extendedMap, mapPosition, appStates.mapWidth, appStates.mapHeight, setToast);
+      const result = createDepot(appStates.map, appStates.extendedMap, mapPosition, appStates.mapWidth, appStates.mapHeight, numberOfLines, setToast);
+      if (result) {
+        const [newTracks, newSwitches, _] = result;
+        appStates.tracks.push(...newTracks);
+        appStates.switches.push(...newSwitches);
+      }
     } else if (appStates.editMode === 'LineCreate') {
       /* LineCreateは右クリックも使うため、mouseupで処理する */
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);

@@ -144,7 +144,6 @@ export interface AppStates {
   globalTimeManager: GlobalTimeManager;
   editMode: EditMode;
   detailedTimetable: DetailedTimetable;
-  operations: Operation[]; // DetailedTimetableのoperation
   timetableData: TimetableData;
   storedTrains: StoredTrain[];
   showInfo: boolean;

@@ -1,4 +1,4 @@
-import { ExtendedGameMap, RailwayLine } from '../../mapEditorModel';
+import { ExtendedGameMap, GameMap, RailwayLine } from '../../mapEditorModel';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, toCellPosition } from '../extendedMapModel';
 import { PlacedTrain } from './trainMoveBase';
 
@@ -53,6 +53,7 @@ export class MapManager {
             );
             if (tile === undefined) continue;
             if (tile.type !== 'None') continue;
+            if (tile.terrain !== 'Grass') continue;
 
             const createConstructType = getCreateConstructType(x, y, frequency);
             if (createConstructType !== 'None') {

@@ -65,10 +65,10 @@ export function TimetableEditorTableComponent({
   return (
     <div style={{ display: 'flex' }}>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div>列車番号</div>
-        <div>列車種別</div>
-        <div>始発駅作業</div>
-        <div>終着駅作業</div>
+        <div style={{ height: '24px' }}>列車番号</div>
+        <div style={{ height: '24px' }}>列車種別</div>
+        <div style={{ height: '24px' }}>始発駅作業</div>
+        <div style={{ height: '24px' }}>終着駅作業</div>
         <StationListComponent
           {...{ diaStations, trains, otherDirectionTrains, setDiaStations, timetableDirection, setSettingData }}
         />
@@ -134,9 +134,9 @@ export function TimetableEditorComponent({
   const timetableData = appStates.timetableData;
 
   const setTimetableData = (timetableData: { timetable: OutlinedTimetable }) => {
+    timetableData.timetable.operations = createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains);
     setAppStates((appStates) => ({
       ...appStates,
-      operations: createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains),
       timetableData: timetableData,
     }));
   };
@@ -149,9 +149,9 @@ export function TimetableEditorComponent({
         stations: stations,
       },
     };
+    timetableData.timetable.operations = createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains);
     setAppStates((appStates) => ({
       ...appStates,
-      operations: createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains),
       timetableData: timetableData,
     }));
   };
@@ -164,9 +164,9 @@ export function TimetableEditorComponent({
         trainTypes: trainTypes,
       },
     };
+    timetableData.timetable.operations = createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains);
     setAppStates((appStates) => ({
       ...appStates,
-      operations: createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains),
       timetableData: timetableData,
     }));
   };
@@ -189,9 +189,9 @@ export function TimetableEditorComponent({
             },
           };
 
+          timetableData.timetable.operations = createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains);
     setAppStates((appStates) => ({
       ...appStates,
-      operations: createOperations(timetableData.timetable.inboundTrains, timetableData.timetable.outboundTrains),
       timetableData: timetableData,
     }));
   };

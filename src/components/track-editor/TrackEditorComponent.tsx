@@ -76,7 +76,7 @@ function toStringEditorData(appStates: AppStates) {
     map: appStates.map,
     storedTrains: appStates.storedTrains,
     timetable: appStates.detailedTimetable,
-    timetableData: appStates.timetableData,
+    timetableData: appStates.outlinedTimetableData,
     extendedMap: appStates.extendedMap,
     placedTrains: appStates.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
@@ -153,7 +153,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     agentManager: createAgentManager(),
     mapWidth: mapWidth,
     mapHeight: mapHeight,
-    timetableData: timetableData,
+    outlinedTimetableData: timetableData,
     railwayLines: railwayLines,
     mapContext: createMapContext(mapWidth, mapHeight),
     moneyManager: new MoneyManager(),
@@ -196,9 +196,11 @@ const SearchMode: 'TimetableBased' | 'RailwayLineBased' = 'RailwayLineBased';
 export function TrackEditorComponent({
   appStates,
   setAppStates,
+  setToast,
 }: {
   appStates: AppStates;
   setAppStates: StateUpdater<AppStates>;
+  setToast: (message: string) => void;
 }) {
   const [runningIntervalId, setRunningIntervalId] = useState<number | null>(null);
   const [positionPercentage, setPositionPercentage] = useState<number>(0);
@@ -263,7 +265,7 @@ export function TrackEditorComponent({
         gameMap: appStates.map,
         placedTrains: appStates.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
-        timetable: appStates.timetableData.timetable,
+        timetable: appStates.outlinedTimetableData.timetable,
         trainMove: appStates.trainMove as TrainMove,
         moneyManager: appStates.moneyManager,
         globalTimeManager: appStates.globalTimeManager,
@@ -286,6 +288,7 @@ export function TrackEditorComponent({
         numberOfLines={numberOfLines}
         constructType={constructType}
         terrainType={terrainType}
+        setToast={setToast}
       />
       {showLineInfoPanel ? (
         <div className='dialog'>

@@ -68,6 +68,8 @@ export function generateId(): string {
   return (++_currentId).toString();
 }
 
+// trainを可変にするのは困難なのでやはり諦める。
+// 後で再構築処理を実装する
 export interface DiaTime {
   diaTimeId: string;
   arrivalTime: number | null;
@@ -123,16 +125,18 @@ export function cloneTrain(train: Train): Train {
 }
 
 export interface OutlinedTimetable {
-  inboundTrains: Train[];
-  outboundTrains: Train[];
+  railwayLineId: string | null;
+  inboundTrainIds: string[];
+  outboundTrainIds: string[];
   stations: Station[];
   trainTypes: TrainType[];
   operations: Operation[];
 }
 
 // Timetableを含む全てのデータ
-export interface TimetableData {
-  timetable: OutlinedTimetable;
+export interface OutlinedTimetableData {
+  trains: Train[];
+  timetables: OutlinedTimetable[];
 }
 
 export interface AppClipboard {

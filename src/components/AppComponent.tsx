@@ -13,6 +13,7 @@ import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { MapManager } from './track-editor/mapManager';
 import { MoneyManager } from './track-editor/moneyManager';
 import { createTrainMove } from './track-editor/trainMoveBase';
+import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
@@ -55,7 +56,7 @@ const defaultMapHeight = 20;
 export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
-  const timetableData = getInitialTimetable();
+  const timetableData = getInitialTimetable(null);
   const storedTrains = [
     {
       placedTrainId: '1',
@@ -73,7 +74,10 @@ export function getInitialAppStates(): AppStates {
     editMode: 'Create',
     globalTimeManager: new GlobalTimeManager(),
     detailedTimetable: timetable,
-    timetableData: timetableData,
+    outlinedTimetableData: {
+      timetables: [timetableData[0]],
+      trains: timetableData[1]
+    },
     storedTrains: storedTrains,
     showInfo: true,
     trainPlaceDirection: 'Up',
@@ -99,6 +103,22 @@ export function getInitialAppStates(): AppStates {
 
 export function App() {
   const [appStates, setAppStates] = useState<AppStates>(() => getInitialAppStates());
+  const setToast = (message: string) => {
+    console.warn({ setToast: message });
+    appStates.message = message;
+    setAppStates((prev) => {
+      return {
+        ...prev,
+        message,
+      };
+    });
+
+    // なぜか効いていないのでコメントアウト
+    // setTimeout(() => {
+    //   appStates.message = '';
+    //   update();
+    // }, 3000);
+  };
 
   return (
     <>
@@ -117,11 +137,11 @@ export function App() {
         splitViews={[
           {
             splitViewId: 1,
-            component: () => <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} />,
+            component: () => <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} setToast={setToast} />,
           },
           {
             splitViewId: 2,
-            component: () => <TimetableEditorComponent appStates={appStates} setAppStates={setAppStates} />,
+            component: () => <TimetableEditorParentComponent appStates={appStates} defaultSelectedRailwayLineId={appStates.selectedRailwayLineId} setAppStates={setAppStates} setToast={setToast} />,
           },
           // {
           //   splitViewId: 3,

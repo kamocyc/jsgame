@@ -312,7 +312,7 @@ export function fillMissingTimes(trains: Train[], stations: Station[]): void {
   }
 }
 
-export function getEkiJikokus(oudBuf: string): OutlinedTimetable {
+export function getEkiJikokus(oudBuf: string): [OutlinedTimetable, Train[]] {
   const oudJson = oudToJson(oudBuf);
   const rosen = oudJson['Rosen'][0];
   const stations = convertEkis(rosen['Eki']);
@@ -322,16 +322,18 @@ export function getEkiJikokus(oudBuf: string): OutlinedTimetable {
   const trains = convertRessyas(ressyas, stations, trainTypes);
   fillMissingTimes(trains, stations);
 
-  const inboundTrains = trains.filter((t) => t.houkou === 'Nobori');
-  const outboundTrains = trains.filter((t) => t.houkou === 'Kudari');
-  return {
+  const inboundTrainIds = trains.filter((t) => t.houkou === 'Nobori').map(train => train.trainId);
+  const outboundTrainIds = trains.filter((t) => t.houkou === 'Kudari').map(train => train.trainId);
+  return [
+    {
+      railwayLineId: null,
     trainTypes,
-    inboundTrains,
-    outboundTrains,
+    inboundTrainIds,
+    outboundTrainIds,
     stations: stations
       .map((station, index) => [station, index] as const)
       .sort((a, b) => b[1] - a[1])
       .map(([station, _]) => station), // stationは逆順にする
-    operations: createOperations(inboundTrains, outboundTrains),
-  };
+    operations: createOperations(trains),
+  }, trains];
 }

@@ -5,6 +5,7 @@ import {
   DiaTime,
   Operation,
   OutlinedTimetable,
+  OutlinedTimetableData,
   Platform,
   PlatformTimetableItem,
   Station,
@@ -365,15 +366,12 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
   return switchTTItems;
 }
 
-function isPlatformsIsNotNull(timetable: OutlinedTimetable) {
-  const inboundNullPlatforms = timetable.inboundTrains.filter((t) =>
-    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platform === null)
-  );
-  const outboundNullPlatforms = timetable.outboundTrains.filter((t) =>
+function isPlatformsIsNotNull(timetable: OutlinedTimetableData) {
+  const nullPlatforms = timetable.trains.filter((t) =>
     t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platform === null)
   );
 
-  if (inboundNullPlatforms.length > 0 || outboundNullPlatforms.length > 0) {
+  if (nullPlatforms.length > 0) {
     alert('番線が設定されていない箇所があります');
     return false;
   }
@@ -382,10 +380,10 @@ function isPlatformsIsNotNull(timetable: OutlinedTimetable) {
 
 export function toDetailedTimetable(
   allTrackStations: Station[],
-  timetable: OutlinedTimetable,
+  timetableData: OutlinedTimetableData,
   tracks: Track[]
 ): [DetailedTimetable, Operation[]] | null {
-  if (!isPlatformsIsNotNull(timetable)) {
+  if (!isPlatformsIsNotNull(timetableData)) {
     return null;
   }
 
@@ -393,23 +391,17 @@ export function toDetailedTimetable(
   // というかまずは単に時刻が入っていないのをエラーにすべき気がする。。。
 
   // 方向をどうするか。。。設置時？基本的にはダイヤ変換時に設定する。ホームトラック終端の上下 > （上下が同じなら）左右方向の区別とする。トラックが移動や回転された場合は再設定が必要になるが、その場合はどちらにしても再設定がいる。
-  const platformTTItems = ([] as PlatformTimetableItem[]).concat(
-    toPlatformTTItems(allTrackStations, tracks, timetable.inboundTrains),
-    toPlatformTTItems(allTrackStations, tracks, timetable.outboundTrains)
-  );
+  const platformTTItems = toPlatformTTItems(allTrackStations, tracks, timetableData.trains);
 
   // switchは、駅と駅の間の経路を探索し、通過したswitchを追加する
   // changeTimeをどうするか。。。 通過の列車の指定のほうがいい気がする。。？でも列車の指定はあるから、そんなに重複することはないか。1列車が駅に到着せずに一つのswitchを複数回通過することはないはず。
   const switchTTItems: SwitchTimetableItem[] = [];
 
-  for (const train of timetable.inboundTrains) {
-    switchTTItems.push(...toSwitchTTItems(tracks, train));
-  }
-  for (const train of timetable.outboundTrains) {
+  for (const train of timetableData.trains) {
     switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
 
-  const operations = createOperations(timetable.inboundTrains, timetable.outboundTrains);
+  const operations = createOperations(timetableData.trains);
   return [
     {
       platformTTItems: platformTTItems,
@@ -478,11 +470,10 @@ function generateOperationCode(operations: Operation[]) {
   return Math.random().toString().replace('.', '');
 }
 
-export function createOperations(inboundTrains: Train[], outboundTrains: Train[]): Operation[] {
+export function createOperations(trains: Train[]): Operation[] {
   const usedTrains = new Set<string>();
   const operations: Operation[] = [];
 
-  const trains = inboundTrains.concat(outboundTrains);
   // TODO: とりあえず効率は悪いが毎回全件探索する。改善したい
 
   function getNextTrain(train: Train): Train | null {

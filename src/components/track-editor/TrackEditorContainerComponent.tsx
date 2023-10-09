@@ -80,6 +80,7 @@ export function CanvasComponent({
   constructType,
   terrainType,
   update,
+  setToast
 }: {
   appStates: AppStates;
   numberOfPlatforms: number;
@@ -87,6 +88,7 @@ export function CanvasComponent({
   constructType: ConstructType;
   terrainType: TerrainType;
   update: () => void;
+  setToast: (toast: string) => void;
 }) {
   const [editorDialogMode, setEditorDialogMode] = useState<EditorDialogMode | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
@@ -96,17 +98,6 @@ export function CanvasComponent({
   const [mouseDragMode, setMouseDragMode] = useState<MouseDragMode | null>(null);
   const [dragMoved, setDragMoved] = useState<boolean>(false);
   const [selectedTrain, setSelectedTrain] = useState<StoredTrain | null>(null);
-
-  const setToast = (message: string) => {
-    console.warn({ setToast: message });
-    appStates.message = message;
-    update();
-
-    setTimeout(() => {
-      appStates.message = '';
-      update();
-    }, 3000);
-  };
 
   return (
     <>

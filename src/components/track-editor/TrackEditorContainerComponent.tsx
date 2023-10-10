@@ -1,33 +1,11 @@
 import { useState } from 'preact/hooks';
-import { deepEqual, generatePlaceName, getNewName, getRandomColor } from '../../common';
-import {
-  AppStates,
-  Cell,
-  CellHeight,
-  CellWidth,
-  EditorDialogMode,
-  ExtendedGameMap,
-  GameMap,
-  MapContext,
-} from '../../mapEditorModel';
-import {
-  DefaultStationDistance,
-  Depot,
-  DetailedTimetable,
-  Platform,
-  Point,
-  Station,
-  Switch,
-  Track,
-  generateId,
-} from '../../model';
-import { getMidPoint, isHitLine } from '../../trackUtil';
-import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad, TerrainType } from '../extendedMapModel';
+import { AppStates, Cell, EditorDialogMode } from '../../mapEditorModel';
+import { DetailedTimetable, Platform, Point, Switch } from '../../model';
+import { ConstructType, TerrainType } from '../extendedMapModel';
 import { StationEditor, SwitchEditor } from './StationSwitchEditorComponent';
 import { StoreTrainInfoPanel } from './StoredTrainInfoPanel';
 import { MouseDragMode, onmousedown, onmousemove, onmouseup, onwheel } from './trackEditorContainerCore';
 import { StoredTrain } from './trainMoveBase';
-
 
 export function EditorContainer({
   editorDialogMode,
@@ -80,7 +58,7 @@ export function CanvasComponent({
   constructType,
   terrainType,
   update,
-  setToast
+  setToast,
 }: {
   appStates: AppStates;
   numberOfPlatforms: number;

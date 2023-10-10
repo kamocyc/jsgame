@@ -1,6 +1,6 @@
 import { assert, removeNull } from '../../common';
-import { AppStates, CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
-import { DiaTime, OutlinedTimetable, OutlinedTimetableData, Point, Station, generateId } from '../../model';
+import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
+import { DiaTime, OutlinedTimetableData, Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManager2, AgentManager2Props } from './agentManager2';
@@ -245,7 +245,12 @@ export function createAgentPath(
   // console.log({ nearestStationCellPosition });
   // console.log({ destinationNearestStationCellPosition });
 
-  const stationPath = searchPath(nearestStation.station, currentTime, destinationNearestStation.station, timetableData)[1];
+  const stationPath = searchPath(
+    nearestStation.station,
+    currentTime,
+    destinationNearestStation.station,
+    timetableData
+  )[1];
   if (stationPath === null) {
     return [];
   }
@@ -481,7 +486,7 @@ export function createAgentManager(): AgentManagerBase {
 // 時刻表ベースの実装
 export class AgentManager implements AgentManagerBase {
   agents: Agent[];
-  readonly agentManagerType = 'AgentManager'
+  readonly agentManagerType = 'AgentManager';
 
   constructor() {
     this.agents = [];
@@ -494,8 +499,7 @@ export class AgentManager implements AgentManagerBase {
   }
 
   addAgentsRandomly(position: Point, cell: ExtendedCellConstruct, props: AgentManager2Props): unknown {
-    throw new Error("Method not implemented.");
-    
+    throw new Error('Method not implemented.');
   }
 
   add(position: Point) {
@@ -548,8 +552,9 @@ export class AgentManager implements AgentManagerBase {
           if (props.currentTime >= diaTime.departureTime) {
             // 時刻表の時間を過ぎたら、対応するtrainを探す
             // diaTime -> Train -> operations.train
-            const train = props.timetableData.trains
-              .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
+            const train = props.timetableData.trains.find((train) =>
+              train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId)
+            );
             assert(train !== undefined, 'train is undefined');
             const placedTrain = props.trainMove.getPlacedTrains().find((t) => t.train?.trainId === train.trainId);
             if (placedTrain === undefined) {

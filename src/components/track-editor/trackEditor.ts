@@ -393,7 +393,12 @@ function getAngleBetweenCells(cell1: Cell, cell2: Cell): LineAngle | 'Error' {
 }
 
 // mapに対して破壊的変更をする
-export function createLine(map: GameMap, cell1: Cell, cell2: Cell, extendedMap: ExtendedGameMap): [Track[], Switch[]] | CreateLineError {
+export function createLine(
+  map: GameMap,
+  cell1: Cell,
+  cell2: Cell,
+  extendedMap: ExtendedGameMap
+): [Track[], Switch[]] | CreateLineError {
   if (cell1.position.x === cell2.position.x && cell1.position.y === cell2.position.y) {
     return { error: '同じセル' };
   }
@@ -441,7 +446,7 @@ export function createLine(map: GameMap, cell1: Cell, cell2: Cell, extendedMap: 
       // 終点にエラー無く到達したら、mapを更新して終了
       for (const [x, y, cell] of mapUpdateData) {
         map[x][y] = cell;
-        extendedMap[x][y].type = 'Railway'
+        extendedMap[x][y].type = 'Railway';
       }
       return [resultTracks, resultSwitches];
     }

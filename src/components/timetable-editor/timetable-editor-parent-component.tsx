@@ -1,12 +1,12 @@
-import { StateUpdater, useState } from "preact/hooks";
-import { AppStates } from "../../mapEditorModel";
-import { TimetableEditorComponent } from "./timetable-editor-component";
-import { OutlinedTimetableData } from "../../model";
-import { JSON_decycle } from "../../cycle";
-import { loadCustomFile } from "../../file";
-import { toDetailedTimetable } from "../track-editor/timetableConverter";
-import { createTrainMove } from "../track-editor/trainMoveBase";
-import { createAgentManager } from "../track-editor/agentManager";
+import { StateUpdater, useState } from 'preact/hooks';
+import { JSON_decycle } from '../../cycle';
+import { loadCustomFile } from '../../file';
+import { AppStates } from '../../mapEditorModel';
+import { OutlinedTimetableData } from '../../model';
+import { createAgentManager } from '../track-editor/agentManager';
+import { toDetailedTimetable } from '../track-editor/timetableConverter';
+import { createTrainMove } from '../track-editor/trainMoveBase';
+import { TimetableEditorComponent } from './timetable-editor-component';
 
 function saveTimetableDataFile(timetableData: OutlinedTimetableData) {
   const buf = toStringTimeTableData(timetableData);
@@ -28,27 +28,32 @@ function toStringTimeTableData(timetableData: OutlinedTimetableData) {
   return JSON.stringify(JSON_decycle(obj), null, 2);
 }
 
-export function TimetableEditorParentComponent(
-  {
-    appStates,
-    defaultSelectedRailwayLineId,
-    setAppStates,
-    setToast,
-  }
-  : { appStates: AppStates; defaultSelectedRailwayLineId: string | null; setAppStates: StateUpdater<AppStates>; setToast: (toast: string) => void; }) {
+export function TimetableEditorParentComponent({
+  appStates,
+  defaultSelectedRailwayLineId,
+  setAppStates,
+  setToast,
+}: {
+  appStates: AppStates;
+  defaultSelectedRailwayLineId: string | null;
+  setAppStates: StateUpdater<AppStates>;
+  setToast: (toast: string) => void;
+}) {
   const [selectedRailwayLineId, setSelectedRailwayLineId] = useState<string | null>(defaultSelectedRailwayLineId);
-  const selectedTimetable = appStates.outlinedTimetableData.timetables.find((timetable) => timetable.railwayLineId === selectedRailwayLineId);
+  const selectedTimetable = appStates.outlinedTimetableData.timetables.find(
+    (timetable) => timetable.railwayLineId === selectedRailwayLineId
+  );
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
   const update = () => {
-    setAppStates(appStates => ({
+    setAppStates((appStates) => ({
       ...appStates,
     }));
-  }
+  };
 
   return (
-  <>
     <>
-    <button
+      <>
+        <button
           onClick={() => {
             saveTimetableDataFile(appStates.outlinedTimetableData);
           }}
@@ -72,7 +77,7 @@ export function TimetableEditorParentComponent(
               const diagram = await loadCustomFile(event);
               if (diagram != null) {
                 appStates.outlinedTimetableData = diagram;
-                update(); 
+                update();
               }
             }}
           />
@@ -106,36 +111,41 @@ export function TimetableEditorParentComponent(
         >
           ⇑詳細ダイヤに反映
         </button>
-        </>
+      </>
       <>
-    <span>
-    路線:<select
-      onChange={(e) => {
-        setSelectedRailwayLineId(e.currentTarget.value);
-      }}>
-      {appStates.railwayLines.map((railwayLine) => (
-        <option value={railwayLine.railwayLineId}>{railwayLine.railwayLineName}</option>
-      ))}
-    </select>
-    </span>
-    {selectedTimetable !== undefined ? 
-    (<TimetableEditorComponent
-      railwayLine={railwayLine}
-      outlinedTimetableData={appStates.outlinedTimetableData}
-      timetable={selectedTimetable}
-      tracks={appStates.tracks}
-      update={update}
-      setOutlinedTimetableData={(timetableData) => {
-        setAppStates((prev) => {
-          return {
-            ...prev,
-            timetableData,
-          };
-        });
-      }}
-      setToast={setToast}
-      />) :
-      <></>
-    }</>
-  </>)
+        <span>
+          路線:
+          <select
+            onChange={(e) => {
+              setSelectedRailwayLineId(e.currentTarget.value);
+            }}
+          >
+            {appStates.railwayLines.map((railwayLine) => (
+              <option value={railwayLine.railwayLineId}>{railwayLine.railwayLineName}</option>
+            ))}
+          </select>
+        </span>
+        {selectedTimetable !== undefined && railwayLine !== undefined ? (
+          <TimetableEditorComponent
+            railwayLine={railwayLine}
+            outlinedTimetableData={appStates.outlinedTimetableData}
+            timetable={selectedTimetable}
+            tracks={appStates.tracks}
+            update={update}
+            setOutlinedTimetableData={(timetableData) => {
+              setAppStates((prev) => {
+                return {
+                  ...prev,
+                  timetableData,
+                };
+              });
+            }}
+            setToast={setToast}
+          />
+        ) : (
+          <></>
+        )}
+      </>
+    </>
+  );
 }

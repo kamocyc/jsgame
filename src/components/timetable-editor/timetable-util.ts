@@ -2,15 +2,15 @@ import { assert } from '../../common';
 import { RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import {
   DefaultStationDistance,
+  DiaTime,
   OutlinedTimetable,
+  OutlinedTimetableData,
   Platform,
   Station,
-  OutlinedTimetableData,
   TimetableDirection,
   Train,
   TrainType,
   generateId,
-  DiaTime,
 } from '../../model';
 import { createOperations } from '../track-editor/timetableConverter';
 import './timetable-editor.css';
@@ -76,15 +76,15 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
       departureTime: index === stops.length - 1 ? null : currentTime + 1,
       isPassing: false,
       station: stop.platform.station,
-      platform: stop.platform
-    }
+      platform: stop.platform,
+    };
   }
 
   const stops = railwayLine.stops;
 
   let currentTime: number;
   let inboundDiaTimes: DiaTime[];
-  let outboundDiaTimes: DiaTime[]
+  let outboundDiaTimes: DiaTime[];
   {
     currentTime = baseTime;
     inboundDiaTimes = stops.map((stop, index) => {
@@ -106,31 +106,35 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
     });
   }
 
-  const stations = stops.map(stop => stop.platform.station);
+  const stations = stops.map((stop) => stop.platform.station);
 
-  const inboundTrains: Train[] = [{
-    trainId: generateId(),
-    trainName: '',
-    trainCode: '001M',
-    diaTimes: inboundDiaTimes,
-    direction: 'Inbound'
-  }];
+  const inboundTrains: Train[] = [
+    {
+      trainId: generateId(),
+      trainName: '',
+      trainCode: '001M',
+      diaTimes: inboundDiaTimes,
+      direction: 'Inbound',
+    },
+  ];
 
-  const outboundTrains: Train[] = [{
-    trainId: generateId(),
-    trainName: '',
-    trainCode: '002M',
-    diaTimes: outboundDiaTimes,
-    direction: 'Outbound'
-  }]
+  const outboundTrains: Train[] = [
+    {
+      trainId: generateId(),
+      trainName: '',
+      trainCode: '002M',
+      diaTimes: outboundDiaTimes,
+      direction: 'Outbound',
+    },
+  ];
 
   const trains = inboundTrains.concat(outboundTrains);
 
   const timetable: OutlinedTimetable = {
-    inboundTrainIds: inboundTrains.map(diaTime => diaTime.trainId),
-    outboundTrainIds: outboundTrains.map(diaTime => diaTime.trainId),
+    inboundTrainIds: inboundTrains.map((diaTime) => diaTime.trainId),
+    outboundTrainIds: outboundTrains.map((diaTime) => diaTime.trainId),
     operations: createOperations(trains),
-    railwayLineId: railwayLine === null ? null : railwayLine.railwayLineId,
+    railwayLineId: railwayLine.railwayLineId,
     stations: stations,
     trainTypes: getInitialTrainTypes(),
   };
@@ -139,15 +143,18 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
 }
 
 export function getTrain(timetableData: OutlinedTimetableData, trainId: string): Train {
-  const train =  timetableData.trains.find(train => train.trainId === trainId);
+  const train = timetableData.trains.find((train) => train.trainId === trainId);
   assert(train !== undefined);
   return train;
 }
 
-export function reverseTimetableDirection(timetableData: OutlinedTimetableData, timetable: OutlinedTimetable): [OutlinedTimetable, Train[]] {
-  const oldInboundTrains = timetable.inboundTrainIds.map(trainId => getTrain(timetableData, trainId));
-  const oldOutboundTrains = timetable.outboundTrainIds.map(trainId => getTrain(timetableData, trainId));
-  
+export function reverseTimetableDirection(
+  timetableData: OutlinedTimetableData,
+  timetable: OutlinedTimetable
+): [OutlinedTimetable, Train[]] {
+  const oldInboundTrains = timetable.inboundTrainIds.map((trainId) => getTrain(timetableData, trainId));
+  const oldOutboundTrains = timetable.outboundTrainIds.map((trainId) => getTrain(timetableData, trainId));
+
   const inboundTrains: Train[] = [];
   const outboundTrains: Train[] = [];
   for (const train of oldInboundTrains) {
@@ -166,14 +173,17 @@ export function reverseTimetableDirection(timetableData: OutlinedTimetableData, 
   }
 
   const trains = outboundTrains.concat(inboundTrains);
-  return [{
-    railwayLineId: timetable.railwayLineId,
-    inboundTrainIds: inboundTrains.map(train => train.trainId),
-    outboundTrainIds: outboundTrains.map(train => train.trainId),
-    stations: timetable.stations.slice().reverse(),
-    trainTypes: timetable.trainTypes,
-    operations: createOperations(trains),
-  }, trains];
+  return [
+    {
+      railwayLineId: timetable.railwayLineId,
+      inboundTrainIds: inboundTrains.map((train) => train.trainId),
+      outboundTrainIds: outboundTrains.map((train) => train.trainId),
+      stations: timetable.stations.slice().reverse(),
+      trainTypes: timetable.trainTypes,
+      operations: createOperations(trains),
+    },
+    trains,
+  ];
 }
 
 export function deleteTrains(outlinedTimetableData: OutlinedTimetableData, trainIds: string[]) {
@@ -182,7 +192,7 @@ export function deleteTrains(outlinedTimetableData: OutlinedTimetableData, train
     // 他で使われていなければ、trainIdを削除
     let used = false;
     for (const tt of outlinedTimetableData.timetables) {
-      if (tt.inboundTrainIds.concat(tt.outboundTrainIds).some(id => id === trainId)) {
+      if (tt.inboundTrainIds.concat(tt.outboundTrainIds).some((id) => id === trainId)) {
         used = true;
         break;
       }
@@ -193,7 +203,9 @@ export function deleteTrains(outlinedTimetableData: OutlinedTimetableData, train
     }
   }
 
-  outlinedTimetableData.trains = outlinedTimetableData.trains.filter(train => !notUedTrainIds.some(id => id === train.trainId));
+  outlinedTimetableData.trains = outlinedTimetableData.trains.filter(
+    (train) => !notUedTrainIds.some((id) => id === train.trainId)
+  );
 }
 
 export function clearTimetable(outlinedTimetableData: OutlinedTimetableData, timetable: OutlinedTimetable) {

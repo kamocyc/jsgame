@@ -16,7 +16,7 @@ import {
   addVector,
   timesVector,
 } from '../../mapEditorModel';
-import { Depot, Point, Station, Track } from '../../model';
+import { Point, Station, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
 import { AgentBase, AgentManagerBase } from './agentManager';
@@ -107,8 +107,6 @@ function drawStraightSub(
         drawLine(ctx, mapContext, { ...begin, y: begin.y - 3 }, { ...end, y: end.y - 3 });
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 1;
-
-
       }
       break;
     }
@@ -303,15 +301,7 @@ function drawTerminal(
     }),
     timesVector(angleToPositionMap[lineType.angle], CellWidth / 2)
   );
-  drawStraightSub(
-    ctx,
-    mapContext,
-    begin,
-    end,
-    xyToLineDirection(angleToPositionMap[lineType.angle]),
-    false,
-    drawMode
-  );
+  drawStraightSub(ctx, mapContext, begin, end, xyToLineDirection(angleToPositionMap[lineType.angle]), false, drawMode);
 }
 
 function drawCurve(
@@ -523,7 +513,7 @@ function drawLineType(
 
 function drawText(ctx: CanvasRenderingContext2D, mapContext: MapContext, text: string, position: Point) {
   const metrics = ctx.measureText(text);
-  
+
   const fillColor = ctx.fillStyle;
   ctx.fillStyle = 'rgb(64, 64, 64, 0.8)';
   ctx.fillRect(rx(position.x, mapContext) - metrics.width / 2, ry(position.y, mapContext) - 15, metrics.width, 20);
@@ -536,17 +526,20 @@ function getPlatformAgentNumber(agentManager_: AgentManagerBase, platformId: str
   const agentManager = agentManager_ as AgentManager2;
 
   const counts = agentManager.getNumberOfAgentsInPlatform();
-  return sum(counts.entries().filter(([keys, v]) => keys[1] === platformId).map(([keys, v]) => v));
+  return sum(
+    counts
+      .entries()
+      .filter(([keys, v]) => keys[1] === platformId)
+      .map(([keys, v]) => v)
+  );
 }
 
-function drawDepots(
-  ctx: CanvasRenderingContext2D,
-  mapContext: MapContext,
-  tracks: Track[],
-  showInfo: boolean
-) {
+function drawDepots(ctx: CanvasRenderingContext2D, mapContext: MapContext, tracks: Track[], showInfo: boolean) {
   const fontSize = 14;
-  const depots = removeDuplicates(tracks.filter((track) => track.track.depotLine != null).map((track) => track.track.depotLine!.depot), (d1, d2) => d1.depotId === d2.depotId);
+  const depots = removeDuplicates(
+    tracks.filter((track) => track.track.depotLine != null).map((track) => track.track.depotLine!.depot),
+    (d1, d2) => d1.depotId === d2.depotId
+  );
   const drawnDepotPoints: Map<string, Point[]> = new Map(depots.map((d) => [d.depotId, []]));
 
   for (const track of tracks) {
@@ -588,7 +581,7 @@ function drawDepots(
     const y = Math.max(...points.map((p) => p.y));
     drawText(ctx, mapContext, name, { x: x, y: y + 10 });
   }
-  ctx.fillStyle = 'black'
+  ctx.fillStyle = 'black';
 }
 
 function drawStations(
@@ -597,7 +590,7 @@ function drawStations(
   stations: Station[],
   tracks: Track[],
   agentManager: AgentManagerBase,
-  showInfo: boolean,
+  showInfo: boolean
 ) {
   const fontSize = 14;
 
@@ -699,21 +692,21 @@ function drawExtendedMap(
       } else if (extendedCell.type === 'Construct') {
         if (extendedCell.constructType === 'House') {
           if (hideDraw) {
-            ctx.fillStyle = '#ffffff'
-            drawText(ctx, mapContext, '家', toCY(position))
+            ctx.fillStyle = '#ffffff';
+            drawText(ctx, mapContext, '家', toCY(position));
           } else {
             drawCellImage(mapContext, ctx, imageCache.get('house')!, toCY(position));
           }
         } else if (extendedCell.constructType === 'Shop') {
           if (hideDraw) {
-            ctx.fillStyle = '#ffffff'
+            ctx.fillStyle = '#ffffff';
             drawText(ctx, mapContext, '店', toCY(position));
           } else {
             drawCellImage(mapContext, ctx, imageCache.get('shop')!, toCY(position));
           }
         } else if (extendedCell.constructType === 'Office') {
           if (hideDraw) {
-            ctx.fillStyle = '#ffffff'
+            ctx.fillStyle = '#ffffff';
             drawText(ctx, mapContext, '職', toCY(position));
           } else {
             drawCellImage(mapContext, ctx, imageCache.get('office')!, toCY(position));
@@ -925,7 +918,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // 駅
   drawStations(ctx, mapContext, stations, tracks, appStates.agentManager, appStates.showInfo);
-  
+
   // 車庫
   drawDepots(ctx, mapContext, tracks, appStates.showInfo);
 

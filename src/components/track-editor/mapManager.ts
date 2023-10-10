@@ -1,4 +1,4 @@
-import { ExtendedGameMap, GameMap, RailwayLine } from '../../mapEditorModel';
+import { ExtendedGameMap, RailwayLine } from '../../mapEditorModel';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, toCellPosition } from '../extendedMapModel';
 import { PlacedTrain } from './trainMoveBase';
 
@@ -28,7 +28,12 @@ export class MapManager {
 
   constructor() {}
 
-  tick(extendedMap: ExtendedGameMap, railwayLines: RailwayLine[], placedTrains: PlacedTrain[], shouldAutoGrow: boolean): boolean {
+  tick(
+    extendedMap: ExtendedGameMap,
+    railwayLines: RailwayLine[],
+    placedTrains: PlacedTrain[],
+    shouldAutoGrow: boolean
+  ): boolean {
     if (!shouldAutoGrow) return false;
 
     // railwayLineの駅の周辺を発展させる。

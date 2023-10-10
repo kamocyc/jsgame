@@ -9,7 +9,7 @@ export function ListSettingCommonComponent<T>({
   getDisplayName,
   excludeFromDatas,
   getNewData,
-  settingColumnWidth
+  settingColumnWidth,
 }: {
   datas: T[];
   setDatas: (datas: T[]) => void;

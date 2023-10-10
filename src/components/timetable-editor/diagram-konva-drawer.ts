@@ -1,8 +1,9 @@
 import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
+import { deepEqual, toStringFromSeconds } from '../../common';
 import { DiaTime, Operation, Train, generateId } from '../../model';
 import { fillMissingTimes } from '../../oudParser';
-import { createOperations, getReasonOfNotConnected } from '../track-editor/timetableConverter';
+import { getReasonOfNotConnected } from '../track-editor/timetableConverter';
 import {
   DiagramProps,
   StationPosition,
@@ -13,7 +14,6 @@ import {
 } from './drawer-util';
 import { StationKonvaManager } from './station-konva';
 import { getDefaultPlatform } from './timetable-util';
-import { deepEqual, toStringFromSeconds } from '../../common';
 
 const canvasHeight = 600;
 const canvasWidth = 600; // dummy width (will be set by initializeKonva)

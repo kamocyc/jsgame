@@ -1,4 +1,3 @@
-import { useState } from 'preact/hooks';
 import { deepEqual, generatePlaceName, getNewName, getRandomColor } from '../../common';
 import {
   AppStates,
@@ -14,7 +13,6 @@ import {
   DefaultStationDistance,
   Depot,
   DepotLine,
-  DetailedTimetable,
   Platform,
   Point,
   Station,
@@ -28,7 +26,6 @@ import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
 import { ITrainMove, StoredTrain } from './trainMoveBase';
-
 
 export type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -144,12 +141,7 @@ function createDepot(
 
   position = { x: position.x, y: position.y - numberOfLines + 1 };
 
-  if (
-    position.x < 0 ||
-    position.x >= mapWidth - 1 ||
-    position.y < 0 ||
-    position.y >= mapHeight + numberOfLines - 1
-  ) {
+  if (position.x < 0 || position.x >= mapWidth - 1 || position.y < 0 || position.y >= mapHeight + numberOfLines - 1) {
     setToast('positionが範囲外');
     return null;
   }
@@ -402,7 +394,15 @@ export function onmousedown(
       setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.editMode === 'DepotCreate') {
-      const result = createDepot(appStates.map, appStates.extendedMap, mapPosition, appStates.mapWidth, appStates.mapHeight, numberOfLines, setToast);
+      const result = createDepot(
+        appStates.map,
+        appStates.extendedMap,
+        mapPosition,
+        appStates.mapWidth,
+        appStates.mapHeight,
+        numberOfLines,
+        setToast
+      );
       if (result) {
         const [newTracks, newSwitches, _] = result;
         appStates.tracks.push(...newTracks);
@@ -479,7 +479,7 @@ function deleteVariousThings(
       return null;
     }
   };
-  
+
   const platformId = getPlatformId(mouseStartCell, mouseEndCell);
   if (platformId !== null) {
     // 駅の削除

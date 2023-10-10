@@ -4,7 +4,6 @@ import {
   DetailedTimetable,
   DiaTime,
   Operation,
-  OutlinedTimetable,
   OutlinedTimetableData,
   Platform,
   PlatformTimetableItem,

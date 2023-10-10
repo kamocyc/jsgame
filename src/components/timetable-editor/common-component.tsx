@@ -1,8 +1,8 @@
 import { ComponentChild } from 'preact';
 import { Ref, useEffect, useRef, useState } from 'preact/hooks';
+import { parseTime, toStringFromSeconds } from '../../common';
 import { ContextData } from '../../model';
 import './timetable-editor.css';
-import { parseTime, toStringFromSeconds } from '../../common';
 
 function parseInputTextAsTime(text: string): string | undefined {
   text = text.replace(/[^0-9]/g, '');
@@ -181,11 +181,11 @@ export function ContextMenuComponent({
 export function SettingColumnComponent({
   children,
   setSettingData,
-  width
+  width,
 }: {
   children: ComponentChild;
   setSettingData: (settingData: null) => void;
-  width?: string
+  width?: string;
 }) {
   return (
     <div style={{ width: width ?? '250px', borderLeft: '2px solid #000', padding: '5px' }}>

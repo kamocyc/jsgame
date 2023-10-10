@@ -322,18 +322,20 @@ export function getEkiJikokus(oudBuf: string): [OutlinedTimetable, Train[]] {
   const trains = convertRessyas(ressyas, stations, trainTypes);
   fillMissingTimes(trains, stations);
 
-  const inboundTrainIds = trains.filter((t) => t.houkou === 'Nobori').map(train => train.trainId);
-  const outboundTrainIds = trains.filter((t) => t.houkou === 'Kudari').map(train => train.trainId);
+  const inboundTrainIds = trains.filter((t) => t.houkou === 'Nobori').map((train) => train.trainId);
+  const outboundTrainIds = trains.filter((t) => t.houkou === 'Kudari').map((train) => train.trainId);
   return [
     {
       railwayLineId: null,
-    trainTypes,
-    inboundTrainIds,
-    outboundTrainIds,
-    stations: stations
-      .map((station, index) => [station, index] as const)
-      .sort((a, b) => b[1] - a[1])
-      .map(([station, _]) => station), // stationは逆順にする
-    operations: createOperations(trains),
-  }, trains];
+      trainTypes,
+      inboundTrainIds,
+      outboundTrainIds,
+      stations: stations
+        .map((station, index) => [station, index] as const)
+        .sort((a, b) => b[1] - a[1])
+        .map(([station, _]) => station), // stationは逆順にする
+      operations: createOperations(trains),
+    },
+    trains,
+  ];
 }

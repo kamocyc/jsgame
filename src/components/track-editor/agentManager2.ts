@@ -156,8 +156,14 @@ export function createAgentPath(
     }
 
     // 最初の路線の駅が1つだけの場合は、不要なので削除
-    if (stationAndRailwayLinePath.length >= 2 && stationAndRailwayLinePath[0].railwayLine.railwayLineId !== stationAndRailwayLinePath[1].railwayLine.railwayLineId) {
-      assert(stationAndRailwayLinePath[0].station.stationId === stationAndRailwayLinePath[1].station.stationId, 'stationAndRailwayLinePath[0].station.stationId === stationAndRailwayLinePath[1].station.stationId');
+    if (
+      stationAndRailwayLinePath.length >= 2 &&
+      stationAndRailwayLinePath[0].railwayLine.railwayLineId !== stationAndRailwayLinePath[1].railwayLine.railwayLineId
+    ) {
+      assert(
+        stationAndRailwayLinePath[0].station.stationId === stationAndRailwayLinePath[1].station.stationId,
+        'stationAndRailwayLinePath[0].station.stationId === stationAndRailwayLinePath[1].station.stationId'
+      );
       stationAndRailwayLinePath.shift();
     }
 
@@ -322,14 +328,14 @@ export interface AgentManager2Props {
   railwayLines: RailwayLine[];
   placedTrains: PlacedTrain[];
   moneyManager: MoneyManager;
-  globalTimeManager: GlobalTimeManager
+  globalTimeManager: GlobalTimeManager;
 }
 
-type MoveProbFunc = { [key in ConstructType]: { [key in ConstructType]: FuncDefinition} };
+type MoveProbFunc = { [key in ConstructType]: { [key in ConstructType]: FuncDefinition } };
 
 const moveProbFuncs: MoveProbFunc = {
-  'House': {
-    'House': [
+  House: {
+    House: [
       [0, 0],
       [5, 0],
       [6, 1],
@@ -342,9 +348,9 @@ const moveProbFuncs: MoveProbFunc = {
       [19, 5],
       [21, 5],
       [23, 3],
-      [24, 0]
+      [24, 0],
     ],
-    'Shop': [
+    Shop: [
       [0, 0],
       [5, 0],
       [6, 1],
@@ -357,9 +363,9 @@ const moveProbFuncs: MoveProbFunc = {
       [19, 20],
       [21, 5],
       [23, 1],
-      [24, 0]
+      [24, 0],
     ],
-    'Office': [
+    Office: [
       [0, 0],
       [5, 0],
       [6, 5],
@@ -372,11 +378,11 @@ const moveProbFuncs: MoveProbFunc = {
       [19, 10],
       [21, 5],
       [23, 5],
-      [24, 0]
-    ]
+      [24, 0],
+    ],
   },
-  'Shop': {
-    'House': [
+  Shop: {
+    House: [
       [0, 0],
       [5, 0],
       [6, 1],
@@ -389,19 +395,19 @@ const moveProbFuncs: MoveProbFunc = {
       [19, 20],
       [21, 15],
       [23, 5],
-      [24, 0]
+      [24, 0],
     ],
-    'Shop': [
+    Shop: [
       [0, 0],
-      [24, 0]
+      [24, 0],
     ],
-    'Office': [
+    Office: [
       [0, 0],
-      [24, 0]
-    ]
+      [24, 0],
+    ],
   },
-  'Office': {
-    'House': [
+  Office: {
+    House: [
       [0, 0],
       [5, 0],
       [6, 5],
@@ -414,9 +420,9 @@ const moveProbFuncs: MoveProbFunc = {
       [19, 100],
       [21, 80],
       [23, 20],
-      [24, 0]
+      [24, 0],
     ],
-    'Shop': [
+    Shop: [
       [0, 0],
       [5, 0],
       [6, 1],
@@ -429,9 +435,9 @@ const moveProbFuncs: MoveProbFunc = {
       [19, 20],
       [21, 10],
       [23, 1],
-      [24, 0]
+      [24, 0],
     ],
-    'Office': [
+    Office: [
       [0, 0],
       [5, 0],
       [6, 1],
@@ -444,24 +450,24 @@ const moveProbFuncs: MoveProbFunc = {
       [19, 10],
       [21, 5],
       [23, 1],
-      [24, 0]
-    ]
-  }
-}
+      [24, 0],
+    ],
+  },
+};
 
 function getMoveProbs(fromConstructType: ConstructType, globalTimeManager: GlobalTimeManager) {
   const hour = globalTimeManager.globalTime / 60 / 60;
   const probs = {
-    'House': getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['House'], hour),
-    'Shop': getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['Shop'], hour),
-    'Office': getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['Office'], hour),
-  }
+    House: getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['House'], hour),
+    Shop: getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['Shop'], hour),
+    Office: getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['Office'], hour),
+  };
   return probs;
 }
 
 // 時刻表ベースの実装
 export class AgentManager2 implements AgentManagerBase {
-  readonly agentManagerType = 'AgentManager2'
+  readonly agentManagerType = 'AgentManager2';
   readonly agentMax = 30;
 
   agents: Agent[];
@@ -486,17 +492,15 @@ export class AgentManager2 implements AgentManagerBase {
     let destinationType: ConstructType | null = null;
     if (r < probs.House / probCoefficient) {
       destinationType = 'House';
-      
     }
     if (r < probs.Shop / probCoefficient) {
-      destinationType = 'Shop'
+      destinationType = 'Shop';
     }
     if (r < probs.Office / probCoefficient) {
-      destinationType = 'Office'
+      destinationType = 'Office';
     }
 
     if (destinationType === null) return false;
-
 
     const destination = this.getRandomDestination(position, props, destinationType);
     if (destination) {
@@ -525,7 +529,7 @@ export class AgentManager2 implements AgentManagerBase {
       path: [],
       pathIndex: -1,
       placedTrain: null,
-    }
+    };
     return agent;
   }
 
@@ -545,11 +549,16 @@ export class AgentManager2 implements AgentManagerBase {
 
   // ランダムな目的地を決める
   // もっとうまくやりたいところ
-  getRandomDestination(agentPosition: Point, props: AgentManager2Props, destinationType: ConstructType): ExtendedCellConstruct {
+  getRandomDestination(
+    agentPosition: Point,
+    props: AgentManager2Props,
+    destinationType: ConstructType
+  ): ExtendedCellConstruct {
     const [stationPositions, platforms] = getStationPositions(props.stations, props.gameMap);
 
-    const candidates = this.getDestinationCandidates(agentPosition, props)
-      .filter(cell => cell.constructType === destinationType);
+    const candidates = this.getDestinationCandidates(agentPosition, props).filter(
+      (cell) => cell.constructType === destinationType
+    );
     // 今いる場所に近いか、駅の近くのみ選択可能とする
     const candidates2 = candidates.filter(
       (c) =>

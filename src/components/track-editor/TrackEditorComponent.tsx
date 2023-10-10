@@ -14,7 +14,6 @@ import {
 import { DetailedTimetable, OutlinedTimetableData, Station, Switch } from '../../model';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct, TerrainType } from '../extendedMapModel';
-import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
@@ -184,7 +183,11 @@ function addAgents(appStates: AppStates) {
   const agentManager = appStates.agentManager;
 
   for (const construct of constructs) {
-    agentManager.addAgentsRandomly(timesVector({ x: construct.position.cx, y: construct.position.cy }, CellHeight), construct, {...appStates, gameMap: appStates.map, placedTrains: appStates.trainMove.getPlacedTrains()});
+    agentManager.addAgentsRandomly(
+      timesVector({ x: construct.position.cx, y: construct.position.cy }, CellHeight),
+      construct,
+      { ...appStates, gameMap: appStates.map, placedTrains: appStates.trainMove.getPlacedTrains() }
+    );
     // if (Math.random() < 0.1) {
     //   agentManager.add(timesVector({ x: house.position.cx, y: house.position.cy }, CellHeight));
     // }
@@ -434,13 +437,25 @@ export function TrackEditorComponent({
           >
             地形を生成
           </button>
-          <label style={{ border: '1px solid #000'}}>情報を表示
-            <input type='checkbox' checked={appStates.showInfo} onChange={() => {appStates.showInfo = !appStates.showInfo}} />
+          <label style={{ border: '1px solid #000' }}>
+            情報を表示
+            <input
+              type='checkbox'
+              checked={appStates.showInfo}
+              onChange={() => {
+                appStates.showInfo = !appStates.showInfo;
+              }}
+            />
           </label>
-          <label style={{ border: '1px solid #000'}}>自動発展
-            <input type='checkbox' checked={appStates.shouldAutoGrow} onChange={() => {
-              appStates.shouldAutoGrow = !appStates.shouldAutoGrow;
-            }} />
+          <label style={{ border: '1px solid #000' }}>
+            自動発展
+            <input
+              type='checkbox'
+              checked={appStates.shouldAutoGrow}
+              onChange={() => {
+                appStates.shouldAutoGrow = !appStates.shouldAutoGrow;
+              }}
+            />
           </label>
         </div>
         <button onClick={() => saveEditorDataLocalStorage(appStates)}>保存</button>
@@ -522,10 +537,13 @@ export function TrackEditorComponent({
       >
         0:00から開始
       </button>
-      <button title={'早送り'} onClick={() => {
-        stopInterval();
-        startTop(1);
-      }}>
+      <button
+        title={'早送り'}
+        onClick={() => {
+          stopInterval();
+          startTop(1);
+        }}
+      >
         ▸▸▸
       </button>
       <div style={{ display: 'inline-block', margin: '3px' }}>{appStates.globalTimeManager.toStringGlobalTime()}</div>

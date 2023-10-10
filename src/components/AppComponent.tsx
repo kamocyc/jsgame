@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
-import { DetailedTimetable } from '../model';
-import { Polygon, sat } from '../sat';
+import { DetailedTimetable, OutlinedTimetableData } from '../model';
 import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
-import { TimetableEditorComponent } from './timetable-editor/timetable-editor-component';
-import { getInitialTimetable } from './timetable-editor/timetable-util';
+import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
 import { ToastComponent } from './toast';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { createAgentManager } from './track-editor/agentManager';
@@ -13,7 +11,6 @@ import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { MapManager } from './track-editor/mapManager';
 import { MoneyManager } from './track-editor/moneyManager';
 import { createTrainMove } from './track-editor/trainMoveBase';
-import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
   const map: Cell[][] = [];
@@ -56,7 +53,10 @@ const defaultMapHeight = 20;
 export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
-  const timetableData = getInitialTimetable(null);
+  const timetableData: OutlinedTimetableData = {
+    timetables: [],
+    trains: [],
+  };
   const storedTrains = [
     {
       placedTrainId: '1',
@@ -74,10 +74,7 @@ export function getInitialAppStates(): AppStates {
     editMode: 'Create',
     globalTimeManager: new GlobalTimeManager(),
     detailedTimetable: timetable,
-    outlinedTimetableData: {
-      timetables: [timetableData[0]],
-      trains: timetableData[1]
-    },
+    outlinedTimetableData: timetableData,
     storedTrains: storedTrains,
     showInfo: true,
     trainPlaceDirection: 'Up',
@@ -137,11 +134,20 @@ export function App() {
         splitViews={[
           {
             splitViewId: 1,
-            component: () => <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} setToast={setToast} />,
+            component: () => (
+              <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} setToast={setToast} />
+            ),
           },
           {
             splitViewId: 2,
-            component: () => <TimetableEditorParentComponent appStates={appStates} defaultSelectedRailwayLineId={appStates.selectedRailwayLineId} setAppStates={setAppStates} setToast={setToast} />,
+            component: () => (
+              <TimetableEditorParentComponent
+                appStates={appStates}
+                defaultSelectedRailwayLineId={appStates.selectedRailwayLineId}
+                setAppStates={setAppStates}
+                setToast={setToast}
+              />
+            ),
           },
           // {
           //   splitViewId: 3,

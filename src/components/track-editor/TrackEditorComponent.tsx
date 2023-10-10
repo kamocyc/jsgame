@@ -18,7 +18,7 @@ import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
-import { createAgentManager, searchPath } from './agentManager';
+import { createAgentManager } from './agentManager';
 import { generateTerrain } from './generateExtendedMap';
 import { MoneyManager } from './moneyManager';
 import { drawEditor } from './trackEditorDrawer';
@@ -113,7 +113,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const storedTrains: StoredTrain[] = obj['storedTrains'] ?? [];
   const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
-  const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable() };
+  const timetableData = obj['timetableData'] ?? { timetable: getInitialTimetable(null) };
   const railwayLines = obj['railwayLines'] ?? [];
 
   const trainMove = createTrainMove(timetable);
@@ -265,7 +265,7 @@ export function TrackEditorComponent({
         gameMap: appStates.map,
         placedTrains: appStates.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
-        timetable: appStates.outlinedTimetableData.timetable,
+        timetableData: appStates.outlinedTimetableData,
         trainMove: appStates.trainMove as TrainMove,
         moneyManager: appStates.moneyManager,
         globalTimeManager: appStates.globalTimeManager,

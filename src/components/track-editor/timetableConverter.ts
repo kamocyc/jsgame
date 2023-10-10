@@ -90,56 +90,56 @@ function getInitialDiaTimes(
   return diaTimes;
 }
 
-export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable | null {
-  const platforms = tracks.filter((t) => t.track.platform != null).map((t) => [t, t.track.platform!] as const);
-  const stations = platforms.map(([t, p]) => p.station);
-  const uniqueStations = stations.filter((x, i, self) => self.indexOf(x) === i);
-  if (uniqueStations.length === 0) {
-    return null;
-  }
-  const stationDistances = getStationDistances(platforms, uniqueStations);
+// export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable | null {
+//   const platforms = tracks.filter((t) => t.track.platform != null).map((t) => [t, t.track.platform!] as const);
+//   const stations = platforms.map(([t, p]) => p.station);
+//   const uniqueStations = stations.filter((x, i, self) => self.indexOf(x) === i);
+//   if (uniqueStations.length === 0) {
+//     return null;
+//   }
+//   const stationDistances = getStationDistances(platforms, uniqueStations);
 
-  const offsetTime = 7 * 60 * 60;
+//   const offsetTime = 7 * 60 * 60;
 
-  const [inboundDiaTimes, outboundDiaTimes] = (() => {
-    if (stationDistances === null) {
-      return [[], []];
-    }
+//   const [inboundDiaTimes, outboundDiaTimes] = (() => {
+//     if (stationDistances === null) {
+//       return [[], []];
+//     }
 
-    const inboundDiaTimes = getInitialDiaTimes(stationDistances, 'Inbound', offsetTime);
-    const outboundDiaTimes = getInitialDiaTimes(
-      [...stationDistances].reverse().map(([s, d]) => [s, stationDistances[stationDistances.length - 1][1] - d]),
-      'Outbound',
-      offsetTime
-    );
+//     const inboundDiaTimes = getInitialDiaTimes(stationDistances, 'Inbound', offsetTime);
+//     const outboundDiaTimes = getInitialDiaTimes(
+//       [...stationDistances].reverse().map(([s, d]) => [s, stationDistances[stationDistances.length - 1][1] - d]),
+//       'Outbound',
+//       offsetTime
+//     );
 
-    return [inboundDiaTimes, outboundDiaTimes];
-  })();
+//     return [inboundDiaTimes, outboundDiaTimes];
+//   })();
 
-  return {
-    stations: inboundDiaTimes.length === 0 ? uniqueStations : inboundDiaTimes.map((d) => d.station),
-    inboundTrains: [
-      {
-        trainId: generateId(),
-        diaTimes: inboundDiaTimes,
-        trainName: 'Inbound',
-        trainCode: '',
-        direction: 'Inbound',
-      },
-    ],
-    outboundTrains: [
-      {
-        trainId: generateId(),
-        diaTimes: outboundDiaTimes,
-        trainName: 'Outbound',
-        trainCode: '',
-        direction: 'Outbound',
-      },
-    ],
-    trainTypes: [],
-    operations: [],
-  };
-}
+//   return {
+//     stations: inboundDiaTimes.length === 0 ? uniqueStations : inboundDiaTimes.map((d) => d.station),
+//     inboundTrains: [
+//       {
+//         trainId: generateId(),
+//         diaTimes: inboundDiaTimes,
+//         trainName: 'Inbound',
+//         trainCode: '',
+//         direction: 'Inbound',
+//       },
+//     ],
+//     outboundTrains: [
+//       {
+//         trainId: generateId(),
+//         diaTimes: outboundDiaTimes,
+//         trainName: 'Outbound',
+//         trainCode: '',
+//         direction: 'Outbound',
+//       },
+//     ],
+//     trainTypes: [],
+//     operations: [],
+//   };
+// }
 
 // function getFirstTrackBetweenPlatforms(tracks: Track[], platform1: Platform, platform2: Platform): Track {
 //   const track1 = getTrackOfPlatform(tracks, platform1);

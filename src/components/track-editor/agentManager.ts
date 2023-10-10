@@ -1,6 +1,6 @@
 import { assert, removeNull } from '../../common';
 import { AppStates, CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
-import { DiaTime, OutlinedTimetable, Point, Station, generateId } from '../../model';
+import { DiaTime, OutlinedTimetable, OutlinedTimetableData, Point, Station, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManager2, AgentManager2Props } from './agentManager2';
@@ -69,11 +69,11 @@ type NextStationInfo = {
  */
 export function getAdjacentStations(
   currentStation: Station,
-  timetable: OutlinedTimetable,
+  timetableData: OutlinedTimetableData,
   currentTime: number
 ): NextStationInfo[] {
   const nextStations = removeNull(
-    timetable.inboundTrains.concat(timetable.outboundTrains).map((train) => {
+    timetableData.trains.map((train) => {
       const [currentStationDiaTime, nextStationDiaTime] = (() => {
         const i = train.diaTimes.findIndex((diaTime) => diaTime.station.stationId === currentStation.stationId);
         if (i === -1 || i >= train.diaTimes.length - 1) {
@@ -152,7 +152,7 @@ export function createAgentPath(
   agent: Agent,
   gameMap: GameMap,
   currentTime: number,
-  timetable: OutlinedTimetable
+  timetableData: OutlinedTimetableData
 ): AgentPath {
   // 現在地から最も近い駅を探す
   const [stationPositions, _] = getStationPositions(stations, gameMap);
@@ -245,7 +245,7 @@ export function createAgentPath(
   // console.log({ nearestStationCellPosition });
   // console.log({ destinationNearestStationCellPosition });
 
-  const stationPath = searchPath(nearestStation.station, currentTime, destinationNearestStation.station, timetable)[1];
+  const stationPath = searchPath(nearestStation.station, currentTime, destinationNearestStation.station, timetableData)[1];
   if (stationPath === null) {
     return [];
   }
@@ -384,12 +384,13 @@ export function searchPath(
   initialPosition: Station,
   startTime: number,
   destination: Station,
-  timetable: OutlinedTimetable
+  timetableData: OutlinedTimetableData
 ): readonly [readonly [Station, number][], StationPath | null] {
   const previous: { [key: string]: [Station, DiaTime] } = {};
 
+  const stations = timetableData.timetables.map((timetable) => timetable.stations).flat();
   // 駅ノードの初期化（未確定のノードのみ）
-  let stationNodes = timetable.stations.map((station) => ({
+  let stationNodes = stations.map((station) => ({
     station: station,
     distance: station.stationId === initialPosition.stationId ? startTime : Number.MAX_SAFE_INTEGER,
   }));
@@ -404,7 +405,7 @@ export function searchPath(
     currentTime = nextDetermineNode.distance;
     stationNodes = stationNodes.filter((node) => node.station.stationId !== nextDetermineNode.station.stationId);
 
-    const adjacentStations = getAdjacentStations(nextDetermineNode.station, timetable, currentTime).filter(
+    const adjacentStations = getAdjacentStations(nextDetermineNode.station, timetableData, currentTime).filter(
       (node_) => !determinedIds.has(node_.nextStation.stationId)
     );
 
@@ -452,7 +453,7 @@ export interface AgentManagerProps {
   extendedMap: ExtendedGameMap;
   stations: Station[];
   gameMap: GameMap;
-  timetable: OutlinedTimetable;
+  timetableData: OutlinedTimetableData;
   trainMove: TrainMove;
   currentTime: number;
 }
@@ -492,6 +493,11 @@ export class AgentManager implements AgentManagerBase {
     return this.agents;
   }
 
+  addAgentsRandomly(position: Point, cell: ExtendedCellConstruct, props: AgentManager2Props): unknown {
+    throw new Error("Method not implemented.");
+    
+  }
+
   add(position: Point) {
     const id = generateId();
     this.agents.push({
@@ -519,7 +525,7 @@ export class AgentManager implements AgentManagerBase {
           agent.destination = destination;
           agent.inDestination = false;
           agent.status = 'Move';
-          agent.path = createAgentPath(props.stations, agent, props.gameMap, props.currentTime, props.timetable);
+          agent.path = createAgentPath(props.stations, agent, props.gameMap, props.currentTime, props.timetableData);
         }
       }
     } else if (agent.status === 'Move') {
@@ -542,8 +548,7 @@ export class AgentManager implements AgentManagerBase {
           if (props.currentTime >= diaTime.departureTime) {
             // 時刻表の時間を過ぎたら、対応するtrainを探す
             // diaTime -> Train -> operations.train
-            const train = props.timetable.inboundTrains
-              .concat(props.timetable.outboundTrains)
+            const train = props.timetableData.trains
               .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
             assert(train !== undefined, 'train is undefined');
             const placedTrain = props.trainMove.getPlacedTrains().find((t) => t.train?.trainId === train.trainId);

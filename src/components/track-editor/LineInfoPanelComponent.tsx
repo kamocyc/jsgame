@@ -68,6 +68,14 @@ export function LineInfoPanel({
                     }}
                   />
                 </div>
+                <div>
+                  駅一覧:
+                  <ul>
+                    {railwayLine.stops.map((stop) => (
+                      <li>{stop.platform.station.stationName}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             );
           }}

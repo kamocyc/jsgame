@@ -13,7 +13,6 @@ import {
   Track,
 } from '../../model';
 import { createAgentManager } from '../track-editor/agentManager';
-import { createOperations, toDetailedTimetable, toOutlinedTimetableStations } from '../track-editor/timetableConverter';
 import { createTrainMove } from '../track-editor/trainMoveBase';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
@@ -206,13 +205,19 @@ export function TimetableEditorComponent({
           onClick={() => {
             const [newTimetable, newTrains] = reverseTimetableDirection(outlinedTimetableData, timetable);
             
-            setOutlinedTimetableData(timetableData => {
-              clearTimetable(timetableData, timetable);
-              return ({
-                timetables: timetableData.timetables.concat([newTimetable]),
-                trains: timetableData.trains.concat(newTrains)
-              })
-            });
+            clearTimetable(outlinedTimetableData, timetable);
+            setOutlinedTimetableData({
+              timetables: outlinedTimetableData.timetables.concat([newTimetable]),
+              trains: outlinedTimetableData.trains.concat(newTrains)
+            })
+
+            // setOutlinedTimetableData(timetableData => {
+            //   clearTimetable(timetableData, timetable);
+            //   return ({
+            //     timetables: timetableData.timetables.concat([newTimetable]),
+            //     trains: timetableData.trains.concat(newTrains)
+            //   })
+            // });
           }}
         >
           上り下りを反転
@@ -224,13 +229,19 @@ export function TimetableEditorComponent({
             }
 
             const [newTimetable, newTrains] = getInitialTimetable(railwayLine);
-            setOutlinedTimetableData(timetableData => {
-              clearTimetable(timetableData, timetable);
-              return ({
-                timetables: timetableData.timetables.concat([newTimetable]),
-                trains: timetableData.trains.concat(newTrains)
-              })
-            });
+            clearTimetable(outlinedTimetableData, timetable);
+            setOutlinedTimetableData({
+              timetables: outlinedTimetableData.timetables.concat([newTimetable]),
+              trains: outlinedTimetableData.trains.concat(newTrains)
+            })
+
+            // setOutlinedTimetableData(timetableData => {
+            //   clearTimetable(timetableData, timetable);
+            //   return ({
+            //     timetables: timetableData.timetables.concat([newTimetable]),
+            //     trains: timetableData.trains.concat(newTrains)
+            //   })
+            // });
           }}
         >
           初期化

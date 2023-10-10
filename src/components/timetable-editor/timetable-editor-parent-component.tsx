@@ -38,7 +38,7 @@ export function TimetableEditorParentComponent(
   : { appStates: AppStates; defaultSelectedRailwayLineId: string | null; setAppStates: StateUpdater<AppStates>; setToast: (toast: string) => void; }) {
   const [selectedRailwayLineId, setSelectedRailwayLineId] = useState<string | null>(defaultSelectedRailwayLineId);
   const selectedTimetable = appStates.outlinedTimetableData.timetables.find((timetable) => timetable.railwayLineId === selectedRailwayLineId);
-  const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId) ?? (appStates.railwayLines.length > 0 ? appStates.railwayLines[0] : null)
+  const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
   const update = () => {
     setAppStates(appStates => ({
       ...appStates,

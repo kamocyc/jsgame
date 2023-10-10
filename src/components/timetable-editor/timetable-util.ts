@@ -66,92 +66,47 @@ export function getInitialTrainTypes(): TrainType[] {
   ];
 }
 
-export function getInitialTimetable(railwayLine: RailwayLine | null): [OutlinedTimetable, Train[]] {
+export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetable, Train[]] {
   const baseTime = 7 * 60 * 60;
 
-  const [stations, inboundDiaTimes, outboundDiaTimes] = (() => {
-    if (railwayLine === null) {
-      const stations: Station[] = [createNewStation('東京'), createNewStation('横浜')];
-      const inboundDiaTimes = [
-        {
-          diaTimeId: generateId(),
-          arrivalTime: null,
-          departureTime: 7 * 60 * 60,
-          isPassing: false,
-          station: stations[0],
-          platform: getDefaultPlatform(stations[0], 'Inbound'),
-        },
-        {
-          diaTimeId: generateId(),
-          arrivalTime: 8 * 60 * 60,
-          departureTime: null,
-          isPassing: false,
-          station: stations[1],
-          platform: getDefaultPlatform(stations[1], 'Inbound'),
-        },
-      ];
-      const outboundDiaTimes = [
-        {
-          diaTimeId: generateId(),
-          arrivalTime: null,
-          departureTime: 7 * 60 * 60 + 30 * 60,
-          isPassing: false,
-          station: stations[1],
-          platform: getDefaultPlatform(stations[1], 'Outbound'),
-        },
-        {
-          diaTimeId: generateId(),
-          arrivalTime: 8 * 60 * 60 + 30 * 60,
-          departureTime: null,
-          isPassing: false,
-          station: stations[0],
-          platform: getDefaultPlatform(stations[0], 'Outbound'),
-        },
-      ];
-      return [stations, inboundDiaTimes, outboundDiaTimes]
-    } else {
-      function createDiaTime(stop: RailwayLineStop, index: number) {
-        return {
-          diaTimeId: generateId(),
-          arrivalTime: index === 0 ? null : currentTime,
-          departureTime: index === stops.length - 1 ? null : currentTime + 1,
-          isPassing: false,
-          station: stop.platform.station,
-          platform: stop.platform
-        }
-      }
-
-      const stops = railwayLine.stops;
-  
-      let currentTime: number;
-      let inboundDiaTimes: DiaTime[];
-      let outboundDiaTimes: DiaTime[]
-      {
-        currentTime = baseTime;
-        inboundDiaTimes = stops.map((stop, index) => {
-          const newDiaTime = createDiaTime(stop, index);
-          if (index !== stops.length - 1 && stops[index].platformPaths != null) {
-            currentTime += stops[index].platformPaths!.length * 3 * 60;
-          }
-          return newDiaTime;
-        });
-      }
-      {
-        currentTime = baseTime;
-        outboundDiaTimes = [...stops].reverse().map((stop, index) => {
-          const newDiaTime = createDiaTime(stop, index);
-          if (index !== stops.length - 1 && stops[index + 1].platformPaths != null) {
-            currentTime += stops[index + 1].platformPaths!.length * 3 * 60;
-          }
-          return newDiaTime;
-        });
-      }
-    
-      const stations = stops.map(stop => stop.platform.station);
-      return [stations, inboundDiaTimes, outboundDiaTimes];
+  function createDiaTime(stop: RailwayLineStop, index: number) {
+    return {
+      diaTimeId: generateId(),
+      arrivalTime: index === 0 ? null : currentTime,
+      departureTime: index === stops.length - 1 ? null : currentTime + 1,
+      isPassing: false,
+      station: stop.platform.station,
+      platform: stop.platform
     }
-  })()
+  }
 
+  const stops = railwayLine.stops;
+
+  let currentTime: number;
+  let inboundDiaTimes: DiaTime[];
+  let outboundDiaTimes: DiaTime[]
+  {
+    currentTime = baseTime;
+    inboundDiaTimes = stops.map((stop, index) => {
+      const newDiaTime = createDiaTime(stop, index);
+      if (index !== stops.length - 1 && stops[index].platformPaths != null) {
+        currentTime += stops[index].platformPaths!.length * 3 * 60;
+      }
+      return newDiaTime;
+    });
+  }
+  {
+    currentTime = baseTime;
+    outboundDiaTimes = [...stops].reverse().map((stop, index) => {
+      const newDiaTime = createDiaTime(stop, index);
+      if (index !== stops.length - 1 && stops[index + 1].platformPaths != null) {
+        currentTime += stops[index + 1].platformPaths!.length * 3 * 60;
+      }
+      return newDiaTime;
+    });
+  }
+
+  const stations = stops.map(stop => stop.platform.station);
 
   const inboundTrains: Train[] = [{
     trainId: generateId(),

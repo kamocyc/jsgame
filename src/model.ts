@@ -125,7 +125,7 @@ export function cloneTrain(train: Train): Train {
 }
 
 export interface OutlinedTimetable {
-  railwayLineId: string | null;
+  railwayLineId: string;
   inboundTrainIds: string[];
   outboundTrainIds: string[];
   stations: Station[];

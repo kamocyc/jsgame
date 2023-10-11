@@ -177,7 +177,7 @@ export class TrainMove implements ITrainMove {
     }
 
     const ttItems = this.timetable.switchTTItems.filter(
-      (t) => t.Switch.switchId === currentSwitch.switchId && t.placedTrainId === placedTrain.placedTrainId
+      (t) => t.switchId === currentSwitch.switchId && t.placedTrainId === placedTrain.placedTrainId
     );
     let branchDirection: BranchDirection;
     if (ttItems.length === 0) {
@@ -212,8 +212,7 @@ export class TrainMove implements ITrainMove {
     ) {
       const timetableItems = this.timetable.platformTTItems.filter(
         (t) =>
-          t.platform.platformId === placedTrain.track.track.platform!.platformId &&
-          t.placedTrainId === placedTrain.placedTrainId
+          t.platformId === placedTrain.track.track.platform!.platformId && t.placedTrainId === placedTrain.placedTrainId
       );
       if (timetableItems.length === 0) {
         console.warn('timetableItems.length === 0');
@@ -402,7 +401,7 @@ export class TrainMoveWithTimetable {
         }
 
         const nextTrack = this.trainMove.timetable.platformTTItems.find(
-          (ttItem) => ttItem.train?.trainId === nextTrain!.trainId
+          (ttItem) => ttItem.trainId === nextTrain!.trainId
         )?.track;
         if (nextTrack == null) {
           throw new Error('ttItem.track == null');
@@ -448,7 +447,7 @@ export class TrainMoveWithTimetable {
 
     for (const operation of operations) {
       const ttItem = this.trainMove.timetable.platformTTItems.find(
-        (ttItem) => ttItem.train?.trainId === operation.trains[0].trainId
+        (ttItem) => ttItem.trainId === operation.trains[0].trainId
       );
       assert(ttItem !== undefined, 'ttItem !== undefined');
       // trackがnullのときは、ダイヤ上、終着であることを意味するべきであるので、nullになることはありえないはず

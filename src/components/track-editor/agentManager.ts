@@ -1,6 +1,7 @@
 import { assert, removeNull } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
-import { DiaTime, OutlinedTimetableData, Point, Station, generateId } from '../../model';
+import { DiaTime, Point, Station, generateId } from '../../model';
+import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManager2, AgentManager2Props } from './agentManager2';

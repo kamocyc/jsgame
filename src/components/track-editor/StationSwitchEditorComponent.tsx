@@ -66,7 +66,7 @@ export function SwitchEditor({
   const [selectedTrain, setSelectedTrain] = useState<StoredTrain | null>(null);
   const [_, setUpdate] = useState([]);
   const ttItems = timetable.switchTTItems.filter(
-    (item) => item.Switch.switchId === Switch.switchId && item.placedTrainId === selectedTrain?.placedTrainId
+    (item) => item.switchId === Switch.switchId && item.placedTrainId === selectedTrain?.placedTrainId
   );
 
   // if (ttItems.length === 0) {
@@ -189,7 +189,7 @@ export function StationEditor({
 
   const station = platform.station;
   const ttItems = timetable.platformTTItems.filter(
-    (item) => item.platform.platformId === platform.platformId && item.placedTrainId === selectedTrain?.placedTrainId
+    (item) => item.platformId === platform.platformId && item.placedTrainId === selectedTrain?.placedTrainId
   );
 
   return (
@@ -218,8 +218,8 @@ export function StationEditor({
             onClick={() => {
               timetable.platformTTItems.push({
                 placedTrainId: selectedTrain.placedTrainId,
-                train: null,
-                platform: platform,
+                trainId: null,
+                platformId: platform.platformId,
                 departureTime: 0,
                 arrivalTime: 0,
                 track: null /* TODO: 方向を指定する */,

@@ -11,7 +11,8 @@ import {
   createMapContext,
   timesVector,
 } from '../../mapEditorModel';
-import { DetailedTimetable, OutlinedTimetableData, Station, Switch } from '../../model';
+import { DetailedTimetable, Station, Switch } from '../../model';
+import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct, TerrainType } from '../extendedMapModel';
 import { LineInfoPanel } from './LineInfoPanelComponent';

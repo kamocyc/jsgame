@@ -1,17 +1,8 @@
 import { StateUpdater, useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
 import { RailwayLine } from '../../mapEditorModel';
-import {
-  AppClipboard,
-  OutlinedTimetable,
-  OutlinedTimetableData,
-  SettingData,
-  Station,
-  TimetableDirection,
-  Track,
-  Train,
-  TrainType,
-} from '../../model';
+import { AppClipboard, SettingData, Station, TimetableDirection, Track, Train, TrainType } from '../../model';
+import { OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';

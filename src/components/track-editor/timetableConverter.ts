@@ -4,7 +4,6 @@ import {
   DetailedTimetable,
   DiaTime,
   Operation,
-  OutlinedTimetableData,
   Platform,
   PlatformTimetableItem,
   Station,
@@ -13,6 +12,7 @@ import {
   Train,
   generateId,
 } from '../../model';
+import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { abstractSearch, getDistance, getNextTracks } from '../../trackUtil';
 import { defaultGlobalTimeSpeed } from './globalTimeManager';
 import { getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove';
@@ -225,11 +225,10 @@ function toPlatformTTItems(allPlatforms: Platform[], tracks: Track[], trains: Tr
       })();
 
       platformTTItems.push({
-        train: { ...train },
+        trainId: train.trainId,
         placedTrainId: train.trainId, // TODO: とりあえずは同じにする
-        platform: {
-          ...getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!)!.track.platform!,
-        } /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */,
+        platformId: getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!)!.track.platform!.platformId,
+        /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */
         departureTime: diaTime.departureTime,
         arrivalTime: diaTime.arrivalTime,
         track: track,
@@ -351,11 +350,8 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
       assert(prevDepartureTime !== null);
 
       switchTTItems.push({
-        train: {
-          ...train,
-        },
         placedTrainId: train.trainId, // TODO: とりあえずは同じにする
-        Switch: { ...currentSwitch },
+        switchId: currentSwitch.switchId,
         changeTime: prevDepartureTime,
         branchDirection: branchDirection,
       });

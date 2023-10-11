@@ -2,7 +2,6 @@ import { RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import {
   DefaultStationDistance,
   DiaTime,
-  OutlinedTimetable,
   Platform,
   Station,
   TimetableDirection,
@@ -10,6 +9,7 @@ import {
   TrainType,
   generateId,
 } from '../../model';
+import { OutlinedTimetable } from '../../outlinedTimetableData';
 import { createOperations } from '../track-editor/timetableConverter';
 import './timetable-editor.css';
 

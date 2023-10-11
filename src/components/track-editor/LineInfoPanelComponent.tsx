@@ -1,5 +1,5 @@
 import { RailwayLine } from '../../mapEditorModel';
-import { OutlinedTimetableData } from '../../model';
+import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { ListSettingCommonComponent } from './ListSettingCommonComponent';
 
 export function LineInfoPanel({

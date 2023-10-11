@@ -4,7 +4,8 @@ import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
 import { MapManager } from './components/track-editor/mapManager';
 import { MoneyManager } from './components/track-editor/moneyManager';
 import { ITrainMove, StoredTrain } from './components/track-editor/trainMoveBase';
-import { DetailedTimetable, OutlinedTimetableData, Platform, Point, Station, Switch, Track } from './model';
+import { DetailedTimetable, Platform, Point, Station, Switch, Track } from './model';
+import { OutlinedTimetableData } from './outlinedTimetableData';
 
 export const CellWidth = 32;
 export const CellHeight = 32;

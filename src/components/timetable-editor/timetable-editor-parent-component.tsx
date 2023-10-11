@@ -1,8 +1,8 @@
-import { StateUpdater, useState } from 'preact/hooks';
+import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates } from '../../mapEditorModel';
-import { OutlinedTimetableData } from '../../model';
+import { OutlinedTimetableData, Platform } from '../../model';
 import { createAgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable } from '../track-editor/timetableConverter';
 import { createTrainMove } from '../track-editor/trainMoveBase';
@@ -40,15 +40,28 @@ export function TimetableEditorParentComponent({
   setToast: (toast: string) => void;
 }) {
   const [selectedRailwayLineId, setSelectedRailwayLineId] = useState<string | null>(defaultSelectedRailwayLineId);
-  const selectedTimetable = appStates.outlinedTimetableData.timetables.find(
-    (timetable) => timetable.railwayLineId === selectedRailwayLineId
-  );
+
+  useEffect(() => {
+    if (selectedRailwayLineId == null && appStates.railwayLines.length > 0) {
+      setSelectedRailwayLineId(appStates.railwayLines[0].railwayLineId);
+    }
+  });
+
+  const selectedTimetable = appStates.outlinedTimetableData
+    .getTimetables()
+    .find((timetable) => timetable.railwayLineId === selectedRailwayLineId);
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
   const update = () => {
     setAppStates((appStates) => ({
       ...appStates,
     }));
   };
+
+  console.log({
+    selectedRailwayLineId,
+    selectedTimetable,
+    railwayLine,
+  });
 
   return (
     <>
@@ -84,8 +97,18 @@ export function TimetableEditorParentComponent({
         </div>
         <button
           onClick={() => {
+            const platforms = appStates.map
+              .map((row) =>
+                row
+                  .filter((cell) => cell.lineType)
+                  .map((cell) => cell.lineType?.tracks)
+                  .flat()
+                  .map((track) => track?.track.platform)
+              )
+              .flat()
+              .filter((p) => p);
             const timetableAndOperations = toDetailedTimetable(
-              appStates.stations,
+              platforms as Platform[],
               appStates.outlinedTimetableData,
               appStates.tracks
             );
@@ -118,6 +141,12 @@ export function TimetableEditorParentComponent({
           <select
             onChange={(e) => {
               setSelectedRailwayLineId(e.currentTarget.value);
+              const railwayLine = appStates.railwayLines.find(
+                (railwayLine) => railwayLine.railwayLineId === e.currentTarget.value
+              );
+              if (railwayLine != null) {
+                update();
+              }
             }}
           >
             {appStates.railwayLines.map((railwayLine) => (
@@ -128,7 +157,7 @@ export function TimetableEditorParentComponent({
         {selectedTimetable !== undefined && railwayLine !== undefined ? (
           <TimetableEditorComponent
             railwayLine={railwayLine}
-            outlinedTimetableData={appStates.outlinedTimetableData}
+            timetableData={appStates.outlinedTimetableData}
             timetable={selectedTimetable}
             tracks={appStates.tracks}
             update={update}

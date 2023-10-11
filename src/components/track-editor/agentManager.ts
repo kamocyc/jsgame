@@ -73,7 +73,7 @@ export function getAdjacentStations(
   currentTime: number
 ): NextStationInfo[] {
   const nextStations = removeNull(
-    timetableData.trains.map((train) => {
+    timetableData.getTrains().map((train) => {
       const [currentStationDiaTime, nextStationDiaTime] = (() => {
         const i = train.diaTimes.findIndex((diaTime) => diaTime.station.stationId === currentStation.stationId);
         if (i === -1 || i >= train.diaTimes.length - 1) {
@@ -393,7 +393,10 @@ export function searchPath(
 ): readonly [readonly [Station, number][], StationPath | null] {
   const previous: { [key: string]: [Station, DiaTime] } = {};
 
-  const stations = timetableData.timetables.map((timetable) => timetable.stations).flat();
+  const stations = timetableData
+    .getTimetables()
+    .map((timetable) => timetable.stations)
+    .flat();
   // 駅ノードの初期化（未確定のノードのみ）
   let stationNodes = stations.map((station) => ({
     station: station,
@@ -552,9 +555,9 @@ export class AgentManager implements AgentManagerBase {
           if (props.currentTime >= diaTime.departureTime) {
             // 時刻表の時間を過ぎたら、対応するtrainを探す
             // diaTime -> Train -> operations.train
-            const train = props.timetableData.trains.find((train) =>
-              train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId)
-            );
+            const train = props.timetableData
+              .getTrains()
+              .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
             assert(train !== undefined, 'train is undefined');
             const placedTrain = props.trainMove.getPlacedTrains().find((t) => t.train?.trainId === train.trainId);
             if (placedTrain === undefined) {

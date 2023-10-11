@@ -18,7 +18,7 @@ export class GlobalTimeManager {
     this.resetGlobalTime();
   }
 
-  resetGlobalTime(time: number = 7 * 60 * 60) {
+  resetGlobalTime(time: number = 10 * 60 * 60) {
     this.globalTime = time;
   }
 

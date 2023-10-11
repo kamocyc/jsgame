@@ -327,6 +327,7 @@ export function getEkiJikokus(oudBuf: string): [OutlinedTimetable, Train[]] {
   return [
     {
       railwayLineId: null,
+      timetableId: generateId(),
       trainTypes,
       inboundTrainIds,
       outboundTrainIds,

@@ -16,7 +16,7 @@ export function ListSettingCommonComponent<T>({
   selectData: (data: T) => void;
   getSettingComponent: (data: T) => any /* JSX.Element */;
   getDisplayName: (data: T) => string;
-  excludeFromDatas: (datas: T[], data: T) => T[];
+  excludeFromDatas: (datas: T[], data: T) => T[] | false;
   getNewData: (() => T) | null;
   settingColumnWidth?: string;
 }) {
@@ -40,7 +40,10 @@ export function ListSettingCommonComponent<T>({
               <div>
                 <button
                   onClick={() => {
-                    setDatas(excludeFromDatas(datas, data));
+                    const result = excludeFromDatas(datas, data);
+                    if (result !== false) {
+                      setDatas(result);
+                    }
                   }}
                 >
                   削除

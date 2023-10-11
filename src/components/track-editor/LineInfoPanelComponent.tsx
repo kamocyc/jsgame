@@ -1,13 +1,16 @@
 import { RailwayLine } from '../../mapEditorModel';
+import { OutlinedTimetableData } from '../../model';
 import { ListSettingCommonComponent } from './ListSettingCommonComponent';
 
 export function LineInfoPanel({
   railwayLines,
+  timetableData,
   setRailwayLines,
   selectedRailwayLineId,
   setSelectedRailwayLineId,
 }: {
   railwayLines: RailwayLine[];
+  timetableData: OutlinedTimetableData;
   setRailwayLines: (railwayLines: RailwayLine[]) => void;
   selectedRailwayLineId: string | null;
   setSelectedRailwayLineId: (id: string) => void;
@@ -83,6 +86,11 @@ export function LineInfoPanel({
             return railwayLine.railwayLineName;
           }}
           excludeFromDatas={(railwayLines, railwayLine) => {
+            // TODO: 削除確認ダイアログを出す？
+            const timetable = timetableData.getTimetables().find((t) => t.railwayLineId === railwayLine.railwayLineId);
+            if (timetable != null) {
+              timetableData.deleteTimetable(timetable.timetableId);
+            }
             return railwayLines.filter((rl) => rl.railwayLineId !== railwayLine.railwayLineId);
           }}
           getNewData={null}

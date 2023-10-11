@@ -18,13 +18,7 @@ import { DiagramOperationComponent } from './diagram-operation-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
-import {
-  clearTimetable,
-  deleteTrains,
-  getInitialTimetable,
-  getTrain,
-  reverseTimetableDirection,
-} from './timetable-util';
+import { getInitialTimetable } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 
@@ -101,7 +95,7 @@ export function TimetableEditorTableComponent({
 }
 
 export function TimetableEditorComponent({
-  outlinedTimetableData,
+  timetableData,
   timetable,
   railwayLine,
   tracks,
@@ -109,7 +103,7 @@ export function TimetableEditorComponent({
   setToast,
   update,
 }: {
-  outlinedTimetableData: OutlinedTimetableData;
+  timetableData: OutlinedTimetableData;
   timetable: OutlinedTimetable;
   railwayLine: RailwayLine;
   tracks: Track[];
@@ -142,13 +136,13 @@ export function TimetableEditorComponent({
     timetable.outboundTrainIds = outlinedTimetable.outboundTrainIds;
     timetable.operations = outlinedTimetable.operations;
     timetable.trainTypes = outlinedTimetable.trainTypes;
-    outlinedTimetableData.trains.push(...trains); // なんか重複するのもできそうな気がするが... とりあえず問題になったら考え
+    timetableData.getTrains().push(...trains); // なんか重複するのもできそうな気がするが... とりあえず問題になったら考え
 
     return true;
   }
 
-  const inboundTrains = timetable.inboundTrainIds.map((trainId) => getTrain(outlinedTimetableData, trainId));
-  const outboundTrains = timetable.outboundTrainIds.map((trainId) => getTrain(outlinedTimetableData, trainId));
+  const inboundTrains = timetable.inboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
+  const outboundTrains = timetable.outboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
 
   const setDiaStations = (stations: Station[]) => {
     timetable.stations = stations;
@@ -161,24 +155,7 @@ export function TimetableEditorComponent({
   };
 
   const setTrains = (trains: Train[]) => {
-    // 削除した分の処理
-    const toDeletedTrainIds =
-      timetableDirection === 'Inbound'
-        ? timetable.inboundTrainIds.filter((trainId) => !trains.some((train) => train.trainId === trainId))
-        : timetable.outboundTrainIds.filter((trainId) => !trains.some((train) => train.trainId === trainId));
-    deleteTrains(outlinedTimetableData, toDeletedTrainIds);
-
-    // 追加した分の処理
-    const toAddedTrains = trains.filter(
-      (train) => !outlinedTimetableData.trains.some((train2) => train2.trainId === train.trainId)
-    );
-    outlinedTimetableData.trains.push(...toAddedTrains);
-
-    if (timetableDirection === 'Inbound') {
-      timetable.inboundTrainIds = trains.map((train) => train.trainId);
-    } else {
-      timetable.outboundTrainIds = trains.map((train) => train.trainId);
-    }
+    timetableData.setTrains(timetable.timetableId, trains, timetableDirection);
 
     update();
   };
@@ -202,7 +179,7 @@ export function TimetableEditorComponent({
             onChange={async (event) => {
               const diagram = await importOutdiaFile(event);
               if (diagram != null) {
-                clearTimetable(outlinedTimetableData, timetable);
+                timetableData.clearTimetable(timetable.timetableId);
                 const result = mergeTimetable(diagram);
                 if (result !== true) {
                   setToast(result.error);
@@ -213,21 +190,7 @@ export function TimetableEditorComponent({
         </div>
         <button
           onClick={() => {
-            const [newTimetable, newTrains] = reverseTimetableDirection(outlinedTimetableData, timetable);
-
-            clearTimetable(outlinedTimetableData, timetable);
-            setOutlinedTimetableData({
-              timetables: outlinedTimetableData.timetables.concat([newTimetable]),
-              trains: outlinedTimetableData.trains.concat(newTrains),
-            });
-
-            // setOutlinedTimetableData(timetableData => {
-            //   clearTimetable(timetableData, timetable);
-            //   return ({
-            //     timetables: timetableData.timetables.concat([newTimetable]),
-            //     trains: timetableData.trains.concat(newTrains)
-            //   })
-            // });
+            timetableData.reverseTimetableDirection(timetable.timetableId);
           }}
         >
           上り下りを反転
@@ -238,20 +201,9 @@ export function TimetableEditorComponent({
               return;
             }
 
+            timetableData.clearTimetable(timetable.timetableId);
             const [newTimetable, newTrains] = getInitialTimetable(railwayLine);
-            clearTimetable(outlinedTimetableData, timetable);
-            setOutlinedTimetableData({
-              timetables: outlinedTimetableData.timetables.concat([newTimetable]),
-              trains: outlinedTimetableData.trains.concat(newTrains),
-            });
-
-            // setOutlinedTimetableData(timetableData => {
-            //   clearTimetable(timetableData, timetable);
-            //   return ({
-            //     timetables: timetableData.timetables.concat([newTimetable]),
-            //     trains: timetableData.trains.concat(newTrains)
-            //   })
-            // });
+            timetableData.addTimetable(newTimetable, newTrains);
           }}
         >
           初期化

@@ -53,10 +53,7 @@ const defaultMapHeight = 20;
 export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
-  const timetableData: OutlinedTimetableData = {
-    timetables: [],
-    trains: [],
-  };
+  const timetableData = new OutlinedTimetableData();
   const storedTrains = [
     {
       placedTrainId: '1',

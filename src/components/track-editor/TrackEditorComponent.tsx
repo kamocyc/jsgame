@@ -75,7 +75,7 @@ function toStringEditorData(appStates: AppStates) {
     map: appStates.map,
     storedTrains: appStates.storedTrains,
     timetable: appStates.detailedTimetable,
-    timetableData: appStates.outlinedTimetableData,
+    timetableData: appStates.outlinedTimetableData.toDataToSave(),
     extendedMap: appStates.extendedMap,
     placedTrains: appStates.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
@@ -112,7 +112,11 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const storedTrains: StoredTrain[] = obj['storedTrains'] ?? [];
   const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
   const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
-  const timetableData: OutlinedTimetableData = obj['timetableData'] ?? { timetables: [], trains: [] };
+  const timetableDataRaw = obj['timetableData'];
+  const timetableData: OutlinedTimetableData =
+    timetableDataRaw.trains && timetableDataRaw.timetables
+      ? new OutlinedTimetableData(timetableDataRaw.trains, timetableDataRaw.timetables)
+      : new OutlinedTimetableData();
   const railwayLines = obj['railwayLines'] ?? [];
 
   const trainMove = createTrainMove(timetable);
@@ -296,6 +300,7 @@ export function TrackEditorComponent({
       {showLineInfoPanel ? (
         <div className='dialog'>
           <LineInfoPanel
+            timetableData={appStates.outlinedTimetableData}
             railwayLines={appStates.railwayLines}
             selectedRailwayLineId={appStates.selectedRailwayLineId}
             setSelectedRailwayLineId={(id) => {

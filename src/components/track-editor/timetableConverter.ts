@@ -169,8 +169,8 @@ function toStringFromPlatform(platform: Platform) {
   return platform.station.stationName + ' ' + platform.platformName;
 }
 
-function toPlatformTTItems(allTrackStations: Station[], tracks: Track[], trains: Train[]): PlatformTimetableItem[] {
-  const allTrackPlatformIds = new Set<string>(allTrackStations.map((s) => s.platforms.map((p) => p.platformId)).flat());
+function toPlatformTTItems(allPlatforms: Platform[], tracks: Track[], trains: Train[]): PlatformTimetableItem[] {
+  const allTrackPlatformIds = new Set<string>(allPlatforms.map((p) => p.platformId));
 
   // platformは基本的には時刻をそのまま転記すればよい
   const platformTTItems: PlatformTimetableItem[] = [];
@@ -366,9 +366,9 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
 }
 
 function isPlatformsIsNotNull(timetable: OutlinedTimetableData) {
-  const nullPlatforms = timetable.trains.filter((t) =>
-    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platform === null)
-  );
+  const nullPlatforms = timetable
+    .getTrains()
+    .filter((t) => t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platform === null));
 
   if (nullPlatforms.length > 0) {
     alert('番線が設定されていない箇所があります');
@@ -378,7 +378,7 @@ function isPlatformsIsNotNull(timetable: OutlinedTimetableData) {
 }
 
 export function toDetailedTimetable(
-  allTrackStations: Station[],
+  allPlatforms: Platform[],
   timetableData: OutlinedTimetableData,
   tracks: Track[]
 ): [DetailedTimetable, Operation[]] | null {
@@ -390,17 +390,17 @@ export function toDetailedTimetable(
   // というかまずは単に時刻が入っていないのをエラーにすべき気がする。。。
 
   // 方向をどうするか。。。設置時？基本的にはダイヤ変換時に設定する。ホームトラック終端の上下 > （上下が同じなら）左右方向の区別とする。トラックが移動や回転された場合は再設定が必要になるが、その場合はどちらにしても再設定がいる。
-  const platformTTItems = toPlatformTTItems(allTrackStations, tracks, timetableData.trains);
+  const platformTTItems = toPlatformTTItems(allPlatforms, tracks, timetableData.getTrains());
 
   // switchは、駅と駅の間の経路を探索し、通過したswitchを追加する
   // changeTimeをどうするか。。。 通過の列車の指定のほうがいい気がする。。？でも列車の指定はあるから、そんなに重複することはないか。1列車が駅に到着せずに一つのswitchを複数回通過することはないはず。
   const switchTTItems: SwitchTimetableItem[] = [];
 
-  for (const train of timetableData.trains) {
+  for (const train of timetableData.getTrains()) {
     switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
 
-  const operations = createOperations(timetableData.trains);
+  const operations = createOperations(timetableData.getTrains());
   return [
     {
       platformTTItems: platformTTItems,

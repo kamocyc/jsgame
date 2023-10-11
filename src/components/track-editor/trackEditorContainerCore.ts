@@ -22,6 +22,7 @@ import {
 } from '../../model';
 import { getMidPoint, isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad, TerrainType } from '../extendedMapModel';
+import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
@@ -577,6 +578,8 @@ export function onmouseup(
         // 選択終了
         if (appStates.currentRailwayLine !== null) {
           appStates.railwayLines.push(appStates.currentRailwayLine);
+          const [timetable, newTrains] = getInitialTimetable(appStates.currentRailwayLine);
+          appStates.outlinedTimetableData.addTimetable(timetable, newTrains);
           appStates.currentRailwayLine = null;
         }
       } else {

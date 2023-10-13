@@ -22,8 +22,8 @@ import { createAgentManager } from './agentManager';
 import { generateTerrain } from './generateExtendedMap';
 import { MoneyManager } from './moneyManager';
 import { drawEditor } from './trackEditorDrawer';
-import { TrainMove } from './trainMove';
 import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
+import { TrainTimetableMove } from './trainTImetableMove';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -264,6 +264,7 @@ export function TrackEditorComponent({
         railwayLines: appStates.railwayLines,
         storedTrains: appStates.storedTrains,
         moneyManager: appStates.moneyManager,
+        tracks: appStates.tracks,
       });
       addAgents(appStates);
       appStates.agentManager.tick({
@@ -274,7 +275,7 @@ export function TrackEditorComponent({
         placedTrains: appStates.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
         timetableData: appStates.outlinedTimetableData,
-        trainMove: appStates.trainMove as TrainMove,
+        trainMove: appStates.trainMove as TrainTimetableMove,
         moneyManager: appStates.moneyManager,
         globalTimeManager: appStates.globalTimeManager,
       });

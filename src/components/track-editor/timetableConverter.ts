@@ -1,93 +1,97 @@
 import { assert } from '../../common';
-import { CellHeight } from '../../mapEditorModel';
 import {
   DetailedTimetable,
-  DiaTime,
   Operation,
   Platform,
-  PlatformTimetableItem,
-  Station,
-  SwitchTimetableItem,
+  PlatformTTItem,
+  PlatformTimetable,
+  PlatformTimetableMap,
+  SwitchTTItem,
+  SwitchTimetable,
   Track,
   Train,
   generateId,
 } from '../../model';
 import { OutlinedTimetableData } from '../../outlinedTimetableData';
-import { abstractSearch, getDistance, getNextTracks } from '../../trackUtil';
-import { defaultGlobalTimeSpeed } from './globalTimeManager';
-import { getNextTrackOfBranchPattern, getNextTrackOfStraightPattern } from './trainMove';
+import {
+  abstractSearch,
+  getDistance,
+  getNextTrackOfBranchPattern,
+  getNextTrackOfStraightPattern,
+  getNextTracks,
+} from '../../trackUtil';
 
-function getStationDistances(platforms: (readonly [Track, Platform])[], stations: Station[]) {
-  // 距離を計算する
-  // platformsのtrackのうち最も左のもの
-  const leftmostStation = platforms.reduce((prev, current) => {
-    if (prev[0].begin.x < current[0].begin.x) {
-      return prev;
-    } else {
-      return current;
-    }
-  });
+// function getStationDistances(platforms: (readonly [Track, Platform])[], stations: Station[]) {
+//   // 距離を計算する
+//   // platformsのtrackのうち最も左のもの
+//   const leftmostStation = platforms.reduce((prev, current) => {
+//     if (prev[0].begin.x < current[0].begin.x) {
+//       return prev;
+//     } else {
+//       return current;
+//     }
+//   });
 
-  const rightmostStation = platforms.reduce((prev, current) => {
-    if (prev[0].begin.x > current[0].begin.x) {
-      return prev;
-    } else {
-      return current;
-    }
-  });
+//   const rightmostStation = platforms.reduce((prev, current) => {
+//     if (prev[0].begin.x > current[0].begin.x) {
+//       return prev;
+//     } else {
+//       return current;
+//     }
+//   });
 
-  const pathTracks = searchTrackPath(leftmostStation[0], rightmostStation[0]);
-  if (!pathTracks) {
-    return null;
-  }
+//   const pathTracks = searchTrackPath(leftmostStation[0], rightmostStation[0]);
+//   if (!pathTracks) {
+//     return null;
+//   }
 
-  // result中のstationを順にたどり、途中に経由したtracksの数を数えて、とりあえず所要時間とする
-  const stationDistances = new Map<string, [Station, number]>();
-  for (let pathTrackIndex = 0; pathTrackIndex < pathTracks.length; pathTrackIndex++) {
-    const station = pathTracks[pathTrackIndex].track.platform?.station;
-    if (station && !stationDistances.has(station.stationId)) {
-      stationDistances.set(station.stationId, [station, pathTrackIndex]);
-    }
-  }
+//   // result中のstationを順にたどり、途中に経由したtracksの数を数えて、とりあえず所要時間とする
+//   const stationDistances = new Map<string, [Station, number]>();
+//   for (let pathTrackIndex = 0; pathTrackIndex < pathTracks.length; pathTrackIndex++) {
+//     const station = pathTracks[pathTrackIndex].track.platform?.station;
+//     if (station && !stationDistances.has(station.stationId)) {
+//       stationDistances.set(station.stationId, [station, pathTrackIndex]);
+//     }
+//   }
 
-  return [...stationDistances.values()];
-}
+//   return [...stationDistances.values()];
+// }
 
-function getInitialDiaTimes(
-  stationDistances: [Station, number][],
-  direction: 'Inbound' | 'Outbound',
-  offsetTime: number
-) {
-  const trainSpeedPixelPerFrame = 10;
-  const timeSpeedSecondPerFrame = defaultGlobalTimeSpeed;
-  const cellLengthPixelPerCell = CellHeight * 1.5;
-  const coefficient = (cellLengthPixelPerCell * timeSpeedSecondPerFrame) / trainSpeedPixelPerFrame;
-  const waitTimePerStation = 15;
+// function getInitialDiaTimes(
+//   stationDistances: [Station, number][],
+//   direction: 'Inbound' | 'Outbound',
+//   offsetTime: number
+// ) {
+//   const trainSpeedPixelPerFrame = 10;
+//   const timeSpeedSecondPerFrame = defaultGlobalTimeSpeed;
+//   const cellLengthPixelPerCell = CellHeight * 1.5;
+//   const coefficient = (cellLengthPixelPerCell * timeSpeedSecondPerFrame) / trainSpeedPixelPerFrame;
+//   const waitTimePerStation = 15;
 
-  const diaTimes: DiaTime[] = [];
-  let accumulatedWaitTime = 0;
-  for (let i = 0; i < stationDistances.length; i++) {
-    const [station, distance] = stationDistances[i];
-    diaTimes.push({
-      diaTimeId: generateId(),
-      arrivalTime: i === 0 ? null : Math.round(distance * coefficient) + accumulatedWaitTime + offsetTime,
-      departureTime:
-        i === stationDistances.length - 1
-          ? null
-          : Math.round(distance * coefficient) + accumulatedWaitTime + waitTimePerStation + offsetTime,
-      isPassing: false,
-      station: station,
-      platform: station.platforms.filter(
-        (p) =>
-          (direction === 'Inbound' && p.platformId === station.defaultInboundPlatformId) ||
-          (direction === 'Outbound' && p.platformId === station.defaultOutboundPlatformId)
-      )[0],
-    });
-    accumulatedWaitTime += waitTimePerStation;
-  }
+//   const diaTimes: DiaTime[] = [];
+//   let accumulatedWaitTime = 0;
+//   for (let i = 0; i < stationDistances.length; i++) {
+//     const [station, distance] = stationDistances[i];
+//     diaTimes.push({
+//       diaTimeId: generateId(),
+//       arrivalTime: i === 0 ? null : Math.round(distance * coefficient) + accumulatedWaitTime + offsetTime,
+//       departureTime:
+//         i === stationDistances.length - 1
+//           ? null
+//           : Math.round(distance * coefficient) + accumulatedWaitTime + waitTimePerStation + offsetTime,
+//       isPassing: false,
+//       station: station,
+//       platform: station.platforms.filter(
+//         (p) =>
+//           (direction === 'Inbound' && p.platformId === station.defaultInboundPlatformId) ||
+//           (direction === 'Outbound' && p.platformId === station.defaultOutboundPlatformId)
+//       )[0],
+//     });
+//     accumulatedWaitTime += waitTimePerStation;
+//   }
 
-  return diaTimes;
-}
+//   return diaTimes;
+// }
 
 // export function toOutlinedTimetableStations(tracks: Track[]): OutlinedTimetable | null {
 //   const platforms = tracks.filter((t) => t.track.platform != null).map((t) => [t, t.track.platform!] as const);
@@ -169,11 +173,11 @@ function toStringFromPlatform(platform: Platform) {
   return platform.station.stationName + ' ' + platform.platformName;
 }
 
-function toPlatformTTItems(allPlatforms: Platform[], tracks: Track[], trains: Train[]): PlatformTimetableItem[] {
+function toPlatformTTItems(allPlatforms: Platform[], tracks: Track[], trains: Train[]): PlatformTimetableMap {
   const allTrackPlatformIds = new Set<string>(allPlatforms.map((p) => p.platformId));
 
   // platformは基本的には時刻をそのまま転記すればよい
-  const platformTTItems: PlatformTimetableItem[] = [];
+  const platformTTItems: PlatformTTItem[] = [];
 
   for (const train of trains) {
     let diaTimeIndex = 0;
@@ -183,62 +187,73 @@ function toPlatformTTItems(allPlatforms: Platform[], tracks: Track[], trains: Tr
       }
 
       // trackの方向を決定する
-      const track = (() => {
-        if (diaTimeIndex === train.diaTimes.length - 1) {
-          return null;
-        }
-        const track1 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!);
-        const track2 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex + 1].platform!);
-        if (!track1) {
-          throw new Error(
-            'track1 が見つかりませんでした (' + toStringFromPlatform(train.diaTimes[diaTimeIndex].platform!) + ')'
-          );
-        }
-        if (!track2) {
-          throw new Error(
-            'track2 が見つかりませんでした (' + toStringFromPlatform(train.diaTimes[diaTimeIndex + 1].platform!) + ')'
-          );
-        }
+      // const track = (() => {
+      //   if (diaTimeIndex === train.diaTimes.length - 1) {
+      //     return null;
+      //   }
+      //   const track1 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!);
+      //   const track2 = getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex + 1].platform!);
+      //   if (!track1) {
+      //     throw new Error(
+      //       'track1 が見つかりませんでした (' + toStringFromPlatform(train.diaTimes[diaTimeIndex].platform!) + ')'
+      //     );
+      //   }
+      //   if (!track2) {
+      //     throw new Error(
+      //       'track2 が見つかりませんでした (' + toStringFromPlatform(train.diaTimes[diaTimeIndex + 1].platform!) + ')'
+      //     );
+      //   }
 
-        // 最短経路を探索する
-        const result = searchTrackPath(track1, track2);
+      //   // 最短経路を探索する
+      //   const result = searchTrackPath(track1, track2);
 
-        if (!result) {
-          throw new Error(
-            '経路が見つかりませんでした (' +
-              toStringFromPlatform(train.diaTimes[diaTimeIndex].platform!) +
-              ' -> ' +
-              toStringFromPlatform(train.diaTimes[diaTimeIndex + 1].platform!) +
-              ')'
-          );
-        }
+      //   if (!result) {
+      //     throw new Error(
+      //       '経路が見つかりませんでした (' +
+      //         toStringFromPlatform(train.diaTimes[diaTimeIndex].platform!) +
+      //         ' -> ' +
+      //         toStringFromPlatform(train.diaTimes[diaTimeIndex + 1].platform!) +
+      //         ')'
+      //     );
+      //   }
 
-        assert(result.length >= 2, 'Route not found');
-        assert(result[0].trackId === track1.trackId, 'result[0].trackId !== track1.trackId');
+      //   assert(result.length >= 2, 'Route not found');
+      //   assert(result[0].trackId === track1.trackId, 'result[0].trackId !== track1.trackId');
 
-        // 経路の最初のtrackだけはreverseになることがあるので、修正
-        if (!getNextTracks(result[0]).some((track) => track.trackId === result[1].trackId)) {
-          result[0] = result[0].reverseTrack;
-        }
+      //   // 経路の最初のtrackだけはreverseになることがあるので、修正
+      //   if (!getNextTracks(result[0]).some((track) => track.trackId === result[1].trackId)) {
+      //     result[0] = result[0].reverseTrack;
+      //   }
 
-        return result[0];
-      })();
+      //   return result[0];
+      // })();
 
       platformTTItems.push({
         trainId: train.trainId,
-        placedTrainId: train.trainId, // TODO: とりあえずは同じにする
         platformId: getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!)!.track.platform!.platformId,
         /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */
         departureTime: diaTime.departureTime,
         arrivalTime: diaTime.arrivalTime,
-        track: track,
+        // trackId: track?.trackId,
       });
 
       diaTimeIndex++;
     }
   }
 
-  return platformTTItems;
+  const platformTimetableMapRaw = new Map<string, PlatformTTItem[]>();
+  for (const platformId of allTrackPlatformIds.keys()) {
+    platformTimetableMapRaw.set(platformId, []);
+  }
+  for (const ttItem of platformTTItems) {
+    const items = platformTimetableMapRaw.get(ttItem.platformId);
+    assert(items != null);
+    items.push(ttItem);
+  }
+
+  return new Map(
+    [...platformTimetableMapRaw.entries()].map(([platformId, items]) => [platformId, new PlatformTimetable(items)])
+  );
 }
 
 function getTrackOfPlatform(tracks: Track[], platform: Platform): Track | undefined {
@@ -266,7 +281,7 @@ export function searchTrackPath(track1: Track, track2: Track): Track[] | undefin
   return result;
 }
 
-function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
+function toSwitchTTItems(tracks: Track[], train: Train): SwitchTTItem[] {
   const diaTimes = train.diaTimes;
   if (diaTimes.length <= 1) {
     return [];
@@ -290,7 +305,8 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
     );
   });
 
-  const switchTTItems: SwitchTimetableItem[] = [];
+  const switchTTItems: SwitchTTItem[] = [];
+  const switchIds = new Map<string, null>();
 
   for (let diaTimeIndex = 0; diaTimeIndex < diaTimes.length - 1; diaTimeIndex++) {
     // TODO: これは、反対方向のトラックが入ることがある。 => searchTrackPath で吸収したので大丈夫なはず
@@ -346,15 +362,17 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTimetableItem[] {
         }
       })();
 
-      const prevDepartureTime = diaTimes[diaTimeIndex].departureTime;
-      assert(prevDepartureTime !== null);
+      // const prevDepartureTime = diaTimes[diaTimeIndex].departureTime;
+      // assert(prevDepartureTime !== null);
 
       switchTTItems.push({
-        placedTrainId: train.trainId, // TODO: とりあえずは同じにする
+        trainId: train.trainId,
         switchId: currentSwitch.switchId,
-        changeTime: prevDepartureTime,
+        // changeTime: prevDepartureTime,
         branchDirection: branchDirection,
       });
+
+      switchIds.set(currentSwitch.switchId, null);
     }
   }
 
@@ -373,11 +391,27 @@ function isPlatformsIsNotNull(timetable: OutlinedTimetableData) {
   return true;
 }
 
+function toTimetableMap(switchTTItems: SwitchTTItem[]) {
+  const switchTimetableMapRaw = new Map<string, SwitchTTItem[]>();
+  for (const switchId of switchTTItems.map((item) => item.switchId)) {
+    switchTimetableMapRaw.set(switchId, []);
+  }
+  for (const ttItem of switchTTItems) {
+    const items = switchTimetableMapRaw.get(ttItem.switchId);
+    assert(items != null);
+    items.push(ttItem);
+  }
+
+  return new Map(
+    [...switchTimetableMapRaw.entries()].map(([switchId, items]) => [switchId, new SwitchTimetable(switchId, items)])
+  );
+}
+
 export function toDetailedTimetable(
   allPlatforms: Platform[],
   timetableData: OutlinedTimetableData,
   tracks: Track[]
-): [DetailedTimetable, Operation[]] | null {
+): DetailedTimetable | null {
   if (!isPlatformsIsNotNull(timetableData)) {
     return null;
   }
@@ -386,24 +420,25 @@ export function toDetailedTimetable(
   // というかまずは単に時刻が入っていないのをエラーにすべき気がする。。。
 
   // 方向をどうするか。。。設置時？基本的にはダイヤ変換時に設定する。ホームトラック終端の上下 > （上下が同じなら）左右方向の区別とする。トラックが移動や回転された場合は再設定が必要になるが、その場合はどちらにしても再設定がいる。
-  const platformTTItems = toPlatformTTItems(allPlatforms, tracks, timetableData.getTrains());
+  const platformTimetableMap = toPlatformTTItems(allPlatforms, tracks, timetableData.getTrains());
 
   // switchは、駅と駅の間の経路を探索し、通過したswitchを追加する
   // changeTimeをどうするか。。。 通過の列車の指定のほうがいい気がする。。？でも列車の指定はあるから、そんなに重複することはないか。1列車が駅に到着せずに一つのswitchを複数回通過することはないはず。
-  const switchTTItems: SwitchTimetableItem[] = [];
+  const switchTTItems: SwitchTTItem[] = [];
 
   for (const train of timetableData.getTrains()) {
     switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
 
+  const switchTimetableMap = toTimetableMap(switchTTItems);
+
   const operations = createOperations(timetableData.getTrains());
-  return [
-    {
-      platformTTItems: platformTTItems,
-      switchTTItems: switchTTItems,
-    },
+
+  return {
+    platformTimetableMap,
+    switchTimetableMap,
     operations,
-  ];
+  };
 }
 
 export function getReasonOfNotConnected(train1: Train, train2: Train): string[] {
@@ -432,7 +467,7 @@ export function getReasonOfNotConnected(train1: Train, train2: Train): string[] 
   //   reasons.push('train1がconnectionです');
   // }
 
-  if (train2.firstStationOperation?.operationType !== 'Connection') {
+  if (train2.firstStationOperation?.stationOperationType !== 'Connection') {
     reasons.push('train2がconnectionではありません');
   }
 
@@ -473,7 +508,7 @@ export function createOperations(trains: Train[]): Operation[] {
 
   function getNextTrain(train: Train): Train | null {
     // 番線が同じで時刻が前後関係にあって、最短の列車を選ぶ。
-    if (train.lastStationOperation?.operationType !== 'Connection') return null;
+    if (train.lastStationOperation?.stationOperationType !== 'Connection') return null;
     if (train.diaTimes.length === 0) return null;
 
     const lastDiaTime = train.diaTimes[train.diaTimes.length - 1];
@@ -485,7 +520,7 @@ export function createOperations(trains: Train[]): Operation[] {
         if (t.firstStationOperation == null || t.diaTimes.length === 0) return false;
 
         return (
-          t.firstStationOperation.operationType === 'Connection' &&
+          t.firstStationOperation.stationOperationType === 'Connection' &&
           t.diaTimes[0].platform?.platformId === lastDiaTime.platform?.platformId &&
           t.diaTimes[0].departureTime != null &&
           t.diaTimes[0].departureTime > lastDiaTime.arrivalTime!
@@ -511,19 +546,29 @@ export function createOperations(trains: Train[]): Operation[] {
       continue;
     }
 
-    if (train.firstStationOperation?.operationType !== 'Connection') {
-      const operation: Operation = {
-        operationId: generateId(),
-        operationCode: train.firstStationOperation?.operationCode ?? generateOperationCode(operations),
-        trains: [],
-      };
+    if (train.firstStationOperation?.stationOperationType !== 'Connection') {
+      assert(train.firstStationOperation?.stationOperationType === 'InOut');
 
+      const operationTrains: Train[] = [];
       let currentTrain: null | Train = train;
       while (currentTrain != null) {
-        operation.trains.push(currentTrain);
+        operationTrains.push(currentTrain);
         usedTrains.add(currentTrain.trainId);
         currentTrain = getNextTrain(currentTrain);
       }
+
+      const lastOperation = operationTrains[operationTrains.length - 1].lastStationOperation;
+      if (lastOperation == null || lastOperation.stationOperationType !== 'InOut') {
+        throw new Error('lastOperation is null or not InOut');
+      }
+
+      const operation: Operation = {
+        operationId: generateId(),
+        operationCode: generateOperationCode(operations),
+        trains: operationTrains,
+        firstOperation: train.firstStationOperation!,
+        lastOperation: lastOperation,
+      };
 
       operations.push(operation);
     }

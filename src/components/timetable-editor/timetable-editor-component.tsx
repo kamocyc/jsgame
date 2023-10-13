@@ -7,6 +7,7 @@ import { SettingColumnComponent, TabComponent, reverseArray } from './common-com
 import { DiagramPageComponent } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
+import { StationOperationSettingComponent } from './station-operation-setting-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
 import { getInitialTimetable } from './timetable-util';
@@ -312,6 +313,14 @@ export function TimetableEditorComponent({
                       diaStation_.stationId === diaStation.stationId ? diaStation : diaStation_
                     )
                   );
+                }}
+              />
+            ) : settingData.settingType === 'StationOperationSetting' ? (
+              <StationOperationSettingComponent
+                station={settingData.station}
+                stationOperation={settingData.stationOperation}
+                setStationOperation={(stationOperation) => {
+                  // TODO
                 }}
               />
             ) : (

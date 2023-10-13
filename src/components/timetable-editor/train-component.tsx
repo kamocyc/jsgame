@@ -200,21 +200,20 @@ export function TrainOperationTypeComponent({
               break;
             case 'InOut':
               setStationOperation({
-                operationType: 'InOut',
-                operationCode: generateId(),
+                stationOperationType: 'InOut',
                 operationTime: 0,
               });
               break;
             case 'Connection':
               setStationOperation({
-                operationType: 'Connection',
+                stationOperationType: 'Connection',
               });
               break;
             default:
               break;
           }
         }}
-        value={stationOperation?.operationType ?? ''}
+        value={stationOperation?.stationOperationType ?? ''}
         style={{ height: 22 + 'px', width: '56px' }}
       >
         <option value=''></option>

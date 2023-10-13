@@ -211,7 +211,7 @@ function convertOperations(ressha: any): {
     const { optype5, optype3, time3, opcode3 } = match.groups;
     if (optype5 != null) {
       return {
-        operationType: 'Connection',
+        stationOperationType: 'Connection',
       };
     }
 
@@ -221,7 +221,7 @@ function convertOperations(ressha: any): {
 
     const jikoku = parseJikoku(time3);
     return {
-      operationType: 'InOut',
+      stationOperationType: 'InOut',
       operationTime: jikoku !== undefined ? timeToSeconds(jikoku) : 0,
       operationCode: opcode3,
     };

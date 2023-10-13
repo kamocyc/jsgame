@@ -3,8 +3,7 @@ import { Track } from '../../model';
 import { getDistance, getMidPoint, getTrackDirection, isTrainOutTrack } from '../../trackUtil';
 import { GlobalTimeManager } from './globalTimeManager';
 import { MoneyManager } from './moneyManager';
-import { shouldStopTrain } from './trainMove';
-import { ITrainMove, PlacedTrain, StoredTrain } from './trainMoveBase';
+import { ITrainMove, PlacedTrain, StoredTrain, shouldStopTrain } from './trainMoveBase';
 
 function getAllPathOfRailwayLine(railwayLine: RailwayLine) {
   const paths: (readonly [Track, string])[] = [];

@@ -1,3 +1,5 @@
+import { assert } from './common';
+
 export interface Point {
   x: number;
   y: number;
@@ -85,18 +87,21 @@ export interface TrainType {
   trainTypeColor: string;
 }
 
+// 入出区
+export interface InOutOperation {
+  stationOperationType: 'InOut';
+  trainId: string;
+  depotLineId: string;
+  trackId: string;
+  operationTime: number;
+}
+
 export type StationOperation =
   | {
       // 前列車との接続
-      operationType: 'Connection';
+      stationOperationType: 'Connection';
     }
-  | {
-      // 入出区
-      operationType: 'InOut';
-      // とりあえず未使用
-      operationTime: number;
-      operationCode: string | undefined;
-    };
+  | InOutOperation;
 
 export type TimetableDirection = 'Outbound' | 'Inbound';
 
@@ -140,45 +145,98 @@ export interface StationSettingData {
   station: Station;
 }
 
-export type SettingData = StationSettingData;
+export interface StationOperationSettingData {
+  settingType: 'StationOperationSetting';
+  station: Station;
+  stationOperation: StationOperation;
+}
+
+export type SettingData = StationSettingData | StationOperationSettingData;
 
 export type BranchDirection = 'Straight' | 'Branch';
 
-// 1つのtrain, platformに対して、複数のtimetableItemが存在する
-export interface PlatformTimetableItem {
-  placedTrainId: string;
-  platformId: string;
-  trainId: string | null;
-  arrivalTime: number | null;
-  departureTime: number | null;
-  track: Track | null;
-}
-
-export interface SwitchTimetableItem {
-  placedTrainId: string;
-  switchId: string;
-  changeTime: number | null;
-  branchDirection: BranchDirection;
-}
-
-// interface ST {
-//   trainId: string;
-//   branchDirection: BranchDirection;
+// // 1つのtrain, platformに対して、複数のtimetableItemが存在する
+// export interface PlatformTimetableItem {
+//   placedTrainId: string;
+//   platformId: string;
+//   trainId: string | null;
+//   arrivalTime: number | null;
+//   departureTime: number | null;
+//   track: Track | null;
 // }
 
-// interface STs {
-//   sts: ST[];
-//   currentIndex: number;
+// export interface SwitchTimetableItem {
+//   placedTrainId: string;
 //   switchId: string;
+//   changeTime: number | null;
+//   branchDirection: BranchDirection;
 // }
 
 export interface Operation {
   operationId: string;
   operationCode: string;
   trains: Train[];
+  firstOperation: InOutOperation;
+  lastOperation: InOutOperation;
 }
 
+export interface PlatformTTItem {
+  trainId: string;
+  platformId: string;
+  arrivalTime: number | null;
+  departureTime: number | null;
+}
+
+export class PlatformTimetable {
+  constructor(private platformTTItems: PlatformTTItem[]) {}
+
+  getPlatformTTItem(trainId: string) {
+    const ttItem = this.platformTTItems.find((ttItem) => ttItem.trainId === trainId);
+    assert(ttItem !== undefined, 'ttItem !== undefined');
+    return ttItem;
+  }
+
+  isLastTTItem(ttItem: PlatformTTItem): boolean {
+    const index = this.platformTTItems.findIndex((item) => item.trainId === ttItem.trainId);
+    assert(index !== -1, 'index !== -1');
+    return index === this.platformTTItems.length - 1;
+  }
+}
+
+// 本来的には単に順番を記録しておいて、補足として列車や時刻情報を持つべき。とはいえ正確な位置はけっきょくのところ一度シミュレーションを回さないとわからない。ので妥協
+// とりあえずは、列車 -> 分岐方向 の情報で処理しておく
+export interface SwitchTTItem {
+  trainId: string;
+  switchId: string;
+  branchDirection: BranchDirection;
+}
+// export interface SwitchTTItemData {
+//   switchId: string;
+//   switchTTItems: SwitchTTItem[];
+// }
+export class SwitchTimetable {
+  // private currentIndex: number = 0;
+
+  constructor(private switchId: string, private switchTTItems: SwitchTTItem[]) {}
+
+  getSwitchId(): string {
+    return this.switchId;
+  }
+
+  getBranchDirection(trainId: string): BranchDirection {
+    const item = this.switchTTItems.find((item) => item.trainId === trainId);
+    if (item === undefined) {
+      throw new Error('分岐方向が見つからない');
+    }
+    return item.branchDirection;
+  }
+}
+
+export type PlatformTimetableMap = Map<string, PlatformTimetable>;
+export type SwitchTimetableMap = Map<string, SwitchTimetable>;
+
 export interface DetailedTimetable {
-  platformTTItems: PlatformTimetableItem[];
-  switchTTItems: SwitchTimetableItem[];
+  platformTimetableMap: PlatformTimetableMap;
+  switchTimetableMap: SwitchTimetableMap;
+  operations: Operation[];
 }

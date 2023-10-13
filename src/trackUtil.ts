@@ -395,87 +395,51 @@ export function isHitLine(point: Point, points: number[], mapTotalHeight: number
   return hitFlag;
 }
 
-// export function searchTrack(startTrack: HalfTrack, stationId: number): [HalfTrack[] | undefined, Map<number, NodeWithDistance<HalfTrack>>] {
-//   function reconstructPath<T>(nodeWithDistance: NodeWithDistance<T>): T[] {
-//     const prev = nodeWithDistance.previousNode;
-//     if (prev) {
-//       const path = reconstructPath(prev);
-//       path.push(nodeWithDistance.node);
-//       return path;
-//     } else {
-//       return [nodeWithDistance.node];
-//     }
-//   }
+function getNextTrackOfSwitchPattern(
+  Switch: Switch,
+  currentTrack: Track,
+  switchPatternIndex: [number, number]
+): Track | null {
+  const [index1, index2] = switchPatternIndex;
+  if (Switch.switchPatterns[index1][0] === currentTrack) {
+    return Switch.switchPatterns[index1][1];
+  } else if (Switch.switchPatterns[index2][0].trackId === currentTrack.trackId) {
+    return Switch.switchPatterns[index2][1];
+  } else {
+    // 定位の方向ではないtrackからswitchに侵入している
+    return null;
+  }
+}
 
-//   // track._nextSwitchがノードであるべきだが、便宜上、trackをqueueに入れる
-//   // queue: 未確定かつ距離が1回以上計算されたノード
-//   const queue = new MinPriorityQueue((a: NodeWithDistance<HalfTrack>) => a.distance);
-//   queue.push({ node: startTrack, previousNode: undefined, distance: 0 });
+// 定位のtrackを返す
+export function getNextTrackOfStraightPattern(currentSwitch: Switch, track: Track): Track | null {
+  assert(currentSwitch.straightPatternIndex !== null);
+  return getNextTrackOfSwitchPattern(currentSwitch, track, currentSwitch.straightPatternIndex);
+}
 
-//   // 決定済みのノード
-//   const determined = new Map<number, NodeWithDistance<HalfTrack>>();
+// 反位のtrackを返す
+export function getNextTrackOfBranchPattern(Switch: Switch, currentTrack: Track): Track | null {
+  assert(Switch.straightPatternIndex !== null);
+  const [straightPatternIndex1, straightPatternIndex2] = Switch.straightPatternIndex;
+  const candidatePatterns = Switch.switchPatterns
+    .filter(
+      // straightPatternIndexの2つ以外
+      (_, i) => i !== straightPatternIndex1 && i !== straightPatternIndex2
+    )
+    .filter(
+      ([t, _]) =>
+        // 分岐の始点がcurrentTrackと一致するもの
+        t.trackId === currentTrack.trackId
+    );
 
-//   while (!queue.isEmpty()) {
-//     const nodeWithDistance = queue.dequeue();
-//     const { node: track } = nodeWithDistance;
-//     if (determined.has(track.trackId)) continue;  // 既に最短経路で決定済み
+  if (candidatePatterns.length === 0) {
+    return null;
+  }
 
-//     determined.set(track.trackId, nodeWithDistance);
+  if (candidatePatterns.length !== 1) {
+    // 一般のレイアウトだと2つ以上分岐がありうるが、とりあえず1つのみの制約とする
+    throw new Error('candidatePatterns.length !== 1');
+  }
 
-//     if (track.track.station?.stationId === stationId) {
-//       // 目的のstation
-//       const path = reconstructPath(nodeWithDistance);
-//       return [path, determined];
-//     }
-
-//     for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
-//       if (!determined.has(toTrack.trackId)) {
-//         const newDistance = nodeWithDistance.distance + getDistance(toTrack._begin, toTrack._end);
-//         // 1つの頂点につき距離の更新ごとにqueueにpushされる。最短のエントリがpopされるので動くが、効率は？
-//         queue.push({ node: toTrack, previousNode: nodeWithDistance, distance: newDistance });
-//       }
-//     }
-//   }
-
-//   return [undefined, determined];
-// }
-
-// // 辺の数の最短を返すので、ダイクストラ法で求めたい。そんなに難しくない
-// function bfsTrack(startTrack: HalfTrack, stationId: number): [HalfTrack, number] | undefined {
-//   const queue = new Queue<HalfTrack>();
-//   const found = new Map<number, HalfTrack | undefined>();
-
-//   queue.enqueue(startTrack);
-//   found.set(startTrack.trackId, undefined);
-
-//   let i = 0;
-//   while (!queue.isEmpty()) {
-//     const track = queue.front();
-//     queue.dequeue();
-//     i ++;
-
-//     for (const toTrack of track._nextSwitch.switchPatterns.filter(([t, _]) => t === track).map(([_, toTrack]) => toTrack)) {
-//       if (!found.has(toTrack.trackId)) {
-//         found.set(toTrack.trackId, track);
-
-//         if (toTrack.track.station?.stationId === stationId) {
-//           // 最初のパスを返す
-//           let prevTrack: HalfTrack = toTrack;
-//           let distance = 0;
-//           while (true) {
-//             i ++;
-//             const track = found.get(prevTrack.trackId)!;
-//             distance += getDistance(track._begin, track._end);
-//             if (track?.trackId === startTrack.trackId) {
-//               if (i > 20) console.log(i);
-//               return [prevTrack, distance];
-//             }
-//             prevTrack = track;
-//           }
-//         }
-
-//         queue.enqueue(toTrack);
-//       }
-//     }
-//   }
-// }
+  return candidatePatterns[0][1];
+}

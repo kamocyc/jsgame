@@ -2,7 +2,6 @@ import { useState } from 'preact/hooks';
 import { AppStates, Cell, EditorDialogMode } from '../../mapEditorModel';
 import { DetailedTimetable, Platform, Point, Switch } from '../../model';
 import { ConstructType, TerrainType } from '../extendedMapModel';
-import { StationEditor, SwitchEditor } from './StationSwitchEditorComponent';
 import { StoreTrainInfoPanel } from './StoredTrainInfoPanel';
 import { MouseDragMode, onmousedown, onmousemove, onmouseup, onwheel } from './trackEditorContainerCore';
 import { StoredTrain } from './trainMoveBase';
@@ -29,21 +28,22 @@ export function EditorContainer({
       {timetable !== null &&
       trains !== null &&
       (editorDialogMode === 'StationEditor' || editorDialogMode === 'SwitchEditor') ? (
-        <div className='dialog'>
-          {editorDialogMode === 'StationEditor' ? (
-            <StationEditor
-              update={update}
-              timetable={timetable}
-              platform={platform!}
-              setPlatform={setPlatform}
-              trains={trains}
-            />
-          ) : editorDialogMode === 'SwitchEditor' ? (
-            <SwitchEditor timetable={timetable} Switch={Switch!} trains={trains} />
-          ) : (
-            <></>
-          )}
-        </div>
+        // <div className='dialog'>
+        //   {editorDialogMode === 'StationEditor' ? (
+        //     <StationEditor
+        //       update={update}
+        //       timetable={timetable}
+        //       platform={platform!}
+        //       setPlatform={setPlatform}
+        //       trains={trains}
+        //     />
+        //   ) : editorDialogMode === 'SwitchEditor' ? (
+        //     <SwitchEditor timetable={timetable} Switch={Switch!} trains={trains} />
+        //   ) : (
+        //     <></>
+        //   )}
+        // </div>
+        <></>
       ) : (
         <></>
       )}

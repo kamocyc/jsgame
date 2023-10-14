@@ -1,7 +1,7 @@
 import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
 import { deepEqual, toStringFromSeconds } from '../../common';
-import { DiaTime, Operation, Train, generateId } from '../../model';
+import { DiaTime, Operation, Train, generateId, getDefaultConnectionType } from '../../model';
 import { fillMissingTimes } from '../../oudParser';
 import { getReasonOfNotConnected } from '../track-editor/timetableConverter';
 import {
@@ -108,10 +108,10 @@ function commitDrawingLine(props: DiagramProps, layer: Konva.Layer): Train | nul
 
   if (diagramState.drawingLineTimes.length >= 2) {
     // 1番目のstationのindexと2番目のstationのindexを比較し、inbound / outboundを判定する
-    const firstStationIndex = props.diaStations.findIndex(
+    const firstStationIndex = props.stations.findIndex(
       (station) => station.stationId === diagramState.drawingLineTimes[0].station.stationId
     );
-    const secondStationIndex = props.diaStations.findIndex(
+    const secondStationIndex = props.stations.findIndex(
       (station) => station.stationId === diagramState.drawingLineTimes[1].station.stationId
     );
     const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
@@ -136,9 +136,11 @@ function commitDrawingLine(props: DiagramProps, layer: Konva.Layer): Train | nul
       diaTimes: diaTimes,
       trainCode: '',
       direction: direction,
+      firstStationOperation: getDefaultConnectionType(),
+      lastStationOperation: getDefaultConnectionType(),
     });
 
-    fillMissingTimes(trains, props.diaStations);
+    fillMissingTimes(trains, props.stations);
 
     props.setUpdate();
     updateTrains(layer, [trains[trains.length - 1]]);
@@ -541,7 +543,7 @@ export function initializeKonva(
 
   stationKonvaManager.adjustStationPosition(stage);
 
-  diagramState.stationPositions = props.diaStations.map((station, index) => ({
+  diagramState.stationPositions = props.stations.map((station, index) => ({
     station,
     diagramPosition: index * 50 + 50,
   }));

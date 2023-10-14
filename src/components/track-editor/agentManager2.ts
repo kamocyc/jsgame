@@ -1,6 +1,6 @@
 import { CountBag, FuncDefinition, assert, getInterpolatedFunctionValue } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
-import { Point, Station, generateId } from '../../model';
+import { Point, StationLike, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ConstructType, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManagerBase, getStationPositions } from './agentManager';
@@ -11,7 +11,7 @@ import { PlacedTrain } from './trainMoveBase';
 export type AgentStatus = 'Idle' | 'Move';
 
 type StationAndRailwayLine = {
-  station: Station;
+  station: StationLike;
   railwayLine: RailwayLine;
   stop: RailwayLineStop;
 };
@@ -41,7 +41,7 @@ interface Agent {
 }
 
 export function createAgentPath(
-  stations: Station[],
+  stations: StationLike[],
   agent: Agent,
   gameMap: GameMap,
   railwayLines: RailwayLine[]
@@ -129,7 +129,7 @@ export function createAgentPath(
     return getWalkOnlyPath();
   }
 
-  const searchFunc = (startStation: Station, destinationStation: Station) => {
+  const searchFunc = (startStation: StationLike, destinationStation: StationLike) => {
     const availableRailwayLines = railwayLines.filter((line) =>
       line.stops.some((stop) => stop.platform.station.stationId === startStation.stationId)
     );
@@ -295,8 +295,8 @@ function getDistanceBetweenStation2(sr1: StationAndRailwayLine, sr2: StationAndR
 }
 
 export function searchPath2(
-  initialPosition: Station,
-  destination: Station,
+  initialPosition: StationLike,
+  destination: StationLike,
   railwayLine: RailwayLine,
   stop: RailwayLineStop,
   railwayLines: RailwayLine[]
@@ -323,7 +323,7 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManager2Props {
   extendedMap: ExtendedGameMap;
-  stations: Station[];
+  stations: StationLike[];
   gameMap: GameMap;
   railwayLines: RailwayLine[];
   placedTrains: PlacedTrain[];

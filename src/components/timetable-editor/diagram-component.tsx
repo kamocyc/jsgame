@@ -19,7 +19,7 @@ export function KonvaCanvas(props: DiagramProps) {
       const stationKonvaManager = new StationKonvaManager(
         stationsCanvas as HTMLDivElement,
         stationCanvasWidth,
-        props.diaStations
+        props.stations
       );
       initializeKonva(mainCanvas as HTMLDivElement, props, stationKonvaManager);
     }

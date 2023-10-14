@@ -14,6 +14,7 @@ import {
   Depot,
   DepotLine,
   Platform,
+  PlatformLike,
   Point,
   Station,
   Switch,
@@ -61,6 +62,7 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
     const id = generateId();
 
     const newStation: Station = {
+      stationType: 'Station',
       stationId: generateId(),
       stationName: '駅' + generateId(),
       platforms: [],
@@ -69,11 +71,11 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
       defaultOutboundPlatformId: id,
     };
 
-    const newPlatform = {
+    const newPlatform: Platform = {
+      platformType: 'Platform',
       platformId: id,
       platformName: '駅' + id,
       station: newStation,
-      shouldDepart: null,
     };
     track.track.platform = newPlatform;
     track.reverseTrack.track.platform = track.track.platform;
@@ -135,9 +137,10 @@ function createDepot(
   const newDepotLines: DepotLine[] = [];
 
   const newDepot: Depot = {
-    depotId: generateId(),
-    depotName: generatePlaceName(),
-    depotLines: [],
+    stationType: 'Depot',
+    stationId: generateId(),
+    stationName: generatePlaceName(),
+    platforms: [],
   };
 
   position = { x: position.x, y: position.y - numberOfLines + 1 };
@@ -158,15 +161,16 @@ function createDepot(
 
     const [tracks, switches] = result;
 
-    const newDepotLine = {
-      depotLineId: generateId(),
-      depotLineName: (i + 1).toString(),
-      depot: newDepot,
+    const newDepotLine: DepotLine = {
+      platformType: 'DepotLine',
+      platformId: generateId(),
+      platformName: (i + 1).toString(),
+      station: newDepot,
     };
-    tracks[0].track.depotLine = newDepotLine;
-    tracks[0].reverseTrack.track.depotLine = tracks[0].track.depotLine;
+    tracks[0].track.platform = newDepotLine;
+    tracks[0].reverseTrack.track.platform = tracks[0].track.platform;
 
-    newDepot.depotLines.push(newDepotLine);
+    newDepot.platforms.push(newDepotLine);
 
     newTracks.push(...tracks);
     newSwitches.push(...switches);
@@ -190,6 +194,7 @@ function placeStation(
   const newPlatforms: Platform[] = [];
 
   const newStation = {
+    stationType: 'Station',
     stationId: generateId(),
     stationName: generatePlaceName(),
     platforms: [],
@@ -219,11 +224,11 @@ function placeStation(
 
     const [tracks, switches] = result;
 
-    const newPlatform = {
+    const newPlatform: Platform = {
+      platformType: 'Platform',
       platformId: generateId(),
       platformName: (i + 1).toString(),
       station: newStation,
-      shouldDepart: null,
     };
     tracks[0].track.platform = newPlatform;
     tracks[0].reverseTrack.track.platform = tracks[0].track.platform;
@@ -269,7 +274,7 @@ function getHitTracks(mapTotalHeight: number, cell: Cell, mousePoint: Point): Tr
   return results;
 }
 
-function getPlatformOfCell(mapTotalHeight: number, cell: Cell, mousePoint: Point): [Track, Platform] | null {
+function getPlatformOfCell(mapTotalHeight: number, cell: Cell, mousePoint: Point): [Track, PlatformLike] | null {
   const tracks = getHitTracks(mapTotalHeight, cell, mousePoint);
   const stationTrack = tracks.find((track) => track.track.platform != null);
   if (stationTrack != null) {
@@ -284,7 +289,7 @@ function showInfoPanel(
   cell: Cell,
   mousePoint: Point,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
-  setPlatform: (platform: Platform | null) => void,
+  setPlatform: (platform: PlatformLike | null) => void,
   setSwitch: (Switch: Switch | null) => void
 ) {
   const trackAndPlatform = getPlatformOfCell(mapTotalHeight, cell, mousePoint);
@@ -316,7 +321,7 @@ export function onmousedown(
   constructType: ConstructType,
   terrainType: TerrainType,
   setEditorDialogMode: (mode: EditorDialogMode | null) => void,
-  setPlatform: (platform: Platform | null) => void,
+  setPlatform: (platform: PlatformLike | null) => void,
   setSwitch: (Switch: Switch | null) => void,
   setMouseStartCell: (cell: Cell | null) => void,
   setMouseStartPoint: (point: Point | null) => void,
@@ -589,7 +594,7 @@ export function onmouseup(
           { x, y }
         );
         if (trackAndPlatform === null) {
-          console.error('platformがnull');
+          setToast('プラットフォームがありません');
         } else {
           const error = addPlatformToLine(
             trackAndPlatform[0],
@@ -711,7 +716,7 @@ function searchTrackPath2(track1: Track, track2: Track): Track[] | undefined {
 // appStates.currentRailwayLine を破壊的に変更する
 export function addPlatformToLine(
   platformTrack: Track,
-  platform: Platform,
+  platform: PlatformLike,
   cell: Cell,
   appStates: AppStates
 ): { error: string } | null {

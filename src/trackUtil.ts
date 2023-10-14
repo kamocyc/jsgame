@@ -111,7 +111,6 @@ export function createNewTrack(
     prevSwitch: _prevSwitch,
     track: {
       platform: null,
-      depotLine: null,
     },
   });
 

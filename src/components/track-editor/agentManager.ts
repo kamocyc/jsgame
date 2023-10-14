@@ -1,12 +1,11 @@
 import { assert, removeNull } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
-import { DiaTime, Point, Station, generateId } from '../../model';
+import { DiaTime, Point, Station, StationLike, generateId } from '../../model';
 import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
 import { AgentManager2, AgentManager2Props } from './agentManager2';
-import { TrainMove } from './trainMove';
-import { PlacedTrain } from './trainMoveBase';
+import { ITrainMove, PlacedTrain } from './trainMoveBase';
 
 export type AgentStatus = 'Idle' | 'Move';
 
@@ -14,7 +13,7 @@ type StationPathStep = {
   /**
    * 次の駅
    */
-  nextStation: Station;
+  nextStation: StationLike;
   /**
    * 現在の駅の発車時刻などの情報
    */
@@ -57,7 +56,7 @@ interface Agent {
 
 type NextStationInfo = {
   currentStationDiaTime: DiaTime;
-  nextStation: Station;
+  nextStation: StationLike;
   nextStationArrivalTime: number;
 };
 
@@ -69,7 +68,7 @@ type NextStationInfo = {
  * @returns
  */
 export function getAdjacentStations(
-  currentStation: Station,
+  currentStation: StationLike,
   timetableData: OutlinedTimetableData,
   currentTime: number
 ): NextStationInfo[] {
@@ -110,7 +109,7 @@ export function getAdjacentStations(
   return nextStations;
 }
 
-export function getStationPositions(stations: Station[], gameMap: GameMap) {
+export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
   const platforms = gameMap
     .map((row) =>
       row
@@ -149,7 +148,7 @@ export function getRandomDestination(agent: Agent, extendedMap: ExtendedGameMap)
 }
 
 export function createAgentPath(
-  stations: Station[],
+  stations: StationLike[],
   agent: Agent,
   gameMap: GameMap,
   currentTime: number,
@@ -299,7 +298,7 @@ export function createAgentPath(
 }
 
 type StationAndRailwayLine = {
-  station: Station;
+  station: StationLike;
   railwayLine: RailwayLine;
   stop: RailwayLineStop;
 };
@@ -387,12 +386,12 @@ export function searchPath2(
 
 // 時刻表を元にしてダイクストラ法で探索する
 export function searchPath(
-  initialPosition: Station,
+  initialPosition: StationLike,
   startTime: number,
-  destination: Station,
+  destination: StationLike,
   timetableData: OutlinedTimetableData
-): readonly [readonly [Station, number][], StationPath | null] {
-  const previous: { [key: string]: [Station, DiaTime] } = {};
+): readonly [readonly [StationLike, number][], StationPath | null] {
+  const previous: { [key: string]: [StationLike, DiaTime] } = {};
 
   const stations = timetableData
     .getTimetables()
@@ -404,7 +403,7 @@ export function searchPath(
     distance: station.stationId === initialPosition.stationId ? startTime : Number.MAX_SAFE_INTEGER,
   }));
 
-  const determinedIds = new Map<string, [Station, number]>();
+  const determinedIds = new Map<string, [StationLike, number]>();
   let currentTime = startTime;
 
   while (stationNodes.length > 0) {
@@ -460,10 +459,10 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManagerProps {
   extendedMap: ExtendedGameMap;
-  stations: Station[];
+  stations: StationLike[];
   gameMap: GameMap;
   timetableData: OutlinedTimetableData;
-  trainMove: TrainMove;
+  trainMove: ITrainMove;
   currentTime: number;
 }
 

@@ -44,8 +44,9 @@ function initializeExtendedMap(mapWidth: number, mapHeight: number): ExtendedCel
 }
 
 const timetable: DetailedTimetable = {
-  platformTTItems: [],
-  switchTTItems: [],
+  platformTimetableMap: new Map(),
+  switchTimetableMap: new Map(),
+  operations: [],
 };
 
 const defaultMapWidth = 100;

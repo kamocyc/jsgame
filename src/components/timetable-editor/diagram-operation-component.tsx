@@ -5,7 +5,6 @@ import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonCom
 import './operation-table.css';
 
 export interface DiagramOperationProps {
-  // diaStations: Station[];
   setUpdate: () => void;
   inboundTrains: Train[];
   outboundTrains: Train[];

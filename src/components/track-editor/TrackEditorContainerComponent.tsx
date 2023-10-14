@@ -1,55 +1,10 @@
 import { useState } from 'preact/hooks';
 import { AppStates, Cell, EditorDialogMode } from '../../mapEditorModel';
-import { DetailedTimetable, Platform, Point, Switch } from '../../model';
+import { PlatformLike, Point, Switch } from '../../model';
 import { ConstructType, TerrainType } from '../extendedMapModel';
 import { StoreTrainInfoPanel } from './StoredTrainInfoPanel';
 import { MouseDragMode, onmousedown, onmousemove, onmouseup, onwheel } from './trackEditorContainerCore';
 import { StoredTrain } from './trainMoveBase';
-
-export function EditorContainer({
-  editorDialogMode,
-  timetable,
-  trains,
-  setPlatform,
-  platform,
-  Switch,
-  update,
-}: {
-  editorDialogMode: EditorDialogMode | null;
-  timetable: DetailedTimetable | null;
-  trains: StoredTrain[] | null;
-  setPlatform: (platform: Platform) => void;
-  platform: Platform | null;
-  Switch: Switch | null;
-  update: () => void;
-}) {
-  return (
-    <>
-      {timetable !== null &&
-      trains !== null &&
-      (editorDialogMode === 'StationEditor' || editorDialogMode === 'SwitchEditor') ? (
-        // <div className='dialog'>
-        //   {editorDialogMode === 'StationEditor' ? (
-        //     <StationEditor
-        //       update={update}
-        //       timetable={timetable}
-        //       platform={platform!}
-        //       setPlatform={setPlatform}
-        //       trains={trains}
-        //     />
-        //   ) : editorDialogMode === 'SwitchEditor' ? (
-        //     <SwitchEditor timetable={timetable} Switch={Switch!} trains={trains} />
-        //   ) : (
-        //     <></>
-        //   )}
-        // </div>
-        <></>
-      ) : (
-        <></>
-      )}
-    </>
-  );
-}
 
 export function CanvasComponent({
   appStates,
@@ -69,7 +24,7 @@ export function CanvasComponent({
   setToast: (toast: string) => void;
 }) {
   const [editorDialogMode, setEditorDialogMode] = useState<EditorDialogMode | null>(null);
-  const [platform, setPlatform] = useState<Platform | null>(null);
+  const [platform, setPlatform] = useState<PlatformLike | null>(null);
   const [Switch, setSwitch] = useState<Switch | null>(null);
   const [mouseStartCell, setMouseStartCell] = useState<Cell | null>(null);
   const [mouseStartPoint, setMouseStartPoint] = useState<Point | null>(null);
@@ -127,15 +82,6 @@ export function CanvasComponent({
           onwheel(e, appStates, update);
         }}
       ></canvas>
-      <EditorContainer
-        timetable={appStates.detailedTimetable}
-        update={update}
-        trains={appStates.storedTrains}
-        Switch={Switch}
-        editorDialogMode={editorDialogMode}
-        setPlatform={setPlatform}
-        platform={platform}
-      />
 
       <div>
         {appStates.editMode === 'PlaceTrain' ? (

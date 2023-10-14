@@ -3,14 +3,16 @@ import {
   AppClipboard,
   ContextData,
   DiaTime,
-  Platform,
-  Station,
+  PlatformLike,
+  SettingData,
+  StationLike,
   StationOperation,
   TimetableDirection,
   Train,
   TrainType,
   cloneTrain,
   generateId,
+  getDefaultConnectionType,
 } from '../../model';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
 import { getDefaultPlatform } from './timetable-util';
@@ -89,9 +91,9 @@ export function PlatformComponent({
   allDiaPlatforms,
   setDiaPlatform,
 }: {
-  diaPlatform: Platform | null;
-  allDiaPlatforms: Platform[];
-  setDiaPlatform: (diaPlatform: Platform | null) => void;
+  diaPlatform: PlatformLike | null;
+  allDiaPlatforms: PlatformLike[];
+  setDiaPlatform: (diaPlatform: PlatformLike | null) => void;
 }) {
   return (
     <select
@@ -182,46 +184,16 @@ function TrainListItemComponent({
   );
 }
 
-export function TrainOperationTypeComponent({
-  stationOperation,
-  setStationOperation,
-}: {
-  stationOperation: StationOperation | undefined;
-  setStationOperation: (stationOperation: StationOperation | undefined) => void;
-}) {
-  return (
-    <>
-      <select
-        onChange={(e) => {
-          const value = (e.target as HTMLSelectElement)?.value;
-          switch (value) {
-            case '':
-              setStationOperation(undefined);
-              break;
-            case 'InOut':
-              setStationOperation({
-                stationOperationType: 'InOut',
-                operationTime: 0,
-              });
-              break;
-            case 'Connection':
-              setStationOperation({
-                stationOperationType: 'Connection',
-              });
-              break;
-            default:
-              break;
-          }
-        }}
-        value={stationOperation?.stationOperationType ?? ''}
-        style={{ height: 22 + 'px', width: '56px' }}
-      >
-        <option value=''></option>
-        <option value='InOut'>入出区</option>
-        <option value='Connection'>前/次列車接続</option>
-      </select>
-    </>
-  );
+function showStationOperation(stationOperation: StationOperation | undefined) {
+  if (stationOperation === undefined) {
+    return '接続'; // 未設定
+  } else if (stationOperation.stationOperationType === 'Connection') {
+    return '接続';
+  } else if (stationOperation.stationOperationType === 'InOut') {
+    return '入出区';
+  } else {
+    throw new Error('invalid');
+  }
 }
 
 export function TrainListComponent({
@@ -232,14 +204,16 @@ export function TrainListComponent({
   trainTypes,
   clipboard,
   setClipboard,
+  setSettingData,
 }: {
   trains: Train[];
-  diaStations: Station[];
+  diaStations: StationLike[];
   timetableDirection: TimetableDirection;
   setTrains: (trains: Train[]) => void;
   trainTypes: TrainType[];
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;
+  setSettingData: (settingData: SettingData) => void;
 }) {
   const [contextData, setContextData] = useState<ContextData>({
     visible: false,
@@ -248,7 +222,7 @@ export function TrainListComponent({
   });
   const [selectedTrain, setSelectedTrain] = useState<Train | null>(null);
 
-  function getDiaTimesOfStations(train: Train, diaStations: Station[]): DiaTime[] {
+  function getDiaTimesOfStations(train: Train, diaStations: StationLike[]): DiaTime[] {
     return diaStations.map((diaStation) => {
       const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === diaStation.stationId);
       if (diaTime) {
@@ -331,23 +305,31 @@ export function TrainListComponent({
 
           <div style={{ height: '24px' }}>
             {/* 始発駅作業 */}
-            <TrainOperationTypeComponent
-              stationOperation={train.firstStationOperation}
-              setStationOperation={(stationOperation) => {
-                train.firstStationOperation = stationOperation;
-                setTrains([...trains]);
+            <button
+              onClick={() => {
+                setSettingData({
+                  settingType: 'StationOperationSetting',
+                  firstOrLast: 'First',
+                  train: train,
+                });
               }}
-            />
+            >
+              {showStationOperation(train.firstStationOperation)}
+            </button>
           </div>
           <div style={{ height: '24px' }}>
             {/* 終着駅作業 */}
-            <TrainOperationTypeComponent
-              stationOperation={train.lastStationOperation}
-              setStationOperation={(stationOperation) => {
-                train.lastStationOperation = stationOperation;
-                setTrains([...trains]);
+            <button
+              onClick={() => {
+                setSettingData({
+                  settingType: 'StationOperationSetting',
+                  firstOrLast: 'Last',
+                  train: train,
+                });
               }}
-            />
+            >
+              {showStationOperation(train.lastStationOperation)}
+            </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + train.trainId}>
             {/* 時刻リスト */}
@@ -372,6 +354,8 @@ export function TrainListComponent({
                 platform: getDefaultPlatform(diaStation, timetableDirection),
               })),
               trainCode: '',
+              firstStationOperation: getDefaultConnectionType(),
+              lastStationOperation: getDefaultConnectionType(),
               direction: timetableDirection,
             });
             setTrains([...trains]);

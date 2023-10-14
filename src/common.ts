@@ -54,6 +54,7 @@ export function createNewStationWithPlatform({
   platformName: string;
 }): Platform {
   const newStation: Station = {
+    stationType: 'Station',
     stationId: generateId(),
     stationName: platformName,
     platforms: [],
@@ -62,7 +63,8 @@ export function createNewStationWithPlatform({
     distance: DefaultStationDistance,
   };
 
-  const newPlatform = {
+  const newPlatform: Platform = {
+    platformType: 'Platform',
     platformId: platformId,
     platformName: platformName,
     station: newStation,
@@ -190,6 +192,7 @@ export function sum(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0);
 }
 
+// showTime
 export function toStringFromSeconds(timeSeconds: number): string {
   const m = Math.floor((timeSeconds / 60) % 60);
   return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);

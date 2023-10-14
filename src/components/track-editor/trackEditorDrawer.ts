@@ -1,4 +1,4 @@
-import { assert, removeDuplicates, sum } from '../../common';
+import { assert, sum } from '../../common';
 import {
   AppStates,
   Cell,
@@ -16,7 +16,7 @@ import {
   addVector,
   timesVector,
 } from '../../mapEditorModel';
-import { Point, Station, Track } from '../../model';
+import { Point, StationLike, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
 import { AgentBase, AgentManagerBase } from './agentManager';
@@ -534,60 +534,10 @@ function getPlatformAgentNumber(agentManager_: AgentManagerBase, platformId: str
   );
 }
 
-function drawDepots(ctx: CanvasRenderingContext2D, mapContext: MapContext, tracks: Track[], showInfo: boolean) {
-  const fontSize = 14;
-  const depots = removeDuplicates(
-    tracks.filter((track) => track.track.depotLine != null).map((track) => track.track.depotLine!.depot),
-    (d1, d2) => d1.depotId === d2.depotId
-  );
-  const drawnDepotPoints: Map<string, Point[]> = new Map(depots.map((d) => [d.depotId, []]));
-
-  for (const track of tracks) {
-    if (track.track.depotLine) {
-      const leftX = track.begin.x < track.end.x ? track.begin.x : track.end.x;
-      ctx.fillStyle = 'yellow';
-      ctx.fillRect(
-        rx(leftX + 2, mapContext),
-        ry((track.begin.y + track.end.y) / 2 - 6, mapContext),
-        (CellWidth - 4) * mapContext.scale,
-        3 * mapContext.scale
-      );
-
-      if (showInfo) {
-        ctx.fillStyle = 'white';
-
-        // platformの名前を描画
-        const name = track.track.depotLine.depotLineName;
-        ctx.font = 'bold ' + fontSize.toString() + 'px ' + fontName;
-        drawText(ctx, mapContext, name, {
-          x: (track.begin.x + track.end.x) / 2 - 10,
-          y: (track.begin.y + track.end.y) / 2 - 5,
-        });
-      }
-
-      const depot = depots.find((depot) => depot.depotId === track.track.depotLine!.depot.depotId);
-      assert(depot !== undefined);
-
-      drawnDepotPoints.get(depot.depotId)!.push(track.begin);
-    }
-  }
-
-  // 車庫名を描画
-  ctx.fillStyle = '#ffcccc';
-  for (const [depotId, points] of drawnDepotPoints) {
-    const depot = depots.find((depot) => depot.depotId === depotId)!;
-    const name = depot.depotName;
-    const x = points.reduce((acc, p) => acc + p.x, 0) / points.length;
-    const y = Math.max(...points.map((p) => p.y));
-    drawText(ctx, mapContext, name, { x: x, y: y + 10 });
-  }
-  ctx.fillStyle = 'black';
-}
-
 function drawStations(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
-  stations: Station[],
+  stations: StationLike[],
   tracks: Track[],
   agentManager: AgentManagerBase,
   showInfo: boolean
@@ -597,35 +547,49 @@ function drawStations(
   const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
 
   for (const track of tracks) {
-    if (track.track.platform) {
-      const image = imageCache.get('platform')!;
-      ctx.drawImage(
-        image,
-        rx((track.begin.x + track.end.x) / 2 - image.width / 2, mapContext),
-        ry((track.begin.y + track.end.y) / 2 - 6, mapContext),
-        image.width * mapContext.scale,
-        image.height * mapContext.scale
-      );
+    const platform = track.track.platform;
+    if (platform) {
+      if (platform.platformType === 'Platform') {
+        const image = imageCache.get('platform')!;
+        ctx.drawImage(
+          image,
+          rx((track.begin.x + track.end.x) / 2 - image.width / 2, mapContext),
+          ry((track.begin.y + track.end.y) / 2 - 6, mapContext),
+          image.width * mapContext.scale,
+          image.height * mapContext.scale
+        );
+      } else {
+        const leftX = track.begin.x < track.end.x ? track.begin.x : track.end.x;
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(
+          rx(leftX + 2, mapContext),
+          ry((track.begin.y + track.end.y) / 2 - 6, mapContext),
+          (CellWidth - 4) * mapContext.scale,
+          3 * mapContext.scale
+        );
+      }
 
       if (showInfo) {
         ctx.fillStyle = 'white';
 
         // platformの名前を描画
-        const name = track.track.platform.platformName;
+        const name = platform.platformName;
         ctx.font = 'bold ' + fontSize.toString() + 'px ' + fontName;
         drawText(ctx, mapContext, name, {
           x: (track.begin.x + track.end.x) / 2 - 10,
           y: (track.begin.y + track.end.y) / 2 - 5,
         });
 
-        // platformにいるagentの数を描画
-        const numberOfAgents = getPlatformAgentNumber(agentManager, track.track.platform.platformId);
-        if (numberOfAgents !== undefined) {
-          ctx.font = 'bold ' + fontSize.toString() + 'px ' + fontName;
-          drawText(ctx, mapContext, '(' + numberOfAgents.toString() + ')', {
-            x: (track.begin.x + track.end.x) / 2 + 10,
-            y: (track.begin.y + track.end.y) / 2 - 5,
-          });
+        if (platform.platformType === 'Platform') {
+          // platformにいるagentの数を描画
+          const numberOfAgents = getPlatformAgentNumber(agentManager, platform.platformId);
+          if (numberOfAgents !== undefined) {
+            ctx.font = 'bold ' + fontSize.toString() + 'px ' + fontName;
+            drawText(ctx, mapContext, '(' + numberOfAgents.toString() + ')', {
+              x: (track.begin.x + track.end.x) / 2 + 10,
+              y: (track.begin.y + track.end.y) / 2 - 5,
+            });
+          }
         }
       }
 
@@ -918,9 +882,6 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // 駅
   drawStations(ctx, mapContext, stations, tracks, appStates.agentManager, appStates.showInfo);
-
-  // 車庫
-  drawDepots(ctx, mapContext, tracks, appStates.showInfo);
 
   // マウスがある場所
   if (mouseStartCell !== null) {

@@ -2,7 +2,7 @@ import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates } from '../../mapEditorModel';
-import { Platform } from '../../model';
+import { PlatformLike } from '../../model';
 import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { createAgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable } from '../track-editor/timetableConverter';
@@ -109,7 +109,7 @@ export function TimetableEditorParentComponent({
               .flat()
               .filter((p) => p);
             const timetableAndOperations = toDetailedTimetable(
-              platforms as Platform[],
+              platforms as PlatformLike[],
               appStates.outlinedTimetableData,
               appStates.tracks
             );
@@ -118,17 +118,15 @@ export function TimetableEditorParentComponent({
               return;
             }
 
-            const [timetable, _] = timetableAndOperations;
-
             // console.log('timetable');
             // console.log(timetable);
 
-            const trainMove = createTrainMove(timetable);
+            const trainMove = createTrainMove(timetableAndOperations);
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: trainMove,
               agentManager: createAgentManager(),
-              detailedTimetable: timetable,
+              detailedTimetable: timetableAndOperations,
               // placedTrains: trains, // これは使っているのか？
             }));
           }}

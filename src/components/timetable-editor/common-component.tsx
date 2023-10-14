@@ -1,7 +1,7 @@
 import { ComponentChild } from 'preact';
 import { Ref, useEffect, useRef, useState } from 'preact/hooks';
 import { parseTime, toStringFromSeconds } from '../../common';
-import { ContextData } from '../../model';
+import { ContextData, getDefaultTime } from '../../model';
 import './timetable-editor.css';
 
 function parseInputTextAsTime(text: string): string | undefined {
@@ -63,6 +63,7 @@ export function EditableTextComponent({
   width: number | null;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+
   // コントロール外をクリックしたときに編集を終了する
   const ref = useRef<HTMLInputElement>(null);
   useOnClickOutside(ref, () => setIsEditing(false));
@@ -108,25 +109,94 @@ export function EditableTextComponent({
 }
 
 export function TimeInputComponent({ time, setTime }: { time: number | null; setTime: (time: number | null) => void }) {
-  return (
-    <EditableTextComponent
-      value={time == null ? '・・' : toStringFromSeconds(time)}
-      onChange={(value) => {
-        if (value === '') {
-          setTime(null);
-          return true;
-        }
+  const [isEditing, setIsEditing] = useState(false);
 
-        const newTime = parseTime(value);
-        if (newTime) {
-          setTime(newTime);
-          return true;
-        }
-        return false;
+  // コントロール外をクリックしたときに編集を終了する
+  const ref = useRef<HTMLInputElement>(null);
+  useOnClickOutside(ref, () => setIsEditing(false));
+
+  // 編集開始時にフォーカスする
+  useEffect(() => {
+    if (isEditing) {
+      // 全選択する
+      ref.current?.focus();
+      ref.current?.setSelectionRange(0, ref.current?.value.length);
+    }
+  }, [isEditing]);
+
+  function getNextTime(time: number | null) {
+    if (time === null) {
+      return getDefaultTime();
+    } else {
+      return (time + 60) % (24 * 60 * 60);
+    }
+  }
+  function getPrevTime(time: number | null) {
+    if (time === null) {
+      return getDefaultTime();
+    } else {
+      return (time - 60 + 24 * 60 * 60) % (24 * 60 * 60);
+    }
+  }
+
+  const height = 24;
+  const width = 44;
+  const value = time == null ? '・・' : toStringFromSeconds(time);
+  const onChange = (value: string) => {
+    if (value === '') {
+      setTime(null);
+      return true;
+    }
+
+    const newTime = parseTime(value);
+    if (newTime) {
+      setTime(newTime);
+      return true;
+    }
+    return false;
+  };
+
+  return (
+    <div
+      style={{
+        height: height + 'px',
+        width: width != null ? width + 'px' : '100%',
+        display: 'flex',
+        alignItems: 'center',
       }}
-      height={24}
-      width={44}
-    />
+    >
+      <input
+        ref={ref}
+        className={isEditing ? 'input-common' : 'text-common'}
+        style={{ width: width != null ? width - 6 + 'px' : '100%', paddingRight: '2px' }}
+        value={value}
+        onChange={(e) => {
+          const stringValue = (e.target as HTMLInputElement).value.trim();
+          if (!onChange(stringValue)) {
+            (e.target as HTMLInputElement).value = value;
+          }
+        }}
+        onFocus={() => {
+          setIsEditing(true);
+        }}
+        onBlur={() => {
+          setIsEditing(false);
+        }}
+        onKeyDown={(e) => {
+          // 上キーが押されたら数字を増やす
+          if (e.key === 'ArrowUp') {
+            const newTime = getNextTime(time);
+            setTime(newTime);
+            (e.target as HTMLInputElement).value = toStringFromSeconds(newTime);
+          }
+          if (e.key === 'ArrowDown') {
+            const newTime = getPrevTime(time);
+            setTime(newTime);
+            (e.target as HTMLInputElement).value = toStringFromSeconds(newTime);
+          }
+        }}
+      />
+    </div>
   );
 }
 

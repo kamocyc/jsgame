@@ -1,7 +1,15 @@
 import { StateUpdater, useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
 import { RailwayLine } from '../../mapEditorModel';
-import { AppClipboard, SettingData, Station, TimetableDirection, Track, Train, TrainType } from '../../model';
+import {
+  AppClipboard,
+  SettingData,
+  StationLike,
+  TimetableDirection,
+  Track,
+  Train,
+  TrainType
+} from '../../model';
 import { OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
@@ -14,7 +22,7 @@ import { getInitialTimetable } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 
-export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Station[] }) {
+export function TrainListRowHeaderComponent({ diaStations }: { diaStations: StationLike[] }) {
   return (
     <div>
       {diaStations.map((diaStation) => (
@@ -40,8 +48,8 @@ export function TimetableEditorTableComponent({
   clipboard,
   setClipboard,
 }: {
-  diaStations: Station[];
-  setDiaStations: (diaStations: Station[]) => void;
+  diaStations: StationLike[];
+  setDiaStations: (diaStations: StationLike[]) => void;
   trains: Train[];
   otherDirectionTrains: Train[];
   setTrains: (trains: Train[]) => void;
@@ -80,6 +88,7 @@ export function TimetableEditorTableComponent({
           trainTypes,
           clipboard,
           setClipboard,
+          setSettingData: setSettingData,
         }}
       />
     </div>
@@ -136,7 +145,7 @@ export function TimetableEditorComponent({
   const inboundTrains = timetable.inboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
   const outboundTrains = timetable.outboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
 
-  const setDiaStations = (stations: Station[]) => {
+  const setDiaStations = (stations: StationLike[]) => {
     timetable.stations = stations;
     update();
   };
@@ -271,7 +280,7 @@ export function TimetableEditorComponent({
                 tabText: 'ダイヤグラム',
                 component: () => (
                   <DiagramPageComponent
-                    diaStations={timetable.stations}
+                    stations={timetable.stations}
                     inboundTrains={inboundTrains}
                     outboundTrains={outboundTrains}
                     operations={timetable.operations}
@@ -317,11 +326,22 @@ export function TimetableEditorComponent({
               />
             ) : settingData.settingType === 'StationOperationSetting' ? (
               <StationOperationSettingComponent
-                station={settingData.station}
-                stationOperation={settingData.stationOperation}
                 setStationOperation={(stationOperation) => {
-                  // TODO
+                  if (settingData.firstOrLast === 'First') {
+                    settingData.train.firstStationOperation = stationOperation;
+                  } else {
+                    settingData.train.lastStationOperation = stationOperation;
+                  }
+                  update();
                 }}
+                stationOperation={
+                  settingData.firstOrLast === 'First'
+                    ? settingData.train.firstStationOperation
+                    : settingData.train.lastStationOperation
+                }
+                stations={timetable.stations}
+                tracks={tracks}
+                train={settingData.train}
               />
             ) : (
               <></>

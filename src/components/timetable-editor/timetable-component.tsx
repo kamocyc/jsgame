@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
-import { DiaTime, Station, TimetableDirection, Train } from '../../model';
+import { DiaTime, StationLike, TimetableDirection, Train } from '../../model';
 
-function getStationTimetable(trains: Train[], diaStation: Station) {
+function getStationTimetable(trains: Train[], diaStation: StationLike) {
   const stationTimetable = trains
     .map((train) => {
       const stationTimes = train.diaTimes.filter(
@@ -14,9 +14,9 @@ function getStationTimetable(trains: Train[], diaStation: Station) {
       // 終着駅の情報はこれだとまずい？
       const finalStation = train.diaTimes[train.diaTimes.length - 1].station;
 
-      return [stationTimes[0], finalStation] as [DiaTime, Station];
+      return [stationTimes[0], finalStation] as [DiaTime, StationLike];
     })
-    .filter((t) => t != null && t[0].departureTime != null) as [DiaTime, Station][];
+    .filter((t) => t != null && t[0].departureTime != null) as [DiaTime, StationLike][];
 
   return stationTimetable.reduce((acc, [diaTime, diaStation]) => {
     const hour = Math.floor(diaTime.departureTime! / 60 / 60);
@@ -25,10 +25,10 @@ function getStationTimetable(trains: Train[], diaStation: Station) {
     }
     acc[hour].push([diaTime, diaStation]);
     return acc;
-  }, [] as { [key: number]: [DiaTime, Station][] });
+  }, [] as { [key: number]: [DiaTime, StationLike][] });
 }
 
-function StationTimetableComponent({ trains, diaStation }: { trains: Train[]; diaStation: Station }) {
+function StationTimetableComponent({ trains, diaStation }: { trains: Train[]; diaStation: StationLike }) {
   const stationTimetable = getStationTimetable(trains, diaStation);
 
   function showMinutes(seconds: number) {
@@ -65,7 +65,7 @@ export function StationTimetablePageComponent({
 }: {
   inboundTrains: Train[];
   outboundTrains: Train[];
-  diaStations: Station[];
+  diaStations: StationLike[];
 }) {
   const [selectedDiaStation, setSelectedDiaStation] = useState(diaStations[0]);
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');

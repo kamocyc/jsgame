@@ -1,13 +1,13 @@
 import { assert } from './common';
 import { createOperations } from './components/track-editor/timetableConverter';
-import { Operation, Station, Train, TrainType, generateId } from './model';
+import { Operation, StationLike, Train, TrainType, generateId } from './model';
 
 export interface OutlinedTimetable {
   railwayLineId: string;
   timetableId: string;
   inboundTrainIds: string[];
   outboundTrainIds: string[];
-  stations: Station[];
+  stations: StationLike[];
   trainTypes: TrainType[];
   operations: Operation[];
 }

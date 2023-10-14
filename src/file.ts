@@ -1,6 +1,7 @@
 import { JSON_retrocycle } from './cycle';
-import { OutlinedTimetable, OutlinedTimetableData, Train } from './model';
+import { Train } from './model';
 import { getEkiJikokus } from './oudParser';
+import { OutlinedTimetable, OutlinedTimetableData } from './outlinedTimetableData';
 
 export async function loadUtf8File(event: Event): Promise<string | null> {
   return new Promise((resolve) => {

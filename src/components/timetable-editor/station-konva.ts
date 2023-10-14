@@ -1,10 +1,10 @@
 import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
-import { Station } from '../../model';
+import { StationLike } from '../../model';
 
 function drawStations(
   layer: Konva.Layer,
-  stationPositions: (Station & { diagramPosition: number })[],
+  stationPositions: (StationLike & { diagramPosition: number })[],
   canvasWidth: number
 ) {
   const stations = new Konva.Group();
@@ -35,9 +35,9 @@ function drawStations(
 
 export class StationKonvaManager {
   private stage: Stage;
-  private stationPositions: (Station & { diagramPosition: number })[];
+  private stationPositions: (StationLike & { diagramPosition: number })[];
 
-  constructor(container: HTMLDivElement, canvasWidth: number, diaStations: Station[]) {
+  constructor(container: HTMLDivElement, canvasWidth: number, diaStations: StationLike[]) {
     const stage = new Konva.Stage({
       container: container,
       width: canvasWidth,

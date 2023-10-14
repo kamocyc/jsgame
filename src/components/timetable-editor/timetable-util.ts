@@ -1,27 +1,38 @@
+import { assert } from '../../common';
 import { RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import {
   DefaultStationDistance,
   DiaTime,
   Platform,
+  PlatformLike,
   Station,
+  StationLike,
   TimetableDirection,
   Train,
   TrainType,
   generateId,
+  getDefaultConnectionType,
 } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 import { createOperations } from '../track-editor/timetableConverter';
 import './timetable-editor.css';
 
-export function getDefaultPlatform(diaStation: Station, direction: TimetableDirection): Platform {
-  const result =
-    direction === 'Outbound'
-      ? diaStation.platforms.find((diaPlatform) => diaPlatform.platformId === diaStation.defaultOutboundPlatformId)
-      : diaStation.platforms.find((diaPlatform) => diaPlatform.platformId === diaStation.defaultInboundPlatformId);
-  if (result == null) {
-    throw new Error('default platform not found');
+export function getDefaultPlatform(station: StationLike, direction: TimetableDirection): PlatformLike {
+  if (station.stationType === 'Station') {
+    const result =
+      direction === 'Outbound'
+        ? station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultOutboundPlatformId)
+        : station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultInboundPlatformId);
+    if (result == null) {
+      throw new Error('default platform not found');
+    }
+    return result;
+  } else if (station.stationType === 'Depot') {
+    assert(station.platforms.length > 0);
+    const result = station.platforms[0];
+    return result;
   }
-  return result;
+  assert(false);
 }
 
 export function createNewStation(stationName: string): Station {
@@ -36,6 +47,7 @@ export function createNewStation(stationName: string): Station {
     },
   ] as Platform[];
   const newStation: Station = {
+    stationType: 'Station',
     stationId: generateId(),
     stationName: stationName,
     platforms: newPlatforms,
@@ -112,6 +124,8 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
       trainName: '',
       trainCode: '001M',
       diaTimes: inboundDiaTimes,
+      firstStationOperation: getDefaultConnectionType(),
+      lastStationOperation: getDefaultConnectionType(),
       direction: 'Inbound',
     },
   ];
@@ -122,6 +136,8 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
       trainName: '',
       trainCode: '002M',
       diaTimes: outboundDiaTimes,
+      firstStationOperation: getDefaultConnectionType(),
+      lastStationOperation: getDefaultConnectionType(),
       direction: 'Outbound',
     },
   ];

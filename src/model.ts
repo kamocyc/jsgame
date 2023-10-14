@@ -15,31 +15,39 @@ export interface Switch {
   straightPatternIndex: [number, number] | null; // 定位のpatternのIndex
 }
 
-export interface Platform {
-  platformId: string;
-  platformName: string;
-  station: Station;
-}
+export type StationLike = Station | Depot;
+
+export type PlatformLike = Platform | DepotLine;
 
 export interface Depot {
-  depotId: string;
-  depotName: string;
-  depotLines: DepotLine[];
+  stationType: 'Depot';
+  stationId: string;
+  stationName: string;
+  platforms: DepotLine[];
 }
 
 export interface DepotLine {
-  depotLineId: string;
-  depotLineName: string;
-  depot: Depot;
+  platformType: 'DepotLine';
+  platformId: string;
+  platformName: string;
+  station: Depot;
 }
 
 export interface Station {
+  stationType: 'Station';
   stationId: string;
   stationName: string;
   platforms: Platform[];
   distance: number;
   defaultOutboundPlatformId: string;
   defaultInboundPlatformId: string;
+}
+
+export interface Platform {
+  platformType: 'Platform';
+  platformId: string;
+  platformName: string;
+  station: Station;
 }
 
 export const DefaultStationDistance = 100;
@@ -55,8 +63,7 @@ export interface Track {
 }
 
 export interface TrackProperty {
-  platform: Platform | null;
-  depotLine: DepotLine | null;
+  platform: PlatformLike | null;
 }
 
 export type ArrivalAndDepartureStatus = 'NotArrived' | 'Arrived' | 'Departed';
@@ -77,8 +84,8 @@ export interface DiaTime {
   arrivalTime: number | null;
   departureTime: number | null;
   isPassing: boolean;
-  station: Station;
-  platform: Platform | null;
+  station: StationLike;
+  platform: PlatformLike | null;
 }
 
 export interface TrainType {
@@ -91,28 +98,36 @@ export interface TrainType {
 export interface InOutOperation {
   stationOperationType: 'InOut';
   trainId: string;
-  depotLineId: string;
+  stationId: string;
+  platformId: string;
   trackId: string;
   operationTime: number;
 }
 
-export type StationOperation =
-  | {
-      // 前列車との接続
-      stationOperationType: 'Connection';
-    }
-  | InOutOperation;
+export interface ConnectionOperation {
+  // 前列車との接続
+  stationOperationType: 'Connection';
+}
+
+export type StationOperation = ConnectionOperation | InOutOperation;
 
 export type TimetableDirection = 'Outbound' | 'Inbound';
 
+export function getDefaultConnectionType(): ConnectionOperation {
+  return { stationOperationType: 'Connection' };
+}
+
+export function getDefaultTime(): number {
+  return 10 * 60 * 60;
+}
 export interface Train {
   trainId: string;
   trainCode: string; // 列車番号
   trainName: string;
   trainType?: TrainType;
   diaTimes: DiaTime[];
-  firstStationOperation?: StationOperation;
-  lastStationOperation?: StationOperation;
+  firstStationOperation: StationOperation;
+  lastStationOperation: StationOperation;
   direction: TimetableDirection | null;
 }
 
@@ -142,13 +157,13 @@ export interface ContextData {
 
 export interface StationSettingData {
   settingType: 'StationSetting';
-  station: Station;
+  station: StationLike;
 }
 
 export interface StationOperationSettingData {
   settingType: 'StationOperationSetting';
-  station: Station;
-  stationOperation: StationOperation;
+  firstOrLast: 'First' | 'Last';
+  train: Train;
 }
 
 export type SettingData = StationSettingData | StationOperationSettingData;

@@ -1,5 +1,10 @@
 export const defaultGlobalTimeSpeed = 5; // 1サイクルで進む秒数
 
+// showTime
+export function toStringTime(globalTime: number): string {
+  const m = Math.floor((globalTime / 60) % 60);
+  return Math.floor(globalTime / 60 / 60).toString() + ':' + (m < 10 ? '0' + m.toString() : '' + m.toString());
+}
 export class GlobalTimeManager {
   private _globalTimeSpeed = defaultGlobalTimeSpeed;
   private _globalTime = 0;
@@ -23,8 +28,7 @@ export class GlobalTimeManager {
   }
 
   toStringGlobalTime(): string {
-    const m = Math.floor((this.globalTime / 60) % 60);
-    return Math.floor(this.globalTime / 60 / 60).toString() + ':' + (m < 10 ? '0' + m.toString() : '' + m.toString());
+    return toStringTime(this.globalTime);
   }
 
   tick(): void {

@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { ContextData, SettingData, Station, Train, generateId } from '../../model';
+import { ContextData, SettingData, StationLike, Train, generateId } from '../../model';
 import { ContextMenuComponent, EditableTextComponent } from './common-component';
 import './timetable-editor.css';
 import { createNewStation, getDefaultPlatform } from './timetable-util';
@@ -8,8 +8,8 @@ function StationComponent({
   diaStation,
   setDiaStation,
 }: {
-  diaStation: Station;
-  setDiaStation: (diaStation: Station) => void;
+  diaStation: StationLike;
+  setDiaStation: (diaStation: StationLike) => void;
 }) {
   return (
     <EditableTextComponent
@@ -38,12 +38,12 @@ function StationContextMenuComponent({
 }: {
   contextData: ContextData;
   setContextData: (contextData: ContextData) => void;
-  diaStations: Station[];
-  setDiaStations: (diaStations: Station[]) => void;
+  diaStations: StationLike[];
+  setDiaStations: (diaStations: StationLike[]) => void;
   trains: Train[];
   otherDirectionTrains: Train[];
-  selectedStation: Station | null;
-  showStationDetail: (diaStation: Station) => void;
+  selectedStation: StationLike | null;
+  showStationDetail: (diaStation: StationLike) => void;
   timetableDirection: 'Inbound' | 'Outbound';
 }) {
   return (
@@ -128,8 +128,8 @@ export function StationListComponent({
   timetableDirection,
   setSettingData,
 }: {
-  diaStations: Station[];
-  setDiaStations: (diaStations: Station[]) => void;
+  diaStations: StationLike[];
+  setDiaStations: (diaStations: StationLike[]) => void;
   trains: Train[];
   otherDirectionTrains: Train[];
   timetableDirection: 'Inbound' | 'Outbound';
@@ -140,9 +140,9 @@ export function StationListComponent({
     posX: 0,
     posY: 0,
   });
-  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [selectedStation, setSelectedStation] = useState<StationLike | null>(null);
 
-  const showStationDetail = (diaStation: Station) => {
+  const showStationDetail = (diaStation: StationLike) => {
     setSettingData({
       settingType: 'StationSetting',
       station: diaStation,
@@ -241,8 +241,8 @@ export function StationDetailComponent({
   diaStation,
   setDiaStation,
 }: {
-  diaStation: Station;
-  setDiaStation: (diaStation: Station) => void;
+  diaStation: StationLike;
+  setDiaStation: (diaStation: StationLike) => void;
 }) {
   return (
     <div>
@@ -259,102 +259,107 @@ export function StationDetailComponent({
           width={100}
         />
       </div>
-      <div>
-        番線リスト:
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', flexDirection: 'row' }}>
-            <div style={{ width: 100 + 'px', textAlign: 'center' }}>番線名</div>
-            <div style={{ width: 50 + 'px', textAlign: 'center' }}>
-              <span style={{ display: 'inline-block' }}>上り</span>
-              <span style={{ display: 'inline-block' }}>主本線</span>
-            </div>
-            <div style={{ width: 50 + 'px', textAlign: 'center' }}>
-              <span style={{ display: 'inline-block' }}>下り</span>
-              <span style={{ display: 'inline-block' }}>主本線</span>
-            </div>
-          </div>
-          <div>
-            {diaStation.platforms.map((diaPlatform) => (
-              <div style={{ display: 'flex', flexDirection: 'row' }}>
-                <EditableTextComponent
-                  value={diaPlatform.platformName}
-                  onChange={(value) => {
-                    diaPlatform.platformName = value;
-                    setDiaStation({ ...diaStation });
-                    return true;
-                  }}
-                  height={24}
-                  width={100}
-                />
-                <input
-                  type='radio'
-                  name='default-inbound-platform'
-                  style={{ width: 50 + 'px', margin: '0' }}
-                  value={diaPlatform.platformId}
-                  onChange={(e) => {
-                    if ((e.target as HTMLInputElement)?.value) {
-                      const targetPlatformId = (e.target as HTMLInputElement).value;
-                      diaStation.defaultInboundPlatformId = targetPlatformId;
-                      setDiaStation({ ...diaStation });
-                    }
-                  }}
-                />
-                <input
-                  type='radio'
-                  name='default-outbound-platform'
-                  style={{ width: 50 + 'px', margin: '0' }}
-                  value={diaPlatform.platformId}
-                  onChange={(e) => {
-                    if ((e.target as HTMLInputElement)?.value) {
-                      const targetPlatformId = (e.target as HTMLInputElement).value;
-                      diaStation.defaultOutboundPlatformId = targetPlatformId;
-                      setDiaStation({ ...diaStation });
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => {
-                    diaStation.platforms = diaStation.platforms.filter(
-                      (diaPlatform_) => diaPlatform_.platformId !== diaPlatform.platformId
-                    );
-                    setDiaStation({ ...diaStation });
-                  }}
-                >
-                  削除
-                </button>
+      {diaStation.stationType === 'Station' ? (
+        <div>
+          番線リスト:
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'row' }}>
+              <div style={{ width: 100 + 'px', textAlign: 'center' }}>番線名</div>
+              <div style={{ width: 50 + 'px', textAlign: 'center' }}>
+                <span style={{ display: 'inline-block' }}>上り</span>
+                <span style={{ display: 'inline-block' }}>主本線</span>
               </div>
-            ))}
-          </div>
-          <div>
-            <button
-              onClick={() => {
-                diaStation.platforms.push({
-                  platformId: generateId(),
-                  platformName:
-                    diaStation.platforms.length === 0
-                      ? '1'
-                      : Math.max(
-                          ...diaStation.platforms.map((p) => {
-                            const n = Number(p.platformName);
-                            if (isNaN(n)) {
-                              return 0;
-                            } else {
-                              return n;
-                            }
-                          })
-                        ) +
-                        1 +
-                        '',
-                  station: diaStation,
-                });
-                setDiaStation({ ...diaStation });
-              }}
-            >
-              番線を追加
-            </button>
+              <div style={{ width: 50 + 'px', textAlign: 'center' }}>
+                <span style={{ display: 'inline-block' }}>下り</span>
+                <span style={{ display: 'inline-block' }}>主本線</span>
+              </div>
+            </div>
+            <div>
+              {diaStation.platforms.map((diaPlatform) => (
+                <div style={{ display: 'flex', flexDirection: 'row' }}>
+                  <EditableTextComponent
+                    value={diaPlatform.platformName}
+                    onChange={(value) => {
+                      diaPlatform.platformName = value;
+                      setDiaStation({ ...diaStation });
+                      return true;
+                    }}
+                    height={24}
+                    width={100}
+                  />
+                  <input
+                    type='radio'
+                    name='default-inbound-platform'
+                    style={{ width: 50 + 'px', margin: '0' }}
+                    value={diaPlatform.platformId}
+                    onChange={(e) => {
+                      if ((e.target as HTMLInputElement)?.value) {
+                        const targetPlatformId = (e.target as HTMLInputElement).value;
+                        diaStation.defaultInboundPlatformId = targetPlatformId;
+                        setDiaStation({ ...diaStation });
+                      }
+                    }}
+                  />
+                  <input
+                    type='radio'
+                    name='default-outbound-platform'
+                    style={{ width: 50 + 'px', margin: '0' }}
+                    value={diaPlatform.platformId}
+                    onChange={(e) => {
+                      if ((e.target as HTMLInputElement)?.value) {
+                        const targetPlatformId = (e.target as HTMLInputElement).value;
+                        diaStation.defaultOutboundPlatformId = targetPlatformId;
+                        setDiaStation({ ...diaStation });
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      diaStation.platforms = diaStation.platforms.filter(
+                        (diaPlatform_) => diaPlatform_.platformId !== diaPlatform.platformId
+                      );
+                      setDiaStation({ ...diaStation });
+                    }}
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div>
+              <button
+                onClick={() => {
+                  diaStation.platforms.push({
+                    platformType: 'Platform',
+                    platformId: generateId(),
+                    platformName:
+                      diaStation.platforms.length === 0
+                        ? '1'
+                        : Math.max(
+                            ...diaStation.platforms.map((p) => {
+                              const n = Number(p.platformName);
+                              if (isNaN(n)) {
+                                return 0;
+                              } else {
+                                return n;
+                              }
+                            })
+                          ) +
+                          1 +
+                          '',
+                    station: diaStation,
+                  });
+                  setDiaStation({ ...diaStation });
+                }}
+              >
+                番線を追加
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <></>
+      )}
     </div>
   );
 }

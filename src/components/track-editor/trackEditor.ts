@@ -17,7 +17,7 @@ import {
   addVector,
   timesVector,
 } from '../../mapEditorModel';
-import { Station, Switch, Track } from '../../model';
+import { StationLike, Switch, Track } from '../../model';
 import { createNewTrack, getRadian, validateSwitch } from '../../trackUtil';
 
 type CreateLineError = { error: string };
@@ -1041,7 +1041,7 @@ export function deleteLine(map: GameMap, cell1: Cell, cell2: Cell): CreateLineEr
   }
 }
 
-export function deleteStation(map: GameMap, station: Station): CreateLineError | true {
+export function deleteStation(map: GameMap, station: StationLike): CreateLineError | true {
   const platformCells = map
     .map((row) =>
       row.filter((cell) =>

@@ -4,7 +4,7 @@ import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
 import { MapManager } from './components/track-editor/mapManager';
 import { MoneyManager } from './components/track-editor/moneyManager';
 import { ITrainMove, StoredTrain } from './components/track-editor/trainMoveBase';
-import { DetailedTimetable, Platform, Point, Station, Switch, Track } from './model';
+import { DetailedTimetable, PlatformLike, Point, StationLike, Switch, Track } from './model';
 import { OutlinedTimetableData } from './outlinedTimetableData';
 
 export const CellWidth = 32;
@@ -129,7 +129,7 @@ export function createMapContext(mapWidth: number, mapHeight: number): MapContex
 
 export interface RailwayLineStop {
   stopId: string;
-  platform: Platform;
+  platform: PlatformLike;
   platformTrack: Track;
   platformPaths: Track[] | null;
 }
@@ -153,7 +153,7 @@ export interface AppStates {
    */
   trainPlaceDirection: 'Up' | 'Down';
   switches: Switch[]; // 今は使っていない
-  stations: Station[];
+  stations: StationLike[];
   tracks: Track[];
   map: GameMap;
   extendedMap: ExtendedGameMap;

@@ -1,5 +1,6 @@
 import { createOperations } from './components/track-editor/timetableConverter';
-import { DiaTime, OutlinedTimetable, Platform, Station, StationOperation, Train, TrainType, generateId } from './model';
+import { DiaTime, Platform, Station, StationLike, StationOperation, Train, TrainType, generateId } from './model';
+import { OutlinedTimetable } from './outlinedTimetableData';
 
 // oud形式をjson形式に変換する
 function oudToJson(oudBuf: string): any {
@@ -143,6 +144,7 @@ function timeToSeconds(time: Time): number {
 function convertEkis(ekis: any[]): Station[] {
   return ekis.map((eki, i) => {
     const station: Station = {
+      stationType: 'Station',
       stationId: generateId(),
       stationName: (eki['Ekimei'] ?? '') as string,
       distance: i * 10 /* TODO: 距離はOudiaSecondでは時間から算出している */,
@@ -152,6 +154,7 @@ function convertEkis(ekis: any[]): Station[] {
     };
     for (const track of eki['EkiTrack2Cont'][0]['EkiTrack2'] as any[]) {
       const platform: Platform = {
+        platformType: 'Platform',
         platformId: generateId(),
         platformName: (track['TrackRyakusyou'] ?? track['TrackName'] ?? '') as string,
         station: station,
@@ -223,7 +226,7 @@ function convertOperations(ressha: any): {
     return {
       stationOperationType: 'InOut',
       operationTime: jikoku !== undefined ? timeToSeconds(jikoku) : 0,
-      operationCode: opcode3,
+      /* TODO: 不足している分を補う */
     };
   };
 
@@ -294,7 +297,7 @@ function convertTrainTypes(ressyasyubetsus: any[]): TrainType[] {
 }
 
 // 足りない駅の時刻を補完する
-export function fillMissingTimes(trains: Train[], stations: Station[]): void {
+export function fillMissingTimes(trains: Train[], stations: StationLike[]): void {
   for (const station of stations) {
     for (const train of trains) {
       const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === station.stationId);

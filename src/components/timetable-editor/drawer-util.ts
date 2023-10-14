@@ -1,9 +1,9 @@
 import Konva from 'konva';
-import { AppClipboard, Operation, Point, Station, Train } from '../../model';
+import { AppClipboard, Operation, Point, StationLike, Train } from '../../model';
 import { Polygon, sat } from '../../sat';
 
 export interface DiagramProps {
-  diaStations: Station[];
+  stations: StationLike[];
   setUpdate: () => void;
   inboundTrains: Train[];
   outboundTrains: Train[];
@@ -17,7 +17,7 @@ export const hitStrokeWidth = 10;
 let editMode: 'Edit' | 'Create' = 'Edit';
 
 export interface StationPosition {
-  station: Station;
+  station: StationLike;
   diagramPosition: number;
 }
 
@@ -32,11 +32,11 @@ export interface DiagramState {
   // stationCanvas: HTMLCanvasElement;
   // mainCanvas: HTMLCanvasElement;
   layer: Konva.Layer;
-  stationPositions: { station: Station; diagramPosition: number }[];
+  stationPositions: StationPosition[];
   secondWidth: number;
   // 線を伸ばしている途中の線
   drawingLine: Konva.Line | null;
-  drawingLineTimes: { station: Station; time: number }[];
+  drawingLineTimes: { station: StationLike; time: number }[];
   selections: TrainSelection[];
   selectionGroup: Konva.Group;
   dragStartPoint: Point | null;

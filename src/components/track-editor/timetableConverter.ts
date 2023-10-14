@@ -3,6 +3,7 @@ import {
   DetailedTimetable,
   Operation,
   Platform,
+  PlatformLike,
   PlatformTTItem,
   PlatformTimetable,
   PlatformTimetableMap,
@@ -173,7 +174,7 @@ function toStringFromPlatform(platform: Platform) {
   return platform.station.stationName + ' ' + platform.platformName;
 }
 
-function toPlatformTTItems(allPlatforms: Platform[], tracks: Track[], trains: Train[]): PlatformTimetableMap {
+function toPlatformTTItems(allPlatforms: PlatformLike[], tracks: Track[], trains: Train[]): PlatformTimetableMap {
   const allTrackPlatformIds = new Set<string>(allPlatforms.map((p) => p.platformId));
 
   // platformは基本的には時刻をそのまま転記すればよい
@@ -256,7 +257,7 @@ function toPlatformTTItems(allPlatforms: Platform[], tracks: Track[], trains: Tr
   );
 }
 
-function getTrackOfPlatform(tracks: Track[], platform: Platform): Track | undefined {
+function getTrackOfPlatform(tracks: Track[], platform: PlatformLike): Track | undefined {
   return tracks.find(
     (t) =>
       t.track.platform?.platformId === platform.platformId ||
@@ -408,7 +409,7 @@ function toTimetableMap(switchTTItems: SwitchTTItem[]) {
 }
 
 export function toDetailedTimetable(
-  allPlatforms: Platform[],
+  allPlatforms: PlatformLike[],
   timetableData: OutlinedTimetableData,
   tracks: Track[]
 ): DetailedTimetable | null {
@@ -546,9 +547,7 @@ export function createOperations(trains: Train[]): Operation[] {
       continue;
     }
 
-    if (train.firstStationOperation?.stationOperationType !== 'Connection') {
-      assert(train.firstStationOperation?.stationOperationType === 'InOut');
-
+    if (train.firstStationOperation?.stationOperationType === 'InOut') {
       const operationTrains: Train[] = [];
       let currentTrain: null | Train = train;
       while (currentTrain != null) {

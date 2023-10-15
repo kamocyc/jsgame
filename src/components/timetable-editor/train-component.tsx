@@ -150,10 +150,11 @@ function TrainListItemComponent({
       >
         <div
           style={{
-            fontSize: '12px',
+            fontSize: '14px',
             width: '10px',
             color: diaTime.isPassing ? 'black' : 'lightgray',
             backgroundColor: diaTime.isPassing ? 'lightgreen' : 'white',
+            cursor: 'pointer',
           }}
           onClick={() => {
             diaTime.isPassing = !diaTime.isPassing;
@@ -164,10 +165,11 @@ function TrainListItemComponent({
         </div>
         <div
           style={{
-            fontSize: '12px',
+            fontSize: '14px',
             width: '10px',
             color: !diaTime.isInService ? 'black' : 'lightgray',
             backgroundColor: !diaTime.isInService ? 'lightgreen' : 'white',
+            cursor: 'pointer',
           }}
           onClick={() => {
             diaTime.isInService = !diaTime.isInService;
@@ -215,6 +217,17 @@ function showStationOperation(stationOperation: StationOperation | undefined, fi
   } else {
     throw new Error('invalid');
   }
+}
+
+// 新しい列車番号を生成する（ロジックは適当）
+function getNewTrainCode(trains: Train[]) {
+  const codes = trains.map((train) => train.trainCode);
+  const symbolInTrainCode = codes[codes.length - 1].replace(/[^A-Z]/g, '');
+  const maxCode = codes.map((code) => code.replace(/[^0-9]/g, '')).sort((a, b) => parseInt(b) - parseInt(a))[0];
+  const newCode = (parseInt(maxCode) + 2)
+    .toString()
+    .padStart(codes[codes.length - 1].replace(/[^0-9]/g, '').length, '0');
+  return symbolInTrainCode + newCode;
 }
 
 export function TrainListComponent({
@@ -283,6 +296,23 @@ export function TrainListComponent({
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ height: '24px', width: '56px' }}>
             {/* 列車番号 */}
+            <EditableTextComponent
+              value={train.trainCode}
+              onChange={(value) => {
+                if (value == '') {
+                  train.trainCode = '';
+                } else {
+                  train.trainCode = value;
+                }
+                setTrains([...trains]);
+                return true;
+              }}
+              height={24}
+              width={null}
+            />
+          </div>
+          <div style={{ height: '24px', width: '56px' }}>
+            {/* 列車名 */}
             <EditableTextComponent
               value={train.trainName ?? ''}
               onChange={(value) => {
@@ -358,11 +388,25 @@ export function TrainListComponent({
               <TrainListItemComponent {...{ diaTime, trains, setTrains }} />
             ))}
           </div>
+          <div>
+            <button
+              onClick={() => {
+                const index = trains.findIndex((t) => t.trainId === train.trainId);
+                if (index >= 0) {
+                  trains.splice(index, 1);
+                  setTrains([...trains]);
+                }
+              }}
+            >
+              削除
+            </button>
+          </div>
         </div>
       ))}
       <div>
         <button
           onClick={() => {
+            const newTrainCode = getNewTrainCode(trains);
             trains.push({
               trainId: generateId(),
               trainName: '',
@@ -375,7 +419,7 @@ export function TrainListComponent({
                 platform: getDefaultPlatform(diaStation, timetableDirection),
                 isInService: true,
               })),
-              trainCode: '',
+              trainCode: newTrainCode,
               firstStationOperation: getDefaultConnectionType(),
               lastStationOperation: getDefaultConnectionType(),
               direction: timetableDirection,

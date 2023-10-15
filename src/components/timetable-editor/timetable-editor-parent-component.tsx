@@ -127,7 +127,6 @@ export function TimetableEditorParentComponent({
               trainMove: trainMove,
               agentManager: createAgentManager(),
               detailedTimetable: timetableAndOperations,
-              // placedTrains: trains, // これは使っているのか？
             }));
           }}
         >

@@ -1,4 +1,4 @@
-import { assert } from '../../common';
+import { assert, nn } from '../../common';
 import {
   DetailedTimetable,
   Operation,
@@ -250,6 +250,11 @@ function toPlatformTTItems(allPlatforms: PlatformLike[], tracks: Track[], trains
     const items = platformTimetableMapRaw.get(ttItem.platformId);
     assert(items != null);
     items.push(ttItem);
+  }
+  for (const platformId of allTrackPlatformIds.keys()) {
+    nn(platformTimetableMapRaw.get(platformId)).sort(
+      (a, b) => nn(a.departureTime ?? a.arrivalTime) - nn(b.departureTime ?? b.arrivalTime)
+    );
   }
 
   return new Map(

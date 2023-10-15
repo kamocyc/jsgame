@@ -1,4 +1,4 @@
-import { assert } from '../../common';
+import { assert, nn } from '../../common';
 import { RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import {
   DefaultStationDistance,
@@ -11,7 +11,6 @@ import {
   Train,
   TrainType,
   generateId,
-  getDefaultConnectionType,
 } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 import { createOperations } from '../track-editor/timetableConverter';
@@ -76,6 +75,33 @@ export function getInitialTrainTypes(): TrainType[] {
   ];
 }
 
+function createTrain(stops: RailwayLineStop[], diaTimes: DiaTime[]): Train {
+  const trainId = generateId();
+  return {
+    trainId: trainId,
+    trainName: '',
+    trainCode: '001M',
+    diaTimes: diaTimes,
+    firstStationOperation: {
+      stationOperationType: 'InOut',
+      trainId,
+      stationId: diaTimes[0].station.stationId,
+      platformId: nn(diaTimes[0].platform).platformId,
+      trackId: stops[0].platformTrack.trackId,
+      operationTime: nn(diaTimes[0].departureTime),
+    },
+    lastStationOperation: {
+      stationOperationType: 'InOut',
+      trainId,
+      stationId: diaTimes[diaTimes.length - 1].station.stationId,
+      platformId: nn(diaTimes[diaTimes.length - 1].platform).platformId,
+      trackId: stops[stops.length - 1].platformTrack.trackId,
+      operationTime: nn(diaTimes[diaTimes.length - 1].arrivalTime) + 60,
+    },
+    direction: 'Inbound',
+  };
+}
+
 export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetable, Train[]] {
   const baseTime = 10 * 60 * 60;
 
@@ -118,29 +144,11 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
 
   const stations = stops.map((stop) => stop.platform.station);
 
-  const inboundTrains: Train[] = [
-    {
-      trainId: generateId(),
-      trainName: '',
-      trainCode: '001M',
-      diaTimes: inboundDiaTimes,
-      firstStationOperation: getDefaultConnectionType(),
-      lastStationOperation: getDefaultConnectionType(),
-      direction: 'Inbound',
-    },
-  ];
+  const trainId = generateId();
+  const inboundTrains: Train[] = [createTrain(stops, inboundDiaTimes)];
 
-  const outboundTrains: Train[] = [
-    {
-      trainId: generateId(),
-      trainName: '',
-      trainCode: '002M',
-      diaTimes: outboundDiaTimes,
-      firstStationOperation: getDefaultConnectionType(),
-      lastStationOperation: getDefaultConnectionType(),
-      direction: 'Outbound',
-    },
-  ];
+  const trainId2 = generateId();
+  const outboundTrains: Train[] = [createTrain([...stops].reverse(), outboundDiaTimes)];
 
   const trains = inboundTrains.concat(outboundTrains);
 

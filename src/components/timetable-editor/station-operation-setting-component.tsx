@@ -22,7 +22,9 @@ export function StationOperationSettingComponent({
   setStationOperation: (stationOperation: StationOperation) => void;
 }) {
   useEffect(() => {
-    setStationOperation({ stationOperationType: 'Connection' });
+    if (stationOperation === undefined) {
+      setStationOperation({ stationOperationType: 'Connection' });
+    }
   }, [stationOperation !== undefined]);
 
   function getPlatformData(platformId: string) {

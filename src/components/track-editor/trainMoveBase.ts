@@ -34,8 +34,10 @@ export interface ITrainMove {
   getTrainMoveType(): 'TrainMove' | 'TrainRailwayMove';
 }
 
+const trainMoveType: 'Railway' | 'Timetable' = 'Timetable';
+
 export function createTrainMove(detailedTimetable: DetailedTimetable | null) {
-  if (true) {
+  if (trainMoveType === 'Railway') {
     return new TrainRailwayMove();
   } else {
     if (detailedTimetable === null) {

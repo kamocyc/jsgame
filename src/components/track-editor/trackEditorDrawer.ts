@@ -558,7 +558,7 @@ function drawStations(
           image.width * mapContext.scale,
           image.height * mapContext.scale
         );
-      } else {
+      } else if (platform.platformType === 'DepotLine') {
         const leftX = track.begin.x < track.end.x ? track.begin.x : track.end.x;
         ctx.fillStyle = 'yellow';
         ctx.fillRect(

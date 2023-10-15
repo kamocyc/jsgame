@@ -215,3 +215,8 @@ export function parseTime(text: string): number | undefined {
 
   return hour * 60 * 60 + minute * 60;
 }
+
+export function nn<T>(v: T | undefined | null): T {
+  assert(v != null);
+  return v;
+}

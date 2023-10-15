@@ -70,7 +70,7 @@ export class TrainTimetableMove implements ITrainMove {
     }
 
     const ttItem = this.timetable.switchTimetableMap.get(currentSwitch.switchId);
-    assert(ttItem !== undefined, '時刻情報が設定されていない')
+    assert(ttItem !== undefined, '時刻情報が設定されていない');
 
     const branchDirection = ttItem.getBranchDirection(placedTrain.trainId!);
     if (branchDirection === 'Straight') {
@@ -196,6 +196,8 @@ export class TrainTimetableMove implements ITrainMove {
       // 運行費を消費する
       props.moneyManager.addMoney(-10);
     }
+
+    this.placedTrains = placedTrains;
 
     // const collided = this.getCollidedTrains();
     // if (collided !== null) {

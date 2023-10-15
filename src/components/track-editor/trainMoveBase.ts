@@ -14,8 +14,9 @@ export interface StoredTrain {
 
 export interface PlacedTrain extends StoredTrain {
   train: Train | null; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
-  trainId?: string;
-  operationId?: string;
+  trainId: string;
+  diaTimeId: string;
+  operationId: string;
   operation: Operation | null;
   speed: number;
   track: Track;
@@ -23,6 +24,8 @@ export interface PlacedTrain extends StoredTrain {
   position: Point;
   stationWaitTime: number;
   stationStatus: ArrivalAndDepartureStatus;
+  operatingStatus: 'OutOfService' | 'InService' | 'Parking';
+  justDepartedPlatformId: string | null;
 }
 
 export type TrainMoveCommonProps = TrainMoveProps & TrainRailwayMoveProps;
@@ -47,7 +50,7 @@ export function createTrainMove(detailedTimetable: DetailedTimetable | null) {
   }
 }
 
-function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | undefined {
+export function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | undefined {
   if (!stationTrack.track.platform) return undefined;
 
   const midPoint = getMidPoint(stationTrack.begin, stationTrack.end);
@@ -57,7 +60,7 @@ function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | unde
 export function shouldStopTrain(train: PlacedTrain): false | Point {
   if (
     !train.track.track.platform ||
-    train.stationStatus !== 'NotArrived' /*|| train.stationWaitTime >= this.maxStationWaitTime*/
+    train.stationStatus === 'Arrived' /*|| train.stationWaitTime >= this.maxStationWaitTime*/
   )
     return false;
 

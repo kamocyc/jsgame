@@ -231,10 +231,13 @@ function toPlatformTTItems(allPlatforms: PlatformLike[], tracks: Track[], trains
 
       platformTTItems.push({
         trainId: train.trainId,
+        diaTimeId: diaTime.diaTimeId,
         platformId: getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!)!.track.platform!.platformId,
         /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */
         departureTime: diaTime.departureTime,
         arrivalTime: diaTime.arrivalTime,
+        isInService: diaTime.isInService,
+        isPassing: diaTime.isPassing,
         // trackId: track?.trackId,
       });
 
@@ -438,7 +441,10 @@ export function toDetailedTimetable(
 
   const switchTimetableMap = toTimetableMap(switchTTItems);
 
-  const operations = createOperations(timetableData.getTrains());
+  const operations = timetableData
+    .getTimetables()
+    .map((timetable) => timetable.operations)
+    .flat();
 
   return {
     platformTimetableMap,
@@ -506,7 +512,7 @@ function generateOperationCode(operations: Operation[]) {
   return Math.random().toString().replace('.', '');
 }
 
-export function createOperations(trains: Train[]): Operation[] {
+export function createOperations(trains: Train[], tracks: Track[] = []): Operation[] {
   const usedTrains = new Set<string>();
   const operations: Operation[] = [];
 
@@ -554,6 +560,14 @@ export function createOperations(trains: Train[]): Operation[] {
 
     if (train.firstStationOperation?.stationOperationType === 'InOut') {
       const operationTrains: Train[] = [];
+      assert(train.firstStationOperation.platformId === train.diaTimes[0].platform?.platformId);
+      assert(train.firstStationOperation.stationId === train.diaTimes[0].platform?.station.stationId);
+      // TODO: できればチェックしたい
+      // assert(
+      //   tracks.find((track) => track.trackId === (train.firstStationOperation as InOutOperation).trackId)?.track
+      //     .platform?.platformId === train.firstStationOperation.platformId
+      // );
+
       let currentTrain: null | Train = train;
       while (currentTrain != null) {
         operationTrains.push(currentTrain);
@@ -563,7 +577,8 @@ export function createOperations(trains: Train[]): Operation[] {
 
       const lastOperation = operationTrains[operationTrains.length - 1].lastStationOperation;
       if (lastOperation == null || lastOperation.stationOperationType !== 'InOut') {
-        throw new Error('lastOperation is null or not InOut');
+        console.warn('lastOperation is null or not InOut');
+        continue;
       }
 
       const operation: Operation = {

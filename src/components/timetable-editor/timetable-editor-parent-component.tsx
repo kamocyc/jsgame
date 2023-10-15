@@ -53,16 +53,17 @@ export function TimetableEditorParentComponent({
     .find((timetable) => timetable.railwayLineId === selectedRailwayLineId);
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
   const update = () => {
+    appStates.outlinedTimetableData.updateOperations();
     setAppStates((appStates) => ({
       ...appStates,
     }));
   };
 
-  console.log({
-    selectedRailwayLineId,
-    selectedTimetable,
-    railwayLine,
-  });
+  // console.log({
+  //   selectedRailwayLineId,
+  //   selectedTimetable,
+  //   railwayLine,
+  // });
 
   return (
     <>

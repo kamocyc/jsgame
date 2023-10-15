@@ -9,12 +9,14 @@ import { getDefaultPlatform } from './timetable-util';
 // 簡易な設定として残すのはありかも。実際にも車両基地に隣接した駅から始発したりとか、駅に耐泊した列車がそのまま出発とかある。
 // やはり分岐駅設定は欲しい。oudiaを参考に作りたい。
 export function StationOperationSettingComponent({
+  firstOrLast,
   stations,
   train,
   tracks,
   stationOperation,
   setStationOperation,
 }: {
+  firstOrLast: 'First' | 'Last';
   stations: StationLike[];
   train: Train;
   tracks: Track[];
@@ -37,6 +39,7 @@ export function StationOperationSettingComponent({
   }
 
   const stationOperation_ = stationOperation ?? { stationOperationType: 'Connection' };
+  const textInOut = firstOrLast === 'First' ? '入区' : '出区';
 
   return (
     <>
@@ -62,18 +65,18 @@ export function StationOperationSettingComponent({
                   train.diaTimes[0].platform?.platformId ??
                   getDefaultPlatform(train.diaTimes[0].station, train.direction).platformId;
 
+                const diaTime = firstOrLast === 'First' ? train.diaTimes[0] : train.diaTimes[train.diaTimes.length - 1];
                 setStationOperation({
                   stationOperationType: 'InOut',
-                  trainId: train.trainId,
                   operationTime: firstStationDepartureTime,
-                  stationId: train.diaTimes[0].station.stationId,
+                  stationId: diaTime.station.stationId,
                   ...getPlatformData(platformId),
                 });
               }
             }}
           >
             <option value='Connection'>接続</option>
-            <option value='InOut'>入出区</option>
+            <option value='InOut'>{textInOut}</option>
           </select>
         </>
       </div>
@@ -126,7 +129,7 @@ export function StationOperationSettingComponent({
             </>
           </div>
           <div>
-            開始時刻:
+            時刻:
             <>
               <TimeInputComponent
                 time={stationOperation_.operationTime}

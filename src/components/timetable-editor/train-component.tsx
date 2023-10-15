@@ -144,17 +144,38 @@ function TrainListItemComponent({
     >
       <div
         style={{
-          fontSize: '12px',
-          width: '10px',
-          color: diaTime.isPassing ? 'black' : 'lightgray',
-          backgroundColor: diaTime.isPassing ? 'lightgreen' : 'white',
-        }}
-        onClick={() => {
-          diaTime.isPassing = !diaTime.isPassing;
-          setTrains([...trains]);
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        レ
+        <div
+          style={{
+            fontSize: '12px',
+            width: '10px',
+            color: diaTime.isPassing ? 'black' : 'lightgray',
+            backgroundColor: diaTime.isPassing ? 'lightgreen' : 'white',
+          }}
+          onClick={() => {
+            diaTime.isPassing = !diaTime.isPassing;
+            setTrains([...trains]);
+          }}
+        >
+          レ
+        </div>
+        <div
+          style={{
+            fontSize: '12px',
+            width: '10px',
+            color: !diaTime.isInService ? 'black' : 'lightgray',
+            backgroundColor: !diaTime.isInService ? 'lightgreen' : 'white',
+          }}
+          onClick={() => {
+            diaTime.isInService = !diaTime.isInService;
+            setTrains([...trains]);
+          }}
+        >
+          回
+        </div>
       </div>
       <div style={{ width: 24 * 3 + 'px', display: 'flex', flexDirection: 'column' }}>
         <TimeInputComponent
@@ -184,13 +205,13 @@ function TrainListItemComponent({
   );
 }
 
-function showStationOperation(stationOperation: StationOperation | undefined) {
+function showStationOperation(stationOperation: StationOperation | undefined, firstOrLast: 'First' | 'Last') {
   if (stationOperation === undefined) {
     return '接続'; // 未設定
   } else if (stationOperation.stationOperationType === 'Connection') {
     return '接続';
   } else if (stationOperation.stationOperationType === 'InOut') {
-    return '入出区';
+    return firstOrLast === 'First' ? '入区' : '出区';
   } else {
     throw new Error('invalid');
   }
@@ -314,7 +335,7 @@ export function TrainListComponent({
                 });
               }}
             >
-              {showStationOperation(train.firstStationOperation)}
+              {showStationOperation(train.firstStationOperation, 'First')}
             </button>
           </div>
           <div style={{ height: '24px' }}>
@@ -328,7 +349,7 @@ export function TrainListComponent({
                 });
               }}
             >
-              {showStationOperation(train.lastStationOperation)}
+              {showStationOperation(train.lastStationOperation, 'Last')}
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + train.trainId}>
@@ -352,6 +373,7 @@ export function TrainListComponent({
                 isPassing: false,
                 station: diaStation,
                 platform: getDefaultPlatform(diaStation, timetableDirection),
+                isInService: true,
               })),
               trainCode: '',
               firstStationOperation: getDefaultConnectionType(),

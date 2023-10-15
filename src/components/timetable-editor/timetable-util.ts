@@ -84,7 +84,6 @@ function createTrain(stops: RailwayLineStop[], diaTimes: DiaTime[]): Train {
     diaTimes: diaTimes,
     firstStationOperation: {
       stationOperationType: 'InOut',
-      trainId,
       stationId: diaTimes[0].station.stationId,
       platformId: nn(diaTimes[0].platform).platformId,
       trackId: stops[0].platformTrack.trackId,
@@ -92,7 +91,6 @@ function createTrain(stops: RailwayLineStop[], diaTimes: DiaTime[]): Train {
     },
     lastStationOperation: {
       stationOperationType: 'InOut',
-      trainId,
       stationId: diaTimes[diaTimes.length - 1].station.stationId,
       platformId: nn(diaTimes[diaTimes.length - 1].platform).platformId,
       trackId: stops[stops.length - 1].platformTrack.trackId,

@@ -150,4 +150,12 @@ export class OutlinedTimetableData {
       this.deleteNotUsedTrains();
     }
   }
+
+  updateOperations() {
+    for (const timetable of this.timetables) {
+      timetable.operations = createOperations(
+        timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(id))
+      );
+    }
+  }
 }

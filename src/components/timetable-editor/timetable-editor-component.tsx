@@ -1,15 +1,7 @@
 import { StateUpdater, useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
 import { RailwayLine } from '../../mapEditorModel';
-import {
-  AppClipboard,
-  SettingData,
-  StationLike,
-  TimetableDirection,
-  Track,
-  Train,
-  TrainType
-} from '../../model';
+import { AppClipboard, SettingData, StationLike, TimetableDirection, Track, Train, TrainType } from '../../model';
 import { OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
@@ -326,6 +318,7 @@ export function TimetableEditorComponent({
               />
             ) : settingData.settingType === 'StationOperationSetting' ? (
               <StationOperationSettingComponent
+                firstOrLast={settingData.firstOrLast}
                 setStationOperation={(stationOperation) => {
                   if (settingData.firstOrLast === 'First') {
                     settingData.train.firstStationOperation = stationOperation;

@@ -116,6 +116,9 @@ export class TrainRailwayMove implements ITrainMove {
           placedTrainId: train.placedTrainId,
           placedTrainName: train.placedTrainName,
           placedRailwayLineId: train.placedRailwayLineId,
+          operatingStatus: 'InService',
+          operationId: null,
+          trainId: null,
           train: null,
           operation: null,
           speed: 10,
@@ -209,7 +212,7 @@ export class TrainRailwayMove implements ITrainMove {
       }
 
       // 発車
-      placedTrain.stationStatus = 'Departed';
+      placedTrain.stationStatus = 'Running';
     }
 
     const previousPosition = { ...placedTrain.position };
@@ -229,7 +232,7 @@ export class TrainRailwayMove implements ITrainMove {
       // trainがtrackの外に出たら、次の線路に移動する
       if (isTrainOutTrack(placedTrain.position, placedTrain.track)) {
         placedTrain.stationWaitTime = 0;
-        placedTrain.stationStatus = 'NotArrived';
+        placedTrain.stationStatus = 'Running';
 
         const nextTrackAndStopId = this.getNextTrack(placedTrain.track, placedTrain, railwayLine, stop);
         const nextTrack = nextTrackAndStopId[0];

@@ -66,7 +66,7 @@ export interface TrackProperty {
   platform: PlatformLike | null;
 }
 
-export type ArrivalAndDepartureStatus = 'NotArrived' | 'Arrived' | 'Departed';
+export type ArrivalAndDepartureStatus = 'Arrived' | 'Running';
 
 function getInitialId(): number {
   return Math.floor((new Date().getTime() - 1600000000000) / 1000);
@@ -84,6 +84,7 @@ export interface DiaTime {
   arrivalTime: number | null;
   departureTime: number | null;
   isPassing: boolean;
+  isInService: boolean;
   station: StationLike;
   platform: PlatformLike | null;
 }
@@ -97,7 +98,6 @@ export interface TrainType {
 // 入出区
 export interface InOutOperation {
   stationOperationType: 'InOut';
-  trainId: string;
   stationId: string;
   platformId: string;
   trackId: string;
@@ -197,7 +197,10 @@ export interface Operation {
 
 export interface PlatformTTItem {
   trainId: string;
+  diaTimeId: string;
   platformId: string;
+  isPassing: boolean;
+  isInService: boolean;
   arrivalTime: number | null;
   departureTime: number | null;
 }

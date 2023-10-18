@@ -1,27 +1,23 @@
 import { useEffect, useRef } from 'preact/hooks';
-import { copyTrains, deleteTrains, pasteTrains } from './diagram-core';
-import { destroySelections, initializeKonva, updateDeleteTrains, updateTrains } from './diagram-konva-drawer';
-import { DiagramProps, diagramState } from './drawer-util';
-import { StationKonvaManager } from './station-konva';
+import { DiagramProps } from '../konva-diagram-editor/drawer-util';
+import { KonvaManager } from '../konva-diagram-editor/konva-manager';
 
 export function KonvaCanvas(props: DiagramProps) {
   const stationCanvasWidth = 100;
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const konvaManagerRef = useRef<KonvaManager | null>(null);
   useEffect(() => {
     const canvas = containerRef.current;
     if (canvas) {
-      const stationsCanvas = document.getElementById('stationsCanvas');
-      const mainCanvas = document.getElementById('mainCanvas');
-      if (!stationsCanvas || !mainCanvas) {
+      const stationContainer = document.getElementById('stationsCanvas');
+      const mainContainer = document.getElementById('mainCanvas');
+      if (!stationContainer || !mainContainer) {
         throw new Error('Canvas not found');
       }
-      const stationKonvaManager = new StationKonvaManager(
-        stationsCanvas as HTMLDivElement,
-        stationCanvasWidth,
-        props.stations
-      );
-      initializeKonva(mainCanvas as HTMLDivElement, props, stationKonvaManager);
+
+      const konvaManager = new KonvaManager(stationContainer as HTMLDivElement, props, mainContainer as HTMLDivElement);
+      konvaManagerRef.current = konvaManager;
     }
   }, [containerRef]);
 
@@ -36,25 +32,17 @@ export function KonvaCanvas(props: DiagramProps) {
         // Ctrl+Cを取得する
         onKeyDown={(e) => {
           if (e.ctrlKey && e.key === 'c') {
-            destroySelections(diagramState.selections);
-            copyTrains(
-              props,
-              diagramState.selections.map((s) => s.train)
-            );
+            konvaManagerRef.current?.copySelections();
           }
           // delete keyを取得
           if (e.key === 'Delete') {
-            destroySelections(diagramState.selections);
-            const trains = diagramState.selections.map((s) => s.train);
-            deleteTrains(props, trains);
-            updateDeleteTrains(diagramState.layer, trains);
+            konvaManagerRef.current?.deleteSelections();
           }
         }}
         // Ctrl+Vを取得する
         onKeyUp={(e) => {
           if (e.ctrlKey && e.key === 'v') {
-            const newTrains = pasteTrains(props);
-            updateTrains(diagramState.layer, newTrains);
+            konvaManagerRef.current?.pasteTrains();
           }
         }}
         tabIndex={-1}

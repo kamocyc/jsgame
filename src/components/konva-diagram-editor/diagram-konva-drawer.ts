@@ -511,35 +511,35 @@ export function initializeKonva(
   props: DiagramProps,
   stationKonvaManager: StationKonvaManager
 ) {
-  const minTime = Math.min(
-    ...(props.inboundTrains
-      .map((train) => train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat())
-      .concat(
-        props.outboundTrains.map((train) =>
-          train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat()
-        )
-      )
-      .flat()
-      .filter((t) => t != null) as number[])
-  );
+  // const minTime = Math.min(
+  //   ...(props.inboundTrains
+  //     .map((train) => train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat())
+  //     .concat(
+  //       props.outboundTrains.map((train) =>
+  //         train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat()
+  //       )
+  //     )
+  //     .flat()
+  //     .filter((t) => t != null) as number[])
+  // );
 
-  diagramState.secondWidth = virtualCanvasWidth / 24 / 60 / 60;
-  stagePosition.x = Math.min(0, -(minTime - 10 * 60) * diagramState.secondWidth * stagePosition.zoom);
+  // diagramState.secondWidth = virtualCanvasWidth / 24 / 60 / 60;
+  // stagePosition.x = Math.min(0, -(minTime - 10 * 60) * diagramState.secondWidth * stagePosition.zoom);
 
-  const stage = new Konva.Stage({
-    container: container,
-    width: canvasWidth,
-    height: canvasHeight,
-    id: 'mainStage',
-  });
+  // const stage = new Konva.Stage({
+  //   container: container,
+  //   width: canvasWidth,
+  //   height: canvasHeight,
+  //   id: 'mainStage',
+  // });
 
-  diagramState.layer = new Konva.Layer();
-  const layer = diagramState.layer;
-  stage.add(layer);
+  // diagramState.layer = new Konva.Layer();
+  // const layer = diagramState.layer;
+  // stage.add(layer);
 
-  stage.x(stagePosition.x);
-  stage.y(stagePosition.y);
-  stage.scale({ x: stagePosition.zoom, y: stagePosition.zoom });
+  // stage.x(stagePosition.x);
+  // stage.y(stagePosition.y);
+  // stage.scale({ x: stagePosition.zoom, y: stagePosition.zoom });
 
   stationKonvaManager.adjustStationPosition(stage);
 

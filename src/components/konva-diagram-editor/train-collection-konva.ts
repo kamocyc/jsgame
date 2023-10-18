@@ -103,7 +103,7 @@ export class TrainCollectionKonva {
           .find((train) => train.trainId === trainId);
         if (train == null) continue;
 
-        this.context.selectionGroupManager.addTrainSelection(trainLine.getTrainLine(), train);
+        this.context.selectionGroupManager.addTrainSelection(trainLine);
         console.log(train);
       }
     }

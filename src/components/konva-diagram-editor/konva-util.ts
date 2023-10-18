@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import { toStringFromSeconds } from '../../common';
-import { DiaTime, Point, Train } from '../../model';
+import { DiaTime, Point } from '../../model';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps, StationPosition } from './drawer-util';
 import { TrainKonva } from './train-konva';
@@ -100,22 +100,18 @@ export class SelectionGroupManager {
   private dragStartPoint: Point | null = null;
   private currentPosition: Point | null = null;
   private selections: TrainKonva[] = [];
-  // private selectionGroup: Konva.Group;
+  private selectionGroup: Konva.Group;
 
   constructor(
     private layer: Konva.Layer,
     private viewStateManager: ViewStateManager,
-    private dragRectKonva: DragRectKonva
+    private diagramProps: DiagramProps
   ) {
-    // this.selectionGroup = new Konva.Group({
-    //   draggable: true,
-    // });
-    // this.selectionGroup.on('mousemove', this.onDragMove.bind(this));
-    // this.layer.add(this.selectionGroup);
-  }
+    this.selectionGroup = new Konva.Group();
+    this.selectionGroup.on('mousedown', this.onMousedown.bind(this));
+    this.selectionGroup.on('mouseup', this.onMouseup.bind(this));
 
-  getSelections() {
-    return this.selections;
+    this.layer.add(this.selectionGroup);
   }
 
   setDragStartPoint(point: { x: number; y: number }) {
@@ -143,6 +139,39 @@ export class SelectionGroupManager {
     }
   }
 
+  drawLabel() {
+    const square = new Konva.Rect({
+      x: position[0] - 5 / scale,
+      y: position[1] - 5 / scale,
+      width: 10 / scale,
+      height: 10 / scale,
+      fill: 'blue',
+      stroke: 'black',
+      strokeWidth: 0,
+      draggable: true,
+      id: `timePoint-${diaTime.diaTimeId}-${arrivalOrDeparture}`,
+    });
+    trainClickedGroup.add(square);
+
+    const textPosition =
+      arrivalOrDeparture === 'arrivalTime'
+        ? { x: position[0] - 30 / scale, y: position[1] + 5 / scale }
+        : { x: position[0], y: position[1] - 20 / scale };
+    const timeLabel = new Konva.Text({
+      x: textPosition.x,
+      y: textPosition.y,
+      text:
+        arrivalOrDeparture === 'arrivalTime'
+          ? toStringFromSeconds(diaTime.arrivalTime!)
+          : toStringFromSeconds(diaTime.departureTime!),
+      fontSize: Math.round(22 / scale),
+      fill: 'black',
+      id: `timeLabel-${diaTime.diaTimeId}-${arrivalOrDeparture}`,
+      hitFunc: function (context, shape) {},
+    });
+    trainClickedGroup.add(timeLabel);
+  }
+
   // 列車線をドラッグしたときの処理
   processTrainDragMove(trainSelection: TrainKonva) {
     const [secondWidth, stationPositions] = [
@@ -151,70 +180,55 @@ export class SelectionGroupManager {
     ];
 
     const train = trainSelection.getTrain();
-    const positionDiaTimeMap = createPositionDiaTimeMap(train.diaTimes, secondWidth, stationPositions);
     const timeOffset = (this.currentPosition!.x - this.dragStartPoint!.x) / secondWidth;
 
-    // const offsetX = shape.x() + this.selectionGroup.x();
-    // let diaTimeIndex = 0;
-    for (const [diaTime_, timeType, _] of positionDiaTimeMap) {
-      const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
-
-      if (timeType === 'arrivalTime') {
-        const time = diaTime.arrivalTime + timeOffset;
-        diaTime.arrivalTime = time;
-      }
-      if (timeType === 'departureTime') {
-        const time = diaTime.departureTime + timeOffset;
-        diaTime.departureTime = time;
+    for (const diaTime of train.diaTimes) {
+      const stationPosition = stationPositions.find(
+        (stationPosition) => stationPosition.station.stationId === diaTime.station.stationId
+      );
+      if (!stationPosition) {
+        throw new Error(`station ${diaTime.station.stationId} not found`);
       }
 
-      const timeLabel = this.layer.findOne(`#timeLabel-${diaTime.diaTimeId}-${timeType}`) as Konva.Text;
-      timeLabel.text(toStringFromSeconds(time));
-      // timeLabel.x(shape.points()[diaTimeIndex] + offsetX - 5);
+      if (diaTime.departureTime != null) {
+        diaTime.departureTime += timeOffset;
 
-      // const timePoint = layer.findOne(`#timePoint-${diaTime.diaTimeId}-${timeType}`) as Konva.Rect;
-      // timePoint.x(shape.points()[diaTimeIndex] + offsetX - 5);
+        const timeLabel = this.layer.findOne(`#timeLabel-${diaTime.diaTimeId}-${timeType}`) as Konva.Text;
+        timeLabel.text(toStringFromSeconds(diaTime.departureTime));
+      }
+      if (diaTime.arrivalTime != null) {
+        diaTime.arrivalTime += timeOffset;
 
-      diaTimeIndex += 2;
+        const timeLabel = this.layer.findOne(`#timeLabel-${diaTime.diaTimeId}-${timeType}`) as Konva.Text;
+        timeLabel.text(toStringFromSeconds(diaTime.arrivalTime));
+      }
     }
 
-    updateTrains(layer, [train]);
+    this.diagramProps.updateTrains();
   }
 
-  onDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
-    const prevSelections = [...this.selections];
-    this.destroySelections();
-    const offsetX = this.selectionGroup.x();
-    this.selectionGroup.x(0);
-
-    for (const selection of prevSelections) {
-      selection.shape.x(selection.shape.x() + offsetX);
-      this.addTrainSelection(selection.shape, selection.train);
-    }
+  onMousedown(e: Konva.KonvaEventObject<MouseEvent>) {
+    const pointerPosition = getPointerPosition(this.layer.getStage());
+    this.setDragStartPoint(pointerPosition);
   }
 
-  addTrainSelection(trainLine: Konva.Line, train: Train) {
-    this.selectionGroup.add(trainLine);
-
-    const newSelection: TrainSelection = {
-      shape: trainLine,
-      train: train,
-    };
-
-    this.selections.push(newSelection);
+  onMouseup(e: Konva.KonvaEventObject<MouseEvent>) {
+    this.dragStartPoint = null;
+    this.currentPosition = null;
   }
 
-  destroySelection(selection: TrainKonva) {
-    selection.shape.draggable(false);
-    selection.shape.stroke('black');
-    selection.shape.remove();
-    this.layer.add(selection.shape);
+  getSelections() {
+    return this.selections;
+  }
+
+  addTrainSelection(trainKonva: TrainKonva) {
+    this.selectionGroup.add(trainKonva.getTrainLine());
+
+    this.selections.push(trainKonva);
   }
 
   destroySelections() {
-    for (const selection of this.selections) {
-      this.destroySelection(selection);
-    }
+    this.selectionGroup.removeChildren();
     this.selections.splice(0, this.selections.length);
   }
 

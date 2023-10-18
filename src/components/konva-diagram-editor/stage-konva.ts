@@ -142,6 +142,8 @@ export class StageKonva {
 
   onMousemove(e: Konva.KonvaEventObject<MouseEvent>) {
     if (this.selectionGroupManager.isDragging()) {
+      const dragPoint = getPointerPosition(this.stage);
+      this.selectionGroupManager.setDraggingPoint(dragPoint);
     } else if (this.dragRectKonva.isDragging()) {
       const dragEndPoint = getPointerPosition(this.stage);
       this.dragRectKonva.setDraggingPoint(dragEndPoint);

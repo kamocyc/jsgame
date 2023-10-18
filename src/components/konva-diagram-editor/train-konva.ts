@@ -33,10 +33,10 @@ export class TrainKonva {
   onClick(e: Konva.KonvaEventObject<MouseEvent>) {
     console.log(this.train.diaTimes);
     if (e.evt.ctrlKey) {
-      this.context.selectionGroupManager.addTrainSelection(this.trainLine, this.train);
+      this.context.selectionGroupManager.addTrainSelection(this);
     } else {
       this.context.selectionGroupManager.destroySelections();
-      this.context.selectionGroupManager.addTrainSelection(this.trainLine, this.train);
+      this.context.selectionGroupManager.addTrainSelection(this);
     }
     e.cancelBubble = true;
   }

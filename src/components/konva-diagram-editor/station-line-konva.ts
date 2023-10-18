@@ -22,6 +22,8 @@ export class StationLineKonva {
     this.stationLine.on('click', this.onClick.bind(this));
 
     this.context.topLayer.add(this.stationLine);
+
+    this.updateShape();
   }
 
   onMouseover(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -60,7 +62,9 @@ export class StationLineKonva {
 export class StationLineCollectionKonva {
   private stationLine: Map<string, StationLineKonva> = new Map();
 
-  constructor(private context: DiagramKonvaContext, private drawingTrainLineKonva: DrawingTrainLineKonva) {}
+  constructor(private context: DiagramKonvaContext, private drawingTrainLineKonva: DrawingTrainLineKonva) {
+    this.updateShape();
+  }
 
   updateShape() {
     const notUsedStationIds = new Set<string>(this.stationLine.keys());

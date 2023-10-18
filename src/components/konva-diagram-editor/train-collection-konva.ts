@@ -8,7 +8,9 @@ import { TrainKonva } from './train-konva';
 export class TrainCollectionKonva {
   private trainKonvas: Map<string, TrainKonva> = new Map();
 
-  constructor(private context: DiagramKonvaContext) {}
+  constructor(private context: DiagramKonvaContext) {
+    this.updateShape();
+  }
 
   updateShape() {
     const notUsedTrainIds = new Set<string>(this.trainKonvas.keys());
@@ -95,7 +97,7 @@ export class TrainCollectionKonva {
       const overlappedTrainLines = this.getOverlappedTrainLines(rect);
 
       for (const trainLine of overlappedTrainLines) {
-        const trainId = trainLine.getTrainId();
+        const trainId = trainLine.getTrain().trainId;
         const train = this.context.diagramProps.inboundTrains
           .concat(this.context.diagramProps.outboundTrains)
           .find((train) => train.trainId === trainId);

@@ -67,7 +67,7 @@ export class StageKonva {
     this.stage.add(this.layer);
 
     this.dragRectKonva = new DragRectKonva(this.layer);
-    this.selectionGroupManager = new SelectionGroupManager(this.layer, viewStateManager);
+    this.selectionGroupManager = new SelectionGroupManager(this.layer, viewStateManager, this.dragRectKonva);
     const context = new DiagramKonvaContext(
       diagramProps,
       viewStateManager,
@@ -81,19 +81,20 @@ export class StageKonva {
     this.stationLineCollectionKonva = new StationLineCollectionKonva(context, this.drawingTrainLineKonva);
     this.operationCollectionKonva = new OperationCollectionKonva(context);
 
-    this.layer.on('wheel', this.onWheel.bind(this));
-    this.layer.on('mousedown', this.onMousedown.bind(this));
-    this.layer.on('mousemove', this.onMousemove.bind(this));
-    this.layer.on('click', this.onClick.bind(this));
-    this.layer.on('mouseup', this.onMouseup.bind(this));
-    this.layer.on('dragmove', this.onDragmove.bind(this));
+    this.stage.on('wheel', this.onWheel.bind(this));
+    this.stage.on('mousedown', this.onMousedown.bind(this));
+    this.stage.on('mousemove', this.onMousemove.bind(this));
+    this.stage.on('click', this.onClick.bind(this));
+    this.stage.on('mouseup', this.onMouseup.bind(this));
+    this.stage.on('dragmove', this.onDragmove.bind(this));
   }
 
   get position() {
     return this.stagePosition;
   }
   set width(width: number) {
-    this.width = width;
+    this.stagePosition.width = width;
+    this.updateShape();
   }
 
   // zooming on scroll
@@ -140,13 +141,11 @@ export class StageKonva {
   }
 
   onMousemove(e: Konva.KonvaEventObject<MouseEvent>) {
-    if (!this.dragRectKonva.isDragging()) return;
-
-    // const stage_ = e.target;
-    // if (stage_.id() !== 'mainStage') return;
-
-    const dragEndPoint = getPointerPosition(this.stage);
-    this.dragRectKonva.setDraggingPoint(dragEndPoint);
+    if (this.selectionGroupManager.isDragging()) {
+    } else if (this.dragRectKonva.isDragging()) {
+      const dragEndPoint = getPointerPosition(this.stage);
+      this.dragRectKonva.setDraggingPoint(dragEndPoint);
+    }
   }
 
   onClick(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -252,11 +251,11 @@ export class MainViewKonvaManager {
 
     this.stageKonva = new StageKonva(minTime, diagramProps, viewStateManger, container, stationViewKonva);
 
-    function fitStageIntoParentContainer() {
+    const fitStageIntoParentContainer = () => {
       const clientWidth = document.documentElement.clientWidth - 30; /* この値はなんとかして設定する */
       container.style.width = clientWidth + 'px';
       this.stageKonva.width = clientWidth;
-    }
+    };
 
     fitStageIntoParentContainer();
 

@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import { toStringFromSeconds } from '../../common';
-import { DiaTime, Train } from '../../model';
+import { DiaTime, Point, Train } from '../../model';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps, StationPosition } from './drawer-util';
 import { TrainKonva } from './train-konva';
@@ -97,38 +97,74 @@ export class DiagramKonvaContext {
 }
 
 export class SelectionGroupManager {
+  private dragStartPoint: Point | null = null;
+  private currentPosition: Point | null = null;
   private selections: TrainKonva[] = [];
-  private selectionGroup: Konva.Group;
+  // private selectionGroup: Konva.Group;
 
-  constructor(private layer: Konva.Layer, private viewStateManager: ViewStateManager) {
-    this.selectionGroup = new Konva.Group({
-      draggable: true,
-    });
-    this.selectionGroup.on('dragmove', this.onDragMove.bind(this));
-
-    this.layer.add(this.selectionGroup);
+  constructor(
+    private layer: Konva.Layer,
+    private viewStateManager: ViewStateManager,
+    private dragRectKonva: DragRectKonva
+  ) {
+    // this.selectionGroup = new Konva.Group({
+    //   draggable: true,
+    // });
+    // this.selectionGroup.on('mousemove', this.onDragMove.bind(this));
+    // this.layer.add(this.selectionGroup);
   }
 
   getSelections() {
     return this.selections;
   }
 
+  setDragStartPoint(point: { x: number; y: number }) {
+    this.dragStartPoint = {
+      x: point.x,
+      y: point.y,
+    };
+  }
+
+  isDragging() {
+    return this.dragStartPoint != null;
+  }
+
+  setDraggingPoint(point: { x: number; y: number }) {
+    if (this.dragStartPoint == null) return;
+
+    const x = Math.round(point.x / this.viewStateManager.getSecondWidth()) * this.viewStateManager.getSecondWidth();
+    this.currentPosition = {
+      x,
+      y: 0,
+    };
+
+    for (const selection of this.selections) {
+      this.processTrainDragMove(selection);
+    }
+  }
+
   // 列車線をドラッグしたときの処理
   processTrainDragMove(trainSelection: TrainKonva) {
-    const { secondWidth, stationPositions } = this.viewStateManager;
+    const [secondWidth, stationPositions] = [
+      this.viewStateManager.getSecondWidth(),
+      this.viewStateManager.getStationPositions(),
+    ];
 
+    const train = trainSelection.getTrain();
     const positionDiaTimeMap = createPositionDiaTimeMap(train.diaTimes, secondWidth, stationPositions);
+    const timeOffset = (this.currentPosition!.x - this.dragStartPoint!.x) / secondWidth;
 
-    const offsetX = shape.x() + this.selectionGroup.x();
-    let diaTimeIndex = 0;
+    // const offsetX = shape.x() + this.selectionGroup.x();
+    // let diaTimeIndex = 0;
     for (const [diaTime_, timeType, _] of positionDiaTimeMap) {
       const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTime_.diaTimeId)!;
-      const time = Math.round((shape.points()[diaTimeIndex] + offsetX) / secondWidth);
 
       if (timeType === 'arrivalTime') {
+        const time = diaTime.arrivalTime + timeOffset;
         diaTime.arrivalTime = time;
       }
       if (timeType === 'departureTime') {
+        const time = diaTime.departureTime + timeOffset;
         diaTime.departureTime = time;
       }
 
@@ -143,19 +179,6 @@ export class SelectionGroupManager {
     }
 
     updateTrains(layer, [train]);
-  }
-
-  onDragMove(e: Konva.KonvaEventObject<DragEvent>) {
-    this.dragRectKonva.finishDragging();
-
-    // 横方向にのみ動く
-    const x = Math.round(e.target.x() / this.diagramState.secondWidth) * this.diagramState.secondWidth;
-    e.target.x(x);
-    e.target.y(0);
-
-    for (const selection of this.selections) {
-      this.processTrainDragMove(selection);
-    }
   }
 
   onDragEnd(e: Konva.KonvaEventObject<DragEvent>) {

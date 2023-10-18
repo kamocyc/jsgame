@@ -19,13 +19,15 @@ export class TrainKonva {
     this.trainLine.on('click', this.onClick.bind(this));
 
     context.topLayer.add(this.trainLine);
+
+    this.updateShape();
   }
 
   getTrainLine() {
     return this.trainLine;
   }
-  getTrainId() {
-    return this.train.trainId;
+  getTrain() {
+    return this.train;
   }
 
   onClick(e: Konva.KonvaEventObject<MouseEvent>) {

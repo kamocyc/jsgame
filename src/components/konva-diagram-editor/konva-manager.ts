@@ -19,7 +19,7 @@ export class KonvaManager {
     this.mainKonva.stageKonva.selectionGroupManager.destroySelections();
     copyTrains(
       this.diagramProps,
-      this.mainKonva.stageKonva.selectionGroupManager.getSelections().map((s) => s.train);
+      this.mainKonva.stageKonva.selectionGroupManager.getSelections().map((s) => s.train)
     );
   }
 

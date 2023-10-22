@@ -1,11 +1,11 @@
 import Konva from 'konva';
 import { deepEqual } from '../../common';
+import { pasteTrains } from './diagram-core';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps } from './drawer-util';
 import { DrawingTrainLineKonva } from './drawing-train-line-konva';
 import {
   DiagramKonvaContext,
-  SelectionGroupManager,
   ViewStateManager,
   canvasHeight,
   canvasWidth,
@@ -14,6 +14,7 @@ import {
   virtualCanvasWidth,
 } from './konva-util';
 import { OperationCollectionKonva } from './operation-konva';
+import { SelectionGroupManager } from './selection-group-manager';
 import { StationLineCollectionKonva } from './station-line-konva';
 import { StationViewKonva } from './station-view-konva';
 import { TimeGridKonva } from './time-grid-konva';
@@ -36,7 +37,8 @@ export class StageKonva {
   private trainCollectionKonva: TrainCollectionKonva;
   private drawingTrainLineKonva: DrawingTrainLineKonva;
   private operationCollectionKonva: OperationCollectionKonva;
-  public selectionGroupManager: SelectionGroupManager;
+  private selectionGroupManager: SelectionGroupManager;
+  private diagramProps: DiagramProps;
 
   private stagePosition = {
     x: 0,
@@ -49,7 +51,7 @@ export class StageKonva {
   constructor(
     minTime: number,
     diagramProps: DiagramProps,
-    viewStateManager: ViewStateManager,
+    private viewStateManager: ViewStateManager,
     private container: HTMLDivElement,
     private stationViewKonva: StationViewKonva
   ) {
@@ -66,10 +68,17 @@ export class StageKonva {
     this.layer = new Konva.Layer();
     this.stage.add(this.layer);
 
+    this.diagramProps = {
+      ...diagramProps,
+      updateTrains: () => {
+        diagramProps.updateTrains();
+        this.operationCollectionKonva.updateShape();
+      },
+    };
     this.dragRectKonva = new DragRectKonva(this.layer);
-    this.selectionGroupManager = new SelectionGroupManager(this.layer, viewStateManager, this.dragRectKonva);
+    this.selectionGroupManager = new SelectionGroupManager(this.layer, viewStateManager, this.diagramProps, this);
     const context = new DiagramKonvaContext(
-      diagramProps,
+      this.diagramProps,
       viewStateManager,
       this.dragRectKonva,
       this.layer,
@@ -81,16 +90,20 @@ export class StageKonva {
     this.stationLineCollectionKonva = new StationLineCollectionKonva(context, this.drawingTrainLineKonva);
     this.operationCollectionKonva = new OperationCollectionKonva(context);
 
+    // stageに対するイベント
     this.stage.on('wheel', this.onWheel.bind(this));
     this.stage.on('mousedown', this.onMousedown.bind(this));
     this.stage.on('mousemove', this.onMousemove.bind(this));
-    this.stage.on('click', this.onClick.bind(this));
+    // this.stage.on('click', this.onClick.bind(this));
     this.stage.on('mouseup', this.onMouseup.bind(this));
     this.stage.on('dragmove', this.onDragmove.bind(this));
+
+    this.stationViewKonva.adjustStationPosition(this.stagePosition);
+    this.updateShape();
   }
 
-  get position() {
-    return this.stagePosition;
+  get scale() {
+    return this.stagePosition.scale;
   }
   set width(width: number) {
     this.stagePosition.width = width;
@@ -98,7 +111,7 @@ export class StageKonva {
   }
 
   // zooming on scroll
-  onWheel(e: Konva.KonvaEventObject<WheelEvent>) {
+  private onWheel(e: Konva.KonvaEventObject<WheelEvent>) {
     e.evt.preventDefault();
 
     const scaleBy = 1.05;
@@ -128,60 +141,79 @@ export class StageKonva {
 
     this.adjustStagePosition(this.stagePosition, this.container);
     this.stationViewKonva.adjustStationPosition(this.stagePosition);
+
+    this.updateShape();
   }
 
-  // stageに対するイベント
-  onMousedown(e: Konva.KonvaEventObject<MouseEvent>) {
+  private onMousedown(e: Konva.KonvaEventObject<MouseEvent>) {
     if (e.evt.button === 2) {
       this.stage.startDrag();
-    } else if (e.evt.button === 0) {
+      this.updateShape();
+    } else if (e.evt.button === 0 && e.target === this.stage) {
       // 範囲選択開始
       this.dragRectKonva.setDragStartPoint(getPointerPosition(this.stage));
+      this.updateShape();
     }
   }
 
-  onMousemove(e: Konva.KonvaEventObject<MouseEvent>) {
+  private onMousemove(e: Konva.KonvaEventObject<MouseEvent>) {
     if (this.selectionGroupManager.isDragging()) {
       const dragPoint = getPointerPosition(this.stage);
       this.selectionGroupManager.setDraggingPoint(dragPoint);
+      this.updateShape();
     } else if (this.dragRectKonva.isDragging()) {
       const dragEndPoint = getPointerPosition(this.stage);
       this.dragRectKonva.setDraggingPoint(dragEndPoint);
+      this.updateShape();
     }
   }
 
-  onClick(e: Konva.KonvaEventObject<MouseEvent>) {
+  // private onClick(e: Konva.KonvaEventObject<MouseEvent>) {
+  //   if (e.evt.button === 2) {
+  //   } else if (e.target === this.stage) {
+  //     this.selectionGroupManager.destroySelections();
+  //     this.updateShape();
+  //   }
+  //   e.cancelBubble = true;
+  // }
+
+  private onMouseup(e: Konva.KonvaEventObject<MouseEvent>) {
     if (e.evt.button === 2) {
       // 右クリック
       this.drawingTrainLineKonva.commitDrawingLine();
-      return;
-    } else {
+      this.updateShape();
+    } else if (this.selectionGroupManager.isDragging()) {
+      this.selectionGroupManager.endDragging();
+      this.updateShape();
+      e.cancelBubble = true;
+    } else if (this.dragRectKonva.isDragging()) {
+      const currentPointerPoint = getPointerPosition(this.stage);
+      if (deepEqual(currentPointerPoint, this.dragRectKonva.getDragStartPoint())) {
+        this.dragRectKonva.finishDragging();
+        this.updateShape();
+        return;
+      }
+
       this.selectionGroupManager.destroySelections();
-    }
-  }
+      this.trainCollectionKonva.addSelectedTrains();
 
-  onMouseup(e: Konva.KonvaEventObject<MouseEvent>) {
-    if (!this.dragRectKonva.isDragging()) return;
+      // if (diagramState.selections.length === 2) {
+      //   console.log({
+      //     reason: getReasonOfNotConnected(diagramState.selections[0].train, diagramState.selections[1].train),
+      //   });
+      // }
 
-    const currentPointerPoint = getPointerPosition(this.stage);
-    if (deepEqual(currentPointerPoint, this.dragRectKonva.getDragStartPoint())) {
       this.dragRectKonva.finishDragging();
-      return;
+      this.updateShape();
+      e.cancelBubble = true;
+    } else if (e.target === this.stage) {
+      this.selectionGroupManager.destroySelections();
+      this.updateShape();
+      e.cancelBubble = true;
     }
-
-    this.selectionGroupManager.destroySelections();
-    this.trainCollectionKonva.addSelectedTrains();
-
-    // if (diagramState.selections.length === 2) {
-    //   console.log({
-    //     reason: getReasonOfNotConnected(diagramState.selections[0].train, diagramState.selections[1].train),
-    //   });
-    // }
-
-    this.dragRectKonva.finishDragging();
   }
 
-  onDragmove(e: Konva.KonvaEventObject<DragEvent>) {
+  private onDragmove(e: Konva.KonvaEventObject<DragEvent>) {
     const stage = e.target;
     if (stage.id() !== 'mainStage') return;
 
@@ -191,6 +223,7 @@ export class StageKonva {
 
     this.adjustStagePosition(this.stagePosition, this.container);
     this.stationViewKonva.adjustStationPosition(this.stagePosition);
+    this.updateShape();
   }
 
   updateShape() {
@@ -225,6 +258,16 @@ export class StageKonva {
     if (stageBottom < containerHeight) {
       stage.y = containerHeight - virtualCanvasHeight * scale;
     }
+  }
+
+  copySelections() {
+    this.selectionGroupManager.copySelections();
+  }
+  pasteTrains() {
+    pasteTrains(this.diagramProps);
+  }
+  deleteSelections() {
+    this.selectionGroupManager.deleteSelections();
   }
 }
 
@@ -263,5 +306,15 @@ export class MainViewKonvaManager {
 
     // ウィンドウリサイズ時にサイズを合わせる
     window.addEventListener('resize', fitStageIntoParentContainer);
+  }
+
+  copySelections() {
+    this.stageKonva.copySelections();
+  }
+  pasteTrains() {
+    this.stageKonva.pasteTrains();
+  }
+  deleteSelections() {
+    this.stageKonva.deleteSelections();
   }
 }

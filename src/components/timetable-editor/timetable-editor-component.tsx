@@ -279,7 +279,10 @@ export function TimetableEditorComponent({
                     outboundTrains={outboundTrains}
                     operations={timetable.operations}
                     setUpdate={() => {
-                      update;
+                      update();
+                    }}
+                    updateTrains={() => {
+                      update();
                     }}
                     clipboard={clipboard}
                     setClipboard={setClipboard}

@@ -1,4 +1,3 @@
-import { copyTrains, pasteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
 import { MainViewKonvaManager } from './stage-konva';
 import { StationViewKonva } from './station-view-konva';
@@ -16,22 +15,14 @@ export class KonvaManager {
   }
 
   copySelections() {
-    this.mainKonva.stageKonva.selectionGroupManager.destroySelections();
-    copyTrains(
-      this.diagramProps,
-      this.mainKonva.stageKonva.selectionGroupManager.getSelections().map((s) => s.train)
-    );
+    this.mainKonva.copySelections();
   }
 
   pasteTrains() {
-    const newTrains = pasteTrains(props);
-    updateTrains(diagramState.layer, newTrains);
+    this.mainKonva.pasteTrains();
   }
 
   deleteSelections() {
-    destroySelections(diagramState.selections);
-    const trains = diagramState.selections.map((s) => s.train);
-    deleteTrains(props, trains);
-    updateDeleteTrains(diagramState.layer, trains);
+    this.mainKonva.deleteSelections();
   }
 }

@@ -5,12 +5,10 @@ import { DiagramKonvaContext, RectState, createPositionDiaTimeMap } from './konv
 
 export class TrainKonva {
   private trainLine: Konva.Line;
-  private stroke: string = 'black';
+  private isSelected: boolean = false;
 
   constructor(private context: DiagramKonvaContext, private train: Train) {
-    this.stroke = this.train.trainType?.trainTypeColor ?? 'black';
     this.trainLine = new Konva.Line({
-      stroke: this.stroke,
       strokeWidth: 1,
       hitStrokeWidth: 10,
       name: 'trainLine',
@@ -42,7 +40,8 @@ export class TrainKonva {
   }
 
   setSelectTrainLine(isSelected: boolean) {
-    this.stroke = isSelected ? 'red' : this.train.trainType?.trainTypeColor ?? 'black';
+    this.isSelected = isSelected;
+    this.updateShape();
   }
 
   private getPoints() {
@@ -59,7 +58,8 @@ export class TrainKonva {
     // 列車線（スジ）を描画
     const positions = this.getPoints();
     this.trainLine.points(positions);
-    this.trainLine.stroke(this.stroke);
+    const stroke = this.isSelected ? 'red' : this.train.trainType?.trainTypeColor ?? 'black';
+    this.trainLine.stroke(stroke);
   }
 
   destroy() {

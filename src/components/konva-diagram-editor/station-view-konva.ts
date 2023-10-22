@@ -11,6 +11,7 @@ export class StationKonva {
   private readonly fontSize = 20;
 
   constructor(
+    layer: Konva.Layer,
     private stationName: string,
     private stationId: string,
     private stationPosition: number,
@@ -30,6 +31,7 @@ export class StationKonva {
     this.shape = new Konva.Group();
     this.shape.add(this.stationText);
     this.shape.add(this.stationLine);
+    layer.add(this.shape);
 
     this.updateShape();
   }
@@ -85,6 +87,7 @@ export class StationViewKonva {
     for (const stationPosition of this.stationPositions) {
       this.stationKonvas.push(
         new StationKonva(
+          layer,
           stationPosition.stationName,
           stationPosition.stationId,
           stationPosition.diagramPosition,
@@ -94,6 +97,8 @@ export class StationViewKonva {
     }
 
     this.stage = stage;
+
+    this.updateShape();
   }
 
   updateShape() {

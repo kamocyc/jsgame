@@ -3,7 +3,7 @@ import { assert } from '../../common';
 import { StationLike } from '../../model';
 import { hitStrokeWidth } from './drawer-util';
 import { DrawingTrainLineKonva } from './drawing-train-line-konva';
-import { DiagramKonvaContext, getPointerPosition, virtualCanvasWidth } from './konva-util';
+import { DiagramKonvaContext, generateKonvaId, getPointerPosition, virtualCanvasWidth } from './konva-util';
 
 export class StationLineKonva {
   private stationLine: Konva.Line;
@@ -17,6 +17,7 @@ export class StationLineKonva {
       stroke: 'black',
       strokeWidth: 1,
       hitStrokeWidth: hitStrokeWidth,
+      id: generateKonvaId(),
     });
     this.stationLine.on('mouseover', this.onMouseover.bind(this));
     this.stationLine.on('click', this.onClick.bind(this));

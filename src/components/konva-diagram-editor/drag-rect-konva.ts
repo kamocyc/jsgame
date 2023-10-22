@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import { RectState } from './konva-util';
+import { RectState, generateKonvaId } from './konva-util';
 
 export class DragRectKonva {
   private dragRect: Konva.Rect;
@@ -12,6 +12,7 @@ export class DragRectKonva {
       stroke: 'black',
       strokeWidth: 1,
       dash: [4, 4],
+      id: generateKonvaId(),
     });
   }
 

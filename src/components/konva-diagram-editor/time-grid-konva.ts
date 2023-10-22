@@ -1,11 +1,13 @@
 import Konva from 'konva';
-import { DiagramKonvaContext } from './konva-util';
+import { DiagramKonvaContext, generateKonvaId } from './konva-util';
 
 export class TimeGridKonva {
   private timeGrid: Konva.Group;
 
   constructor(private context: DiagramKonvaContext) {
-    this.timeGrid = new Konva.Group();
+    this.timeGrid = new Konva.Group({
+      id: generateKonvaId(),
+    });
     context.topLayer.add(this.timeGrid);
 
     const stationPositions = context.viewStateManager.getStationPositions();
@@ -26,6 +28,7 @@ export class TimeGridKonva {
         fontSize: 20,
         fontFamily: 'Calibri',
         fill: 'black',
+        id: generateKonvaId(),
       });
       this.timeGrid.add(hourText);
 
@@ -33,6 +36,7 @@ export class TimeGridKonva {
         points: [offset * secondWidth, 0, offset * secondWidth, layerHeight],
         stroke: 'black',
         strokeWidth: 1,
+        id: generateKonvaId(),
       });
       this.timeGrid.add(hourLine);
 
@@ -49,6 +53,7 @@ export class TimeGridKonva {
             stroke: 'lightgray',
             strokeWidth: 1,
             dash: [2, 2],
+            id: generateKonvaId(),
           });
           this.timeGrid.add(line);
         }
@@ -63,6 +68,7 @@ export class TimeGridKonva {
             points: [(offset + i * 60 * 10) * secondWidth, 0, (offset + i * 60 * 10) * secondWidth, layerHeight],
             stroke: 'lightgray',
             strokeWidth: 1,
+            id: generateKonvaId(),
           });
           this.timeGrid.add(line);
 

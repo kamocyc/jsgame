@@ -1,7 +1,7 @@
 import Konva from 'konva';
 import { assert } from '../../common';
 import { StationLike } from '../../model';
-import { DiagramKonvaContext } from './konva-util';
+import { DiagramKonvaContext, generateKonvaId } from './konva-util';
 import { TrainCollectionKonva } from './train-collection-konva';
 
 export class DrawingTrainLineKonva {
@@ -17,6 +17,7 @@ export class DrawingTrainLineKonva {
       stroke: 'red',
       strokeWidth: 1,
       hitFunc: function (context, shape) {},
+      id: generateKonvaId(),
     });
   }
 

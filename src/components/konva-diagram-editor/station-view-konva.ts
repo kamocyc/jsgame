@@ -2,6 +2,7 @@ import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
 import { assert } from '../../common';
 import { StationLike } from '../../model';
+import { generateKonvaId } from './konva-util';
 
 export class StationKonva {
   private stationText: Konva.Text;
@@ -22,13 +23,17 @@ export class StationKonva {
       fontSize: this.fontSize,
       fontFamily: 'Calibri',
       fill: 'black',
+      id: generateKonvaId(),
     });
     this.stationLine = new Konva.Line({
       stroke: 'black',
       strokeWidth: 1,
+      id: generateKonvaId(),
     });
 
-    this.shape = new Konva.Group();
+    this.shape = new Konva.Group({
+      id: generateKonvaId(),
+    });
     this.shape.add(this.stationText);
     this.shape.add(this.stationLine);
     layer.add(this.shape);
@@ -73,6 +78,7 @@ export class StationViewKonva {
       container: container,
       width: canvasWidth,
       height: this.height,
+      id: generateKonvaId(),
     });
 
     const layer = new Konva.Layer({ id: 'station-layer' });

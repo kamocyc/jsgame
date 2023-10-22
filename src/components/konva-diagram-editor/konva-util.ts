@@ -2,6 +2,7 @@ import Konva from 'konva';
 import { DiaTime } from '../../model';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps, StationPosition } from './drawer-util';
+import { MouseEventManager } from './mouse-event-manager';
 import { SelectionGroupManager } from './selection-group-manager';
 
 export const canvasHeight = 600;
@@ -91,6 +92,11 @@ export class DiagramKonvaContext {
     public viewStateManager: ViewStateManager,
     public dragRectKonva: DragRectKonva,
     public topLayer: Konva.Layer,
-    public selectionGroupManager: SelectionGroupManager
+    public selectionGroupManager: SelectionGroupManager,
+    public mouseEventManager: MouseEventManager
   ) {}
+}
+
+export function generateKonvaId() {
+  return Date.now() + '_' + Math.random().toString(36).slice(-8);
 }

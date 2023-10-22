@@ -14,7 +14,7 @@ export class TrainKonva {
       name: 'trainLine',
       id: `trainLine-${this.train.trainId}`,
     });
-    this.trainLine.on('click', this.onClick.bind(this));
+    context.mouseEventManager.registerClickHandler(this.trainLine.id(), this.onClick.bind(this));
 
     context.topLayer.add(this.trainLine);
 

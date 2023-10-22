@@ -1,12 +1,12 @@
 import Konva from 'konva';
 import { hitStrokeWidth } from './drawer-util';
-import { DiagramKonvaContext, createPositionDiaTimeMap } from './konva-util';
+import { DiagramKonvaContext, createPositionDiaTimeMap, generateKonvaId } from './konva-util';
 
 export class OperationCollectionKonva {
   private operationGroup: Konva.Group;
 
   constructor(private diagramKonvaContext: DiagramKonvaContext) {
-    this.operationGroup = new Konva.Group();
+    this.operationGroup = new Konva.Group({ id: generateKonvaId() });
     diagramKonvaContext.topLayer.add(this.operationGroup);
 
     this.updateShape();
@@ -51,6 +51,7 @@ export class OperationCollectionKonva {
           stroke: 'orange',
           strokeWidth: 1,
           hitStrokeWidth: hitStrokeWidth,
+          id: generateKonvaId(),
         });
         this.operationGroup.add(line);
 

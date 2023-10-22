@@ -3,7 +3,8 @@ import { assert, nn, toStringFromSeconds } from '../../common';
 import { Point } from '../../model';
 import { copyTrains, deleteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
-import { ViewStateManager, getPointerPosition } from './konva-util';
+import { ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
+import { MouseEventManager } from './mouse-event-manager';
 import { TrainKonva } from './train-konva';
 
 interface DiaTimePartial {
@@ -29,12 +30,17 @@ export class SelectionGroupManager {
     private layer: Konva.Layer,
     private viewStateManager: ViewStateManager,
     private diagramProps: DiagramProps,
+    private mouseEventManager: MouseEventManager,
     private stageKonva: { scale: number }
   ) {
-    this.selectionGroup = new Konva.Group();
-    this.selectionGroup.on('mousedown', this.onMousedown.bind(this));
+    this.selectionGroup = new Konva.Group({ id: generateKonvaId() });
+    mouseEventManager.registerDragStartHandler(this.selectionGroup.id(), this.onDragStart.bind(this));
+    mouseEventManager.registerDragMoveHandler(this.selectionGroup.id(), this.onDragMove.bind(this));
+    mouseEventManager.registerDragEndHandler(this.selectionGroup.id(), this.onDragEnd.bind(this));
 
-    this.markerGroup = new Konva.Group();
+    this.markerGroup = new Konva.Group({
+      id: generateKonvaId(),
+    });
 
     this.layer.add(this.selectionGroup);
     this.layer.add(this.markerGroup);
@@ -54,10 +60,12 @@ export class SelectionGroupManager {
             fill: 'blue',
             stroke: 'black',
             strokeWidth: 0,
+            id: generateKonvaId(),
           });
           const text = new Konva.Text({
             fill: 'black',
             hitFunc: function (context, shape) {},
+            id: generateKonvaId(),
           });
           this.markerGroup.add(square);
           this.markerGroup.add(text);
@@ -192,13 +200,19 @@ export class SelectionGroupManager {
     this.diagramProps.updateTrains();
   }
 
-  private onMousedown(e: Konva.KonvaEventObject<MouseEvent>) {
+  private onDragStart(e: Konva.KonvaEventObject<MouseEvent>) {
     const pointerPosition = getPointerPosition(this.layer.getStage());
     this.setDragStartPoint(pointerPosition);
     this.updateShape();
   }
 
-  endDragging() {
+  onDragMove() {
+    const dragPoint = getPointerPosition(this.layer.getStage());
+    this.setDraggingPoint(dragPoint);
+    this.updateShape();
+  }
+
+  onDragEnd() {
     this.dragStartPoint = null;
     this.currentPosition = null;
     this.updateShape();

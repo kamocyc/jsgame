@@ -39,8 +39,7 @@ export class StationLineKonva {
     this.context.selectionGroupManager.destroySelections();
 
     if (e.evt.button === 2) {
-      // 右クリック
-      this.drawingTrainLineKonva.commitDrawingLine();
+      // 右クリック => 別のところでハンドリングしている
       return;
     }
 

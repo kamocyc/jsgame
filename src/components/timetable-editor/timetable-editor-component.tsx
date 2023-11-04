@@ -1,4 +1,4 @@
-import { StateUpdater, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
 import { RailwayLine } from '../../mapEditorModel';
 import {
@@ -11,7 +11,7 @@ import {
   Train,
   TrainType,
 } from '../../model';
-import { OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
+import { AddingNewTrain, HistoryItem, OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
@@ -38,7 +38,7 @@ export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Stat
 }
 
 export function TimetableEditorTableComponent({
-  diaStations,
+  diaStations: stations,
   setDiaStations,
   trains,
   otherDirectionTrains,
@@ -51,8 +51,8 @@ export function TimetableEditorTableComponent({
 }: {
   diaStations: StationLike[];
   setDiaStations: (diaStations: StationLike[]) => void;
-  trains: Train[];
-  otherDirectionTrains: Train[];
+  trains: readonly Train[];
+  otherDirectionTrains: readonly Train[];
   crudTrain: CrudTrain;
   timetableDirection: 'Inbound' | 'Outbound';
   trainTypes: TrainType[];
@@ -69,7 +69,14 @@ export function TimetableEditorTableComponent({
         <div style={{ height: '24px' }}>始発駅作業</div>
         <div style={{ height: '24px' }}>終着駅作業</div>
         <StationListComponent
-          {...{ diaStations, trains, otherDirectionTrains, setDiaStations, timetableDirection, setSettingData }}
+          {...{
+            diaStations: stations,
+            trains,
+            otherDirectionTrains,
+            setDiaStations,
+            timetableDirection,
+            setSettingData,
+          }}
         />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -78,13 +85,13 @@ export function TimetableEditorTableComponent({
         <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
-        <TrainListRowHeaderComponent diaStations={diaStations} />
+        <TrainListRowHeaderComponent diaStations={stations} />
       </div>
       <TrainListComponent
         {...{
-          diaStations: diaStations,
+          stations: stations,
           trains: trains,
-          crudTrain,
+          crudTrain: crudTrain,
           timetableDirection: timetableDirection,
           trainTypes,
           clipboard,
@@ -101,7 +108,6 @@ export function TimetableEditorComponent({
   timetable,
   railwayLine,
   tracks,
-  setOutlinedTimetableData,
   setToast,
   update,
 }: {
@@ -109,7 +115,6 @@ export function TimetableEditorComponent({
   timetable: OutlinedTimetable;
   railwayLine: RailwayLine;
   tracks: Track[];
-  setOutlinedTimetableData: StateUpdater<OutlinedTimetableData>;
   setToast: (message: string) => void;
   update: () => void;
 }) {
@@ -143,13 +148,13 @@ export function TimetableEditorComponent({
     return true;
   }
 
-  const inboundTrains = timetable.inboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
-  const outboundTrains = timetable.outboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
-
-  // const updateTrains = () => {
-  //   timetable.tr
-  //   update();
-  // }
+  const getTrainsWithDirections: () => [readonly Train[], readonly Train[]] = () => {
+    return [
+      timetable.inboundTrainIds.map((trainId) => timetableData.getTrain(trainId)),
+      timetable.outboundTrainIds.map((trainId) => timetableData.getTrain(trainId)),
+    ];
+  };
+  const [inboundTrains, outboundTrains] = getTrainsWithDirections();
 
   const setDiaStations = (stations: StationLike[]) => {
     timetable.stations = stations;
@@ -161,27 +166,25 @@ export function TimetableEditorComponent({
     update();
   };
 
-  // const setTrains = (trains: Train[]) => {
-  //   timetableData.setTrains(timetable.timetableId, trains, timetableDirection);
+  const updateTrain = (historyItem: HistoryItem) => {
+    timetableData.commitTrain(historyItem);
+    update();
+  };
 
-  //   update();
-  // };
-
-  const crudTrain = {
-    addTrains: (trains: Train[], beforeTrainId: string | null = null) => {
-      timetableData.addTrains(timetable.timetableId, trains, timetableDirection, beforeTrainId);
+  const crudTrain: CrudTrain = {
+    addTrains: (addingNewTrains: AddingNewTrain[]) => {
+      timetableData.addTrains(timetable.timetableId, addingNewTrains);
+      update();
+    },
+    addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => {
+      timetableData.addTrain(timetable.timetableId, train, direction);
       update();
     },
     deleteTrains: (trainIds: string[]) => {
-      for (const trainId of trainIds) {
-        timetableData.deleteTrain(trainId);
-      }
+      timetableData.deleteTrains(timetable.timetableId, trainIds);
       update();
     },
-    updateTrain: (trainId: string, updater: (source: Train) => Train) => {
-      timetableData.updateTrain(trainId, updater);
-      update();
-    },
+    updateTrain: updateTrain,
   };
 
   return (
@@ -303,6 +306,7 @@ export function TimetableEditorComponent({
                 tabText: 'ダイヤグラム',
                 component: () => (
                   <DiagramPageComponent
+                    timetable={timetable}
                     stations={timetable.stations}
                     inboundTrains={inboundTrains}
                     outboundTrains={outboundTrains}
@@ -310,6 +314,9 @@ export function TimetableEditorComponent({
                     crudTrain={crudTrain}
                     clipboard={clipboard}
                     setClipboard={setClipboard}
+                    getTrainsWithDirections={() => {
+                      return getTrainsWithDirections();
+                    }}
                   />
                 ),
               },
@@ -348,6 +355,7 @@ export function TimetableEditorComponent({
               />
             ) : settingData.settingType === 'StationOperationSetting' ? (
               <StationOperationSettingComponent
+                timetable={timetable}
                 firstOrLast={settingData.firstOrLast}
                 setStationOperation={(stationOperation) => {
                   if (settingData.firstOrLast === 'First') {

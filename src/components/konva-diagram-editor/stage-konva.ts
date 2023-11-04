@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import { CrudTrain, Train } from '../../model';
-import { OutlinedTimetable } from '../../outlinedTimetableData';
+import { AddingNewTrain, HistoryItem, OutlinedTimetable } from '../../outlinedTimetableData';
 import { pasteTrains } from './diagram-core';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps } from './drawer-util';
@@ -37,15 +37,20 @@ export interface OutlinedTimetableHistoryItemContext {
 
 // やることは、オブジェクトへの反映。ただし、undo / redoのために、undo / redo用の関数を返す必要がある。
 
-function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void) {
+function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void): CrudTrain {
   return {
-    addTrains: (trains: Train[]) => {
+    addTrains: (trains: AddingNewTrain[]) => {
       const result = crudTrain.addTrains(trains);
       hook();
       return result;
     },
-    updateTrain: (trainId: string, updater: (train: Train) => Train) => {
-      const result = crudTrain.updateTrain(trainId, updater);
+    addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => {
+      const result = crudTrain.addTrain(train, direction);
+      hook();
+      return result;
+    },
+    updateTrain: (historyItem: HistoryItem) => {
+      const result = crudTrain.updateTrain(historyItem);
       hook();
       return result;
     },
@@ -100,6 +105,10 @@ export class StageKonva {
     this.diagramProps = {
       ...diagramProps,
       crudTrain: setHookToCrudTrain(diagramProps.crudTrain, () => {
+        const [inboundTrains, outboundTrains] = this.diagramProps.getTrainsWithDirections();
+        this.diagramProps.inboundTrains = inboundTrains;
+        this.diagramProps.outboundTrains = outboundTrains;
+        this.diagramProps.clipboard = diagramProps.clipboard;
         this.operationCollectionKonva.updateShape();
       }),
     };

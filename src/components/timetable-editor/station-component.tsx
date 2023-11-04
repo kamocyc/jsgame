@@ -40,8 +40,8 @@ function StationContextMenuComponent({
   setContextData: (contextData: ContextData) => void;
   diaStations: StationLike[];
   setDiaStations: (diaStations: StationLike[]) => void;
-  trains: Train[];
-  otherDirectionTrains: Train[];
+  trains: readonly Train[];
+  otherDirectionTrains: readonly Train[];
   selectedStation: StationLike | null;
   showStationDetail: (diaStation: StationLike) => void;
   timetableDirection: 'Inbound' | 'Outbound';
@@ -98,6 +98,7 @@ function StationContextMenuComponent({
                 isPassing: false,
                 station: newStation,
                 platform: getDefaultPlatform(newStation, timetableDirection),
+                isInService: true,
               });
             });
             otherDirectionTrains.forEach((train) => {
@@ -108,6 +109,7 @@ function StationContextMenuComponent({
                 isPassing: false,
                 station: newStation,
                 platform: getDefaultPlatform(newStation, timetableDirection),
+                isInService: true,
               });
             });
 
@@ -130,8 +132,8 @@ export function StationListComponent({
 }: {
   diaStations: StationLike[];
   setDiaStations: (diaStations: StationLike[]) => void;
-  trains: Train[];
-  otherDirectionTrains: Train[];
+  trains: readonly Train[];
+  otherDirectionTrains: readonly Train[];
   timetableDirection: 'Inbound' | 'Outbound';
   setSettingData: (settingData: SettingData) => void;
 }) {
@@ -213,6 +215,7 @@ export function StationListComponent({
                 isPassing: false,
                 station: newStation,
                 platform: getDefaultPlatform(newStation, timetableDirection),
+                isInService: true,
               });
             });
 
@@ -224,6 +227,7 @@ export function StationListComponent({
                 isPassing: false,
                 station: newStation,
                 platform: getDefaultPlatform(newStation, timetableDirection),
+                isInService: true,
               });
             });
 

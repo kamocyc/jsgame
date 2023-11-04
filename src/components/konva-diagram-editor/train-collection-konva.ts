@@ -64,17 +64,15 @@ export class TrainCollectionKonva {
       const trains =
         direction === 'Inbound' ? this.context.diagramProps.inboundTrains : this.context.diagramProps.outboundTrains;
 
-      const diaTimes = drawingLineTimes.map(
-        (drawingLineTime) =>
-          ({
-            station: drawingLineTime.station,
-            departureTime: drawingLineTime.time,
-            arrivalTime: null,
-            diaTimeId: generateId(),
-            isPassing: false,
-            platform: getDefaultPlatform(drawingLineTime.station, direction),
-          } as DiaTime)
-      );
+      const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime) => ({
+        station: drawingLineTime.station,
+        departureTime: drawingLineTime.time,
+        arrivalTime: null,
+        diaTimeId: generateId(),
+        isPassing: false,
+        platform: getDefaultPlatform(drawingLineTime.station, direction),
+        isInService: true,
+      }));
 
       const newTrain: Train = {
         trainId: generateId(),
@@ -88,7 +86,7 @@ export class TrainCollectionKonva {
 
       fillMissingTimes(newTrain, this.context.diagramProps.stations);
 
-      this.context.diagramProps.crudTrain.addTrains([newTrain]);
+      this.context.diagramProps.crudTrain.addTrain(newTrain, direction);
       this.updateShape();
 
       return trains[trains.length - 1];

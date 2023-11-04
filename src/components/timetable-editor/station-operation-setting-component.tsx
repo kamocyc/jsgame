@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { assert } from '../../common';
 import { StationLike, StationOperation, Track, Train } from '../../model';
+import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { TimeInputComponent } from './common-component';
 import { getDefaultPlatform } from './timetable-util';
 
@@ -9,6 +10,7 @@ import { getDefaultPlatform } from './timetable-util';
 // 簡易な設定として残すのはありかも。実際にも車両基地に隣接した駅から始発したりとか、駅に耐泊した列車がそのまま出発とかある。
 // やはり分岐駅設定は欲しい。oudiaを参考に作りたい。
 export function StationOperationSettingComponent({
+  timetable,
   firstOrLast,
   stations,
   train,
@@ -16,6 +18,7 @@ export function StationOperationSettingComponent({
   stationOperation,
   setStationOperation,
 }: {
+  timetable: OutlinedTimetable;
   firstOrLast: 'First' | 'Last';
   stations: StationLike[];
   train: Train;
@@ -57,13 +60,13 @@ export function StationOperationSettingComponent({
                 });
               } else if (stationOperationType === 'InOut') {
                 assert(train.diaTimes.length > 0);
-                assert(train.direction != null);
+                const direction = getDirection(timetable, train.trainId);
 
                 const firstStationDepartureTime =
                   train.diaTimes[0].departureTime === null ? 10 * 60 * 60 : train.diaTimes[0].departureTime;
                 const platformId =
                   train.diaTimes[0].platform?.platformId ??
-                  getDefaultPlatform(train.diaTimes[0].station, train.direction).platformId;
+                  getDefaultPlatform(train.diaTimes[0].station, direction).platformId;
 
                 const diaTime = firstOrLast === 'First' ? train.diaTimes[0] : train.diaTimes[train.diaTimes.length - 1];
                 setStationOperation({

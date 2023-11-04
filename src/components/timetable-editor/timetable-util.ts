@@ -96,7 +96,6 @@ function createTrain(stops: RailwayLineStop[], diaTimes: DiaTime[]): Train {
       trackId: stops[stops.length - 1].platformTrack.trackId,
       operationTime: nn(diaTimes[diaTimes.length - 1].arrivalTime) + 60,
     },
-    direction: 'Inbound',
   };
 }
 

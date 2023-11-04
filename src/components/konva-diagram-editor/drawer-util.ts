@@ -1,13 +1,16 @@
 import { AppClipboard, CrudTrain, Operation, StationLike, Train } from '../../model';
+import { OutlinedTimetable } from '../../outlinedTimetableData';
 
 export interface DiagramProps {
   stations: StationLike[];
   crudTrain: CrudTrain;
-  inboundTrains: Train[];
-  outboundTrains: Train[];
+  inboundTrains: readonly Train[];
+  outboundTrains: readonly Train[];
   operations: Operation[];
+  timetable: OutlinedTimetable;
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;
+  getTrainsWithDirections: () => [readonly Train[], readonly Train[]];
 }
 
 export const hitStrokeWidth = 10;

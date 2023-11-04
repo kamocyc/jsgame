@@ -59,12 +59,6 @@ export function TimetableEditorParentComponent({
     }));
   };
 
-  // console.log({
-  //   selectedRailwayLineId,
-  //   selectedTimetable,
-  //   railwayLine,
-  // });
-
   return (
     <>
       <>
@@ -92,6 +86,7 @@ export function TimetableEditorParentComponent({
               const diagram = await loadCustomFile(event);
               if (diagram != null) {
                 appStates.outlinedTimetableData = diagram;
+                appStates.outlinedTimetableData.clearHistory();
                 update();
               }
             }}
@@ -153,6 +148,24 @@ export function TimetableEditorParentComponent({
             ))}
           </select>
         </span>
+        <button
+          onClick={() => {
+            appStates.outlinedTimetableData.undo();
+            update();
+          }}
+          disabled={!appStates.outlinedTimetableData.canUndo()}
+        >
+          undo
+        </button>
+        <button
+          onClick={() => {
+            appStates.outlinedTimetableData.redo();
+            update();
+          }}
+          disabled={!appStates.outlinedTimetableData.canRedo()}
+        >
+          redo
+        </button>
         {selectedTimetable !== undefined && railwayLine !== undefined ? (
           <TimetableEditorComponent
             railwayLine={railwayLine}
@@ -160,14 +173,6 @@ export function TimetableEditorParentComponent({
             timetable={selectedTimetable}
             tracks={appStates.tracks}
             update={update}
-            setOutlinedTimetableData={(timetableData) => {
-              setAppStates((prev) => {
-                return {
-                  ...prev,
-                  timetableData,
-                };
-              });
-            }}
             setToast={setToast}
           />
         ) : (

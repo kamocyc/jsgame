@@ -1,4 +1,5 @@
 import { assert } from './common';
+import { AddingNewTrain, HistoryItem } from './outlinedTimetableData';
 
 export interface Point {
   x: number;
@@ -258,7 +259,8 @@ export interface DetailedTimetable {
 }
 
 export interface CrudTrain {
-  addTrains: (trains: Train[], beforeTrainId?: string | null) => void;
+  addTrains: (addingNewTrains: AddingNewTrain[]) => void;
+  addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => void;
   deleteTrains: (trainIds: string[]) => void;
-  updateTrain: (trainId: string, updater: (train: Train) => Train) => void;
+  updateTrain: (historyItem: HistoryItem) => void;
 }

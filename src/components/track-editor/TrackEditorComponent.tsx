@@ -11,8 +11,8 @@ import {
   createMapContext,
   timesVector,
 } from '../../mapEditorModel';
-import { DetailedTimetable, Station, Switch } from '../../model';
-import { OutlinedTimetableData } from '../../outlinedTimetableData';
+import { DetailedTimetable, Station, Switch, Train } from '../../model';
+import { HistoryManager, OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct, TerrainType } from '../extendedMapModel';
 import { LineInfoPanel } from './LineInfoPanelComponent';
@@ -116,8 +116,8 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const timetableDataRaw = obj['timetableData'];
   const timetableData: OutlinedTimetableData =
     timetableDataRaw.trains && timetableDataRaw.timetables
-      ? new OutlinedTimetableData(timetableDataRaw.trains, timetableDataRaw.timetables)
-      : new OutlinedTimetableData();
+      ? new OutlinedTimetableData(new HistoryManager(), timetableDataRaw.trains as Train[], timetableDataRaw.timetables as OutlinedTimetable[])
+      : new OutlinedTimetableData(new HistoryManager());
   const railwayLines = obj['railwayLines'] ?? [];
 
   const trainMove = createTrainMove(timetable);

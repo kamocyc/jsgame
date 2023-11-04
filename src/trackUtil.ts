@@ -218,20 +218,6 @@ export function getRandomElementOfArray<T>(array: T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
-export function changeSwitch(nearestTrackPoint: Point) {
-  // TODO
-  // const nearestTracks = tracks
-  //   .filter(track => deepEqual(track._begin, nearestTrackPoint));
-  // const targetSwitch = nearestTracks[0]._prevSwitch;
-  // if (targetSwitch.fromTracks.length === 1 && targetSwitch.toTracks.length === 1) return;
-  // // とりあえず適当にランダムに選ぶ
-  // while (true) {
-  //   targetSwitch._branchedTrackFrom = getRandomElementOfArray(targetSwitch.fromTracks);
-  //   targetSwitch._branchedTrackTo = getRandomElementOfArray(targetSwitch.toTracks);
-  //   if (targetSwitch._branchedTrackFrom !== targetSwitch._branchedTrackTo.reverseTrack) break;
-  // }
-}
-
 interface NodeWithDistance<T> {
   node: T;
   previousNode: NodeWithDistance<T> | undefined;

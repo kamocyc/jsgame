@@ -7,8 +7,8 @@ import './operation-table.css';
 
 export interface DiagramOperationProps {
   setUpdate: () => void;
-  inboundTrains: Train[];
-  outboundTrains: Train[];
+  inboundTrains: readonly Train[];
+  outboundTrains: readonly Train[];
   operations: Operation[];
   timetable: OutlinedTimetable;
 }

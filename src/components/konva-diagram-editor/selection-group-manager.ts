@@ -3,7 +3,8 @@ import { KonvaEventObject } from 'konva/lib/Node';
 import { Shape, ShapeConfig } from 'konva/lib/Shape';
 import { Stage } from 'konva/lib/Stage';
 import { assert, nn, toStringFromSeconds } from '../../common';
-import { Point, Train } from '../../model';
+import { Point } from '../../model';
+import { HistoryItem } from '../../outlinedTimetableData';
 import { copyTrains, deleteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
 import { ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
@@ -21,7 +22,7 @@ interface TrainPartial {
 }
 
 class TrainDragManager {
-  private dragStartTrainTimes: TrainPartial[] = [];
+  private dragStartTrainTimes: readonly TrainPartial[] = [];
   public selections: TrainKonva[] = [];
   private isTimeDrag: boolean = false;
 
@@ -39,25 +40,74 @@ class TrainDragManager {
         arrivalTime: diaTime.arrivalTime,
         departureTime: diaTime.departureTime,
       }));
-      this.dragStartTrainTimes.push({
-        trainId: train.trainId,
-        diaTimes: partialDiaTimes,
-      });
+      this.dragStartTrainTimes = this.dragStartTrainTimes.concat([
+        {
+          trainId: train.trainId,
+          diaTimes: partialDiaTimes,
+        },
+      ]);
     }
   }
 
   setDraggingPoint(timeDiff: number) {
-    for (const selection of this.selections) {
-      this.processTrainDragMove(selection.getTrain(), timeDiff);
-    }
+    const dragStartTrainTimes = this.dragStartTrainTimes;
+    const trains = this.selections.map((s) => s.getTrain());
+
+    return {
+      this: undefined,
+      redo: () => {
+        for (const train of trains) {
+          const startTimes = dragStartTrainTimes.find((t) => t.trainId === train.trainId);
+          assert(startTimes != null);
+
+          let i = 0;
+          for (const diaTime of train.diaTimes) {
+            if (diaTime.departureTime != null) {
+              const orgTime = startTimes.diaTimes[i].departureTime;
+              assert(orgTime != null);
+              diaTime.departureTime = orgTime + timeDiff;
+            }
+            if (diaTime.arrivalTime != null) {
+              const orgTime = startTimes.diaTimes[i].arrivalTime;
+              assert(orgTime != null);
+              diaTime.arrivalTime = orgTime + timeDiff;
+            }
+            i++;
+          }
+        }
+      },
+      undo: () => {
+        // undoの先の状態が違う。本来はドラッグ終了時に1回のみ記録したい
+        for (const train of trains) {
+          const startTimes = dragStartTrainTimes.find((t) => t.trainId === train.trainId);
+          assert(startTimes != null);
+
+          let i = 0;
+          for (const diaTime of train.diaTimes) {
+            if (diaTime.departureTime != null) {
+              const orgTime = startTimes.diaTimes[i].departureTime;
+              assert(orgTime != null);
+              diaTime.departureTime = orgTime;
+            }
+            if (diaTime.arrivalTime != null) {
+              const orgTime = startTimes.diaTimes[i].arrivalTime;
+              assert(orgTime != null);
+              diaTime.arrivalTime = orgTime;
+            }
+            i++;
+          }
+        }
+      },
+    };
   }
 
+  // 1つの点のみをドラッグしたとき
   setDraggingPointForTime(
     timeDiff: number,
     trainId: string,
     diaTimeId: string,
     arrivalOrDeparture: 'Arrival' | 'Departure'
-  ) {
+  ): HistoryItem {
     const train = this.selections.find((s) => s.getTrain().trainId === trainId);
     assert(train !== undefined);
     const diaTime = train.getTrain().diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
@@ -68,40 +118,40 @@ class TrainDragManager {
     const startTime = startTimes.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
     assert(startTime !== undefined);
 
+    let orgDepartureTime: number | null = null;
+    let orgArrivalTime: number | null = null;
+
     if (arrivalOrDeparture === 'Departure') {
       if (diaTime.departureTime != null) {
-        const orgTime = startTime.departureTime;
-        assert(orgTime != null);
-        diaTime.departureTime = orgTime + timeDiff;
+        orgDepartureTime = startTime.departureTime;
+        assert(orgDepartureTime != null);
       }
     } else if (arrivalOrDeparture === 'Arrival') {
       if (diaTime.arrivalTime != null) {
-        const orgTime = startTime.arrivalTime;
-        assert(orgTime != null);
-        diaTime.arrivalTime = orgTime + timeDiff;
+        orgArrivalTime = startTime.arrivalTime;
+        assert(orgArrivalTime != null);
       }
     }
-  }
 
-  // 列車線をドラッグしたときの処理
-  private processTrainDragMove(train: Train, timeDiff: number) {
-    const startTimes = this.dragStartTrainTimes.find((t) => t.trainId === train.trainId);
-    assert(startTimes != null);
-
-    let i = 0;
-    for (const diaTime of train.diaTimes) {
-      if (diaTime.departureTime != null) {
-        const orgTime = startTimes.diaTimes[i].departureTime;
-        assert(orgTime != null);
-        diaTime.departureTime = orgTime + timeDiff;
-      }
-      if (diaTime.arrivalTime != null) {
-        const orgTime = startTimes.diaTimes[i].arrivalTime;
-        assert(orgTime != null);
-        diaTime.arrivalTime = orgTime + timeDiff;
-      }
-      i++;
-    }
+    return {
+      this: undefined,
+      redo: () => {
+        if (orgDepartureTime !== null) {
+          diaTime.departureTime = orgDepartureTime + timeDiff;
+        }
+        if (orgArrivalTime !== null) {
+          diaTime.arrivalTime = orgArrivalTime + timeDiff;
+        }
+      },
+      undo: () => {
+        if (orgDepartureTime !== null) {
+          diaTime.departureTime = orgDepartureTime;
+        }
+        if (orgArrivalTime !== null) {
+          diaTime.arrivalTime = orgArrivalTime;
+        }
+      },
+    };
   }
 }
 
@@ -222,7 +272,7 @@ export class SelectionGroupManager {
     timeLabel.fontSize(20 / scale);
   }
 
-  onDragMove(e: KonvaEventObject<MouseEvent>, target: Shape<ShapeConfig> | Stage, isTimeDrag: boolean = false) {
+  onDragMove(e: KonvaEventObject<MouseEvent>, target: Shape<ShapeConfig> | Stage) {
     const dragPoint = getPointerPosition(this.layer.getStage());
     if (this.dragStartPoint == null) return;
 
@@ -235,14 +285,15 @@ export class SelectionGroupManager {
     const timeDiff = Math.round(
       (this.currentPosition!.x - this.dragStartPoint!.x) / this.viewStateManager.getSecondWidth()
     );
+    let historyItem: HistoryItem;
     if (target.id().substring(0, 8) === 'timeBox-') {
       const [_, trainId, diaTimeId, timeType] = target.id().split('_');
       assert(timeType === 'Arrival' || timeType === 'Departure');
-      this.trainDragManager.setDraggingPointForTime(timeDiff, trainId, diaTimeId, timeType);
+      historyItem = this.trainDragManager.setDraggingPointForTime(timeDiff, trainId, diaTimeId, timeType);
     } else {
-      this.trainDragManager.setDraggingPoint(timeDiff);
+      historyItem = this.trainDragManager.setDraggingPoint(timeDiff);
     }
-    this.diagramProps.updateTrains();
+    this.diagramProps.crudTrain.updateTrain(historyItem);
     this.updateShape();
   }
 
@@ -295,8 +346,8 @@ export class SelectionGroupManager {
   moveSelections(offsetX: number) {
     this.trainDragManager.setDragStartPoint();
     const timeDiff = offsetX * 15;
-    this.trainDragManager.setDraggingPoint(timeDiff);
-    this.diagramProps.updateTrains();
+    const historyItem = this.trainDragManager.setDraggingPoint(timeDiff);
+    this.diagramProps.crudTrain.updateTrain(historyItem);
     this.updateShape();
   }
 

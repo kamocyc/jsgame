@@ -1,5 +1,4 @@
 import { useState } from 'preact/hooks';
-import { assert } from '../../common';
 import {
   AppClipboard,
   ContextData,
@@ -16,6 +15,7 @@ import {
   generateId,
   getDefaultConnectionType,
 } from '../../model';
+import { HistoryItem } from '../../outlinedTimetableData';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
 import { getDefaultPlatform } from './timetable-util';
 
@@ -27,8 +27,9 @@ function TrainContextMenuComponent({
   clipboard,
   setClipboard,
   selectedTrain,
+  timetableDirection,
 }: {
-  trains: Train[];
+  trains: readonly Train[];
   crudTrain: CrudTrain;
   contextData: ContextData;
 
@@ -36,6 +37,7 @@ function TrainContextMenuComponent({
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;
   selectedTrain: Train | null;
+  timetableDirection: TimetableDirection;
 }) {
   return (
     <ContextMenuComponent
@@ -46,6 +48,7 @@ function TrainContextMenuComponent({
           label: '列車を削除',
           onClick: () => {
             if (selectedTrain != null) {
+              const oldTrains = trains; // undo用
               crudTrain.deleteTrains([selectedTrain.trainId]);
               setContextData({ ...contextData, visible: false });
             }
@@ -70,7 +73,14 @@ function TrainContextMenuComponent({
               const newTrains = clipboard.trains;
 
               // 現在のdiaTrainの直前に挿入
-              crudTrain.addTrains(newTrains, selectedTrain?.trainId ?? null);
+              crudTrain.addTrains(
+                newTrains.map((newTrain) => ({
+                  train: newTrain,
+                  beforeTrainId: selectedTrain?.trainId ?? null,
+                  direction: timetableDirection,
+                }))
+              );
+
               setContextData({ ...contextData, visible: false });
             }
           },
@@ -117,10 +127,10 @@ export function PlatformComponent({
 
 function TrainListItemComponent({
   diaTime,
-  updateDiaTime,
+  updateTrain,
 }: {
   diaTime: DiaTime;
-  updateDiaTime: (updater: (data: DiaTime) => DiaTime) => void;
+  updateTrain: (historyItem: HistoryItem) => void;
 }) {
   return (
     <div
@@ -149,9 +159,14 @@ function TrainListItemComponent({
             cursor: 'pointer',
           }}
           onClick={() => {
-            updateDiaTime((diaTime) => {
-              diaTime.isPassing = !diaTime.isPassing;
-              return diaTime;
+            updateTrain({
+              this: undefined,
+              redo: () => {
+                diaTime.isPassing = !diaTime.isPassing;
+              },
+              undo: () => {
+                diaTime.isPassing = !diaTime.isPassing;
+              },
             });
           }}
         >
@@ -166,9 +181,14 @@ function TrainListItemComponent({
             cursor: 'pointer',
           }}
           onClick={() => {
-            updateDiaTime((diaTime) => {
-              diaTime.isInService = !diaTime.isInService;
-              return diaTime;
+            updateTrain({
+              this: undefined,
+              redo: () => {
+                diaTime.isInService = !diaTime.isInService;
+              },
+              undo: () => {
+                diaTime.isInService = !diaTime.isInService;
+              },
             });
           }}
         >
@@ -179,28 +199,46 @@ function TrainListItemComponent({
         <TimeInputComponent
           time={diaTime.arrivalTime}
           setTime={(time) => {
-            updateDiaTime((diaTime) => {
-              diaTime.arrivalTime = time;
-              return diaTime;
+            const oldTime = diaTime.arrivalTime; // undo用
+            updateTrain({
+              this: undefined,
+              redo: () => {
+                diaTime.arrivalTime = time;
+              },
+              undo: () => {
+                diaTime.arrivalTime = oldTime;
+              },
             });
           }}
         />
         <PlatformComponent
           diaPlatform={diaTime.platform}
           allDiaPlatforms={diaTime.station.platforms}
-          setDiaPlatform={(diaPlatform) => {
-            updateDiaTime((diaTime) => {
-              diaTime.platform = diaPlatform;
-              return diaTime;
+          setDiaPlatform={(platform) => {
+            const oldPlatform = diaTime.platform; // undo用
+            updateTrain({
+              this: undefined,
+              redo: () => {
+                diaTime.platform = platform;
+              },
+              undo: () => {
+                diaTime.platform = oldPlatform;
+              },
             });
           }}
         />
         <TimeInputComponent
           time={diaTime.departureTime}
           setTime={(time) => {
-            updateDiaTime((diaTime) => {
-              diaTime.departureTime = time;
-              return diaTime;
+            const oldTime = diaTime.departureTime; // undo用
+            updateTrain({
+              this: undefined,
+              redo: () => {
+                diaTime.departureTime = time;
+              },
+              undo: () => {
+                diaTime.departureTime = oldTime;
+              },
             });
           }}
         />
@@ -222,7 +260,7 @@ function showStationOperation(stationOperation: StationOperation | undefined, fi
 }
 
 // 新しい列車番号を生成する（ロジックは適当）
-function getNewTrainCode(trains: Train[]) {
+function getNewTrainCode(trains: readonly Train[]) {
   const codes = trains.map((train) => train.trainCode);
   const symbolInTrainCode = codes[codes.length - 1].replace(/[^A-Z]/g, '');
   const maxCode = codes.map((code) => code.replace(/[^0-9]/g, '')).sort((a, b) => parseInt(b) - parseInt(a))[0];
@@ -234,7 +272,7 @@ function getNewTrainCode(trains: Train[]) {
 
 export function TrainListComponent({
   trains,
-  diaStations,
+  stations,
   timetableDirection,
   crudTrain,
   trainTypes,
@@ -242,8 +280,8 @@ export function TrainListComponent({
   setClipboard,
   setSettingData,
 }: {
-  trains: Train[];
-  diaStations: StationLike[];
+  trains: readonly Train[];
+  stations: StationLike[];
   timetableDirection: TimetableDirection;
   crudTrain: CrudTrain;
   trainTypes: TrainType[];
@@ -292,7 +330,16 @@ export function TrainListComponent({
       }}
     >
       <TrainContextMenuComponent
-        {...{ contextData, trains, crudTrain, setContextData, clipboard, setClipboard, selectedTrain }}
+        {...{
+          contextData,
+          trains,
+          crudTrain,
+          setContextData,
+          clipboard,
+          setClipboard,
+          selectedTrain,
+          timetableDirection,
+        }}
       />
       {trains.map((train) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -301,14 +348,21 @@ export function TrainListComponent({
             <EditableTextComponent
               value={train.trainCode}
               onChange={(value) => {
-                crudTrain.updateTrain(train.trainId, (train) => {
-                  if (value == '') {
-                    train.trainCode = '';
-                  } else {
-                    train.trainCode = value;
-                  }
-                  return train;
+                const oldTrainCode = train.trainCode; // undo用
+                crudTrain.updateTrain({
+                  this: undefined,
+                  redo: () => {
+                    if (value == '') {
+                      train.trainCode = '';
+                    } else {
+                      train.trainCode = value;
+                    }
+                  },
+                  undo: () => {
+                    train.trainCode = oldTrainCode;
+                  },
                 });
+
                 return true;
               }}
               height={24}
@@ -320,13 +374,19 @@ export function TrainListComponent({
             <EditableTextComponent
               value={train.trainName ?? ''}
               onChange={(value) => {
-                crudTrain.updateTrain(train.trainId, (train) => {
-                  if (value == '') {
-                    train.trainName = '';
-                  } else {
-                    train.trainName = value;
-                  }
-                  return train;
+                const oldTrainName = train.trainName; // undo用
+                crudTrain.updateTrain({
+                  this: undefined,
+                  redo: () => {
+                    if (value == '') {
+                      train.trainName = '';
+                    } else {
+                      train.trainName = value;
+                    }
+                  },
+                  undo: () => {
+                    train.trainName = oldTrainName;
+                  },
                 });
 
                 return true;
@@ -342,16 +402,22 @@ export function TrainListComponent({
               style={{ height: 22 + 'px', width: '56px' }}
               onChange={(e) => {
                 if ((e.target as HTMLSelectElement)?.value != null) {
-                  crudTrain.updateTrain(train.trainId, (train) => {
-                    const newTrainType = trainTypes.find(
-                      (trainType) => trainType.trainTypeId === (e.target as HTMLSelectElement).value
-                    );
-                    if (newTrainType) {
-                      train.trainType = newTrainType;
-                    } else {
-                      train.trainType = undefined;
-                    }
-                    return train;
+                  const oldTrainType = train.trainType; // undo用
+                  crudTrain.updateTrain({
+                    this: undefined,
+                    redo: () => {
+                      const newTrainType = trainTypes.find(
+                        (trainType) => trainType.trainTypeId === (e.target as HTMLSelectElement).value
+                      );
+                      if (newTrainType) {
+                        train.trainType = newTrainType;
+                      } else {
+                        train.trainType = undefined;
+                      }
+                    },
+                    undo: () => {
+                      train.trainType = oldTrainType;
+                    },
                   });
                 }
               }}
@@ -393,20 +459,8 @@ export function TrainListComponent({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + train.trainId}>
             {/* 時刻リスト */}
-            {getDiaTimesOfStations(train, diaStations).map((diaTime) => (
-              <TrainListItemComponent
-                diaTime={diaTime}
-                updateDiaTime={(updater) => {
-                  crudTrain.updateTrain(train.trainId, (train) => {
-                    const newDiaTime = updater(diaTime);
-                    const diaTimes = getDiaTimesOfStations(train, diaStations);
-                    const index = diaTimes.findIndex((diaTime) => diaTime.diaTimeId === newDiaTime.diaTimeId);
-                    assert(index >= 0);
-                    train.diaTimes[index] = newDiaTime;
-                    return train;
-                  });
-                }}
-              />
+            {getDiaTimesOfStations(train, stations).map((diaTime) => (
+              <TrainListItemComponent diaTime={diaTime} updateTrain={(h) => crudTrain.updateTrain(h)} />
             ))}
           </div>
           <div>
@@ -427,7 +481,7 @@ export function TrainListComponent({
             const newTrain: Train = {
               trainId: generateId(),
               trainName: '',
-              diaTimes: diaStations.map((diaStation) => ({
+              diaTimes: stations.map((diaStation) => ({
                 diaTimeId: generateId(),
                 arrivalTime: null,
                 departureTime: null,
@@ -440,7 +494,7 @@ export function TrainListComponent({
               firstStationOperation: getDefaultConnectionType(),
               lastStationOperation: getDefaultConnectionType(),
             };
-            crudTrain.addTrains([newTrain]);
+            crudTrain.addTrain(newTrain, timetableDirection);
           }}
         >
           列車を追加

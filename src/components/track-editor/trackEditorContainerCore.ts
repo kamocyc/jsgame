@@ -113,7 +113,7 @@ function placeTrain(
     train: null,
     speed: 10 /* 加速す料にしたいところ*/,
     stationWaitTime: 0,
-    stationStatus: 'NotArrived',
+    stationStatus: 'Arrived',
     stopId: null,
     track: hitTrack,
     position: position,

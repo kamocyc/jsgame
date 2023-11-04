@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
 import { DetailedTimetable } from '../model';
-import { OutlinedTimetableData } from '../outlinedTimetableData';
+import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData';
 import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
 import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
@@ -55,7 +55,7 @@ const defaultMapHeight = 20;
 export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
-  const timetableData = new OutlinedTimetableData();
+  const timetableData = new OutlinedTimetableData(new HistoryManager());
   const storedTrains = [
     {
       placedTrainId: '1',

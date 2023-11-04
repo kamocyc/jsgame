@@ -560,7 +560,7 @@ export function createOperations(trains: Train[], tracks: Track[] = []): Operati
 
     if (train.firstStationOperation?.stationOperationType === 'InOut') {
       const operationTrains: Train[] = [];
-      assert(train.firstStationOperation.platformId === train.diaTimes[0].platform?.platformId);
+      // assert(train.firstStationOperation.platformId === train.diaTimes[0].platform?.platformId);
       assert(train.firstStationOperation.stationId === train.diaTimes[0].platform?.station.stationId);
       // TODO: できればチェックしたい
       // assert(

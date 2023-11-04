@@ -1,9 +1,23 @@
 import { assert } from '../../common';
 import { DiaTime, StationLike, Train, generateId, getDefaultConnectionType } from '../../model';
-import { fillMissingTimes } from '../../oudParser';
-import { getDefaultPlatform } from '../timetable-editor/timetable-util';
+import { fillMissingTimes, getDefaultPlatform } from '../timetable-editor/timetable-util';
 import { DiagramKonvaContext, RectState } from './konva-util';
 import { TrainKonva } from './train-konva';
+
+// interface HistoryItem {
+//   undo: () => void;
+//   redo: () => void;
+// }
+
+// class HistoryManager {
+//   private histories: HistoryItem[] = [];
+//   private currentIndex: number = 0;
+
+//   push(item: HistoryItem) {
+//   }
+// }
+
+// const historyManager = new HistoryManager();
 
 export class TrainCollectionKonva {
   private trainKonvas: Map<string, TrainKonva> = new Map();
@@ -62,7 +76,7 @@ export class TrainCollectionKonva {
           } as DiaTime)
       );
 
-      trains.push({
+      const newTrain: Train = {
         trainId: generateId(),
         trainName: '',
         trainType: undefined,
@@ -71,11 +85,11 @@ export class TrainCollectionKonva {
         direction: direction,
         firstStationOperation: getDefaultConnectionType(),
         lastStationOperation: getDefaultConnectionType(),
-      });
+      };
 
-      fillMissingTimes(trains, this.context.diagramProps.stations);
+      fillMissingTimes(newTrain, this.context.diagramProps.stations);
 
-      this.context.diagramProps.updateTrains();
+      this.context.diagramProps.crudTrain.addTrains([newTrain]);
       this.updateShape();
 
       return trains[trains.length - 1];

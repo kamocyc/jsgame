@@ -1,7 +1,16 @@
 import { StateUpdater, useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
 import { RailwayLine } from '../../mapEditorModel';
-import { AppClipboard, SettingData, StationLike, TimetableDirection, Track, Train, TrainType } from '../../model';
+import {
+  AppClipboard,
+  CrudTrain,
+  SettingData,
+  StationLike,
+  TimetableDirection,
+  Track,
+  Train,
+  TrainType,
+} from '../../model';
 import { OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { DiagramPageComponent } from './diagram-component';
@@ -33,7 +42,7 @@ export function TimetableEditorTableComponent({
   setDiaStations,
   trains,
   otherDirectionTrains,
-  setTrains,
+  crudTrain,
   timetableDirection,
   trainTypes,
   setSettingData,
@@ -44,7 +53,7 @@ export function TimetableEditorTableComponent({
   setDiaStations: (diaStations: StationLike[]) => void;
   trains: Train[];
   otherDirectionTrains: Train[];
-  setTrains: (trains: Train[]) => void;
+  crudTrain: CrudTrain;
   timetableDirection: 'Inbound' | 'Outbound';
   trainTypes: TrainType[];
   setSettingData: (settingData: SettingData) => void;
@@ -75,9 +84,7 @@ export function TimetableEditorTableComponent({
         {...{
           diaStations: diaStations,
           trains: trains,
-          setTrains: (trains) => {
-            setTrains([...trains]);
-          },
+          crudTrain,
           timetableDirection: timetableDirection,
           trainTypes,
           clipboard,
@@ -139,6 +146,11 @@ export function TimetableEditorComponent({
   const inboundTrains = timetable.inboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
   const outboundTrains = timetable.outboundTrainIds.map((trainId) => timetableData.getTrain(trainId));
 
+  // const updateTrains = () => {
+  //   timetable.tr
+  //   update();
+  // }
+
   const setDiaStations = (stations: StationLike[]) => {
     timetable.stations = stations;
     update();
@@ -149,10 +161,25 @@ export function TimetableEditorComponent({
     update();
   };
 
-  const setTrains = (trains: Train[]) => {
-    timetableData.setTrains(timetable.timetableId, trains, timetableDirection);
+  // const setTrains = (trains: Train[]) => {
+  //   timetableData.setTrains(timetable.timetableId, trains, timetableDirection);
 
-    update();
+  //   update();
+  // };
+
+  const crudTrain = {
+    addTrains: (trains: Train[], beforeTrainId: string | null = null) => {
+      timetableData.addTrains(timetable.timetableId, trains, timetableDirection, beforeTrainId);
+      update();
+    },
+    deleteTrain: (trainId: string) => {
+      timetableData.deleteTrain(trainId);
+      update();
+    },
+    updateTrain: (trainId: string, updater: (source: Train) => Train) => {
+      timetableData.updateTrain(trainId, updater);
+      update();
+    },
   };
 
   return (
@@ -221,7 +248,7 @@ export function TimetableEditorComponent({
                       setDiaStations: setDiaStations,
                       trains: inboundTrains,
                       otherDirectionTrains: outboundTrains,
-                      setTrains: setTrains,
+                      crudTrain: crudTrain,
                       timetableDirection,
                       trainTypes: timetable.trainTypes,
                       setSettingData,
@@ -241,7 +268,7 @@ export function TimetableEditorComponent({
                       setDiaStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
                       trains: outboundTrains,
                       otherDirectionTrains: inboundTrains,
-                      setTrains: setTrains,
+                      crudTrain: crudTrain,
                       timetableDirection,
                       trainTypes: timetable.trainTypes,
                       setSettingData,
@@ -278,12 +305,7 @@ export function TimetableEditorComponent({
                     inboundTrains={inboundTrains}
                     outboundTrains={outboundTrains}
                     operations={timetable.operations}
-                    setUpdate={() => {
-                      update();
-                    }}
-                    updateTrains={() => {
-                      update();
-                    }}
+                    crudTrain={crudTrain}
                     clipboard={clipboard}
                     setClipboard={setClipboard}
                   />

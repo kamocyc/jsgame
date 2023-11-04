@@ -1,9 +1,8 @@
-import { AppClipboard, Operation, StationLike, Train } from '../../model';
+import { AppClipboard, CrudTrain, Operation, StationLike, Train } from '../../model';
 
 export interface DiagramProps {
   stations: StationLike[];
-  updateTrains: () => void;
-  setUpdate: () => void;
+  crudTrain: CrudTrain;
   inboundTrains: Train[];
   outboundTrains: Train[];
   operations: Operation[];

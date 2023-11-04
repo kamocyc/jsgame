@@ -17,12 +17,13 @@ export class KonvaManager {
   copySelections() {
     this.mainKonva.copySelections();
   }
-
   pasteTrains() {
     this.mainKonva.pasteTrains();
   }
-
   deleteSelections() {
     this.mainKonva.deleteSelections();
+  }
+  moveSelections(offsetX: number, offsetY: number) {
+    this.mainKonva.moveSelections(offsetX, offsetY);
   }
 }

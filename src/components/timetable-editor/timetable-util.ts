@@ -103,7 +103,7 @@ function createTrain(stops: RailwayLineStop[], diaTimes: DiaTime[]): Train {
 export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetable, Train[]] {
   const baseTime = 10 * 60 * 60;
 
-  function createDiaTime(stop: RailwayLineStop, index: number) {
+  function createDiaTime(stop: RailwayLineStop, index: number): DiaTime {
     return {
       diaTimeId: generateId(),
       arrivalTime: index === 0 ? null : currentTime,
@@ -111,6 +111,7 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
       isPassing: false,
       station: stop.platform.station,
       platform: stop.platform,
+      isInService: true,
     };
   }
 
@@ -161,4 +162,22 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
   };
 
   return [timetable, trains];
+}
+
+// 足りない駅の時刻を補完する
+export function fillMissingTimes(train: Train, stations: StationLike[]): void {
+  for (const station of stations) {
+    const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === station.stationId);
+    if (diaTime === undefined) {
+      train.diaTimes.push({
+        diaTimeId: generateId(),
+        station: station,
+        platform: null,
+        arrivalTime: null,
+        departureTime: null,
+        isPassing: false,
+        isInService: false,
+      });
+    }
+  }
 }

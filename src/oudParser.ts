@@ -1,3 +1,4 @@
+import { fillMissingTimes } from './components/timetable-editor/timetable-util';
 import { createOperations } from './components/track-editor/timetableConverter';
 import { DiaTime, Platform, Station, StationLike, StationOperation, Train, TrainType, generateId } from './model';
 import { OutlinedTimetable } from './outlinedTimetableData';
@@ -297,21 +298,9 @@ function convertTrainTypes(ressyasyubetsus: any[]): TrainType[] {
 }
 
 // 足りない駅の時刻を補完する
-export function fillMissingTimes(trains: Train[], stations: StationLike[]): void {
-  for (const station of stations) {
-    for (const train of trains) {
-      const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === station.stationId);
-      if (diaTime === undefined) {
-        train.diaTimes.push({
-          diaTimeId: generateId(),
-          station: station,
-          platform: null,
-          arrivalTime: null,
-          departureTime: null,
-          isPassing: false,
-        });
-      }
-    }
+function fillAllMissingTimes(trains: Train[], stations: StationLike[]): void {
+  for (const train of trains) {
+    fillMissingTimes(train, stations);
   }
 }
 
@@ -323,7 +312,7 @@ export function getEkiJikokus(oudBuf: string): [OutlinedTimetable, Train[]] {
   const dia = rosen['Dia'][0];
   const ressyas = (dia['Kudari'][0]['Ressya'] ?? []).concat(dia['Nobori'][0]['Ressya'] ?? []);
   const trains = convertRessyas(ressyas, stations, trainTypes);
-  fillMissingTimes(trains, stations);
+  fillAllMissingTimes(trains, stations);
 
   const inboundTrainIds = trains.filter((t) => t.houkou === 'Nobori').map((train) => train.trainId);
   const outboundTrainIds = trains.filter((t) => t.houkou === 'Kudari').map((train) => train.trainId);

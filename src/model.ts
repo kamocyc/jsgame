@@ -258,3 +258,9 @@ export interface DetailedTimetable {
   switchTimetableMap: SwitchTimetableMap;
   operations: Operation[];
 }
+
+export interface CrudTrain {
+  addTrains: (trains: Train[], beforeTrainId?: string | null) => void;
+  deleteTrain: (trainId: string) => void;
+  updateTrain: (trainId: string, updater: (train: Train) => Train) => void;
+}

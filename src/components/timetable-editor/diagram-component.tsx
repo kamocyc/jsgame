@@ -23,7 +23,7 @@ export function KonvaCanvas(props: DiagramProps) {
 
   return (
     <div ref={containerRef} style={{ display: 'flex' }}>
-      <div id='stationsCanvas' style={{ width: stationCanvasWidth + 'px' }}></div>
+      <div id='stationsCanvas' style={{ width: stationCanvasWidth + 'px', backgroundColor: '#f9f9f9' }}></div>
       <div
         id='mainCanvas'
         onContextMenu={(e) => {
@@ -37,6 +37,14 @@ export function KonvaCanvas(props: DiagramProps) {
           // delete keyを取得
           if (e.key === 'Delete') {
             konvaManagerRef.current?.deleteSelections();
+          }
+          if (e.key === 'ArrowLeft') {
+            konvaManagerRef.current?.moveSelections(-1, 0);
+            e.preventDefault();
+          }
+          if (e.key === 'ArrowRight') {
+            konvaManagerRef.current?.moveSelections(1, 0);
+            e.preventDefault();
           }
         }}
         // Ctrl+Vを取得する

@@ -1,4 +1,5 @@
 import Konva from 'konva';
+import { CrudTrain, Train } from '../../model';
 import { pasteTrains } from './diagram-core';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps } from './drawer-util';
@@ -29,6 +30,25 @@ interface StagePosition {
   scale: number;
 }
 
+function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void) {
+  return {
+    addTrains: (trains: Train[]) => {
+      const result = crudTrain.addTrains(trains);
+      hook();
+      return result;
+    },
+    updateTrain: (trainId: string, updater: (train: Train) => Train) => {
+      const result = crudTrain.updateTrain(trainId, updater);
+      hook();
+      return result;
+    },
+    deleteTrain: (trainId: string) => {
+      const result = crudTrain.deleteTrain(trainId);
+      hook();
+      return result;
+    },
+  };
+}
 export class StageKonva {
   private stage: Konva.Stage;
   private layer: Konva.Layer;
@@ -72,10 +92,9 @@ export class StageKonva {
 
     this.diagramProps = {
       ...diagramProps,
-      updateTrains: () => {
-        diagramProps.updateTrains();
+      crudTrain: setHookToCrudTrain(diagramProps.crudTrain, () => {
         this.operationCollectionKonva.updateShape();
-      },
+      }),
     };
     this.mouseEventManager = new MouseEventManager(this.layer);
     this.dragRectKonva = new DragRectKonva(this.layer);
@@ -103,6 +122,9 @@ export class StageKonva {
     // stageに対するイベント
     this.stage.on('wheel', this.onWheel.bind(this));
     this.stage.on('mousedown', this.onMousedown.bind(this));
+    this.stage.on('mouseup', (e) => {
+      this.stage.stopDrag();
+    });
     this.stage.on('dragmove', this.onDragmove.bind(this));
 
     this.mouseEventManager.registerClickHandler(this.stage.id(), (e) => {
@@ -143,10 +165,6 @@ export class StageKonva {
         this.updateShape();
       }
     });
-
-    // this.stage.on('mousemove', this.onMousemove.bind(this));
-    // // this.stage.on('click', this.onClick.bind(this));
-    // this.stage.on('mouseup', this.onMouseup.bind(this));
 
     this.stationViewKonva.adjustStationPosition(this.stagePosition);
     this.updateShape();
@@ -193,6 +211,8 @@ export class StageKonva {
     this.stationViewKonva.adjustStationPosition(this.stagePosition);
 
     this.updateShape();
+    this.selectionGroupManager.updateShape();
+    this.timeGridKonva.updateShape();
   }
 
   private onMousedown(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -211,7 +231,10 @@ export class StageKonva {
 
     this.adjustStagePosition(this.stagePosition, this.container);
     this.stationViewKonva.adjustStationPosition(this.stagePosition);
+
     this.updateShape();
+    this.selectionGroupManager.updateShape();
+    this.timeGridKonva.updateShape();
   }
 
   updateShape() {
@@ -256,6 +279,9 @@ export class StageKonva {
   }
   deleteSelections() {
     this.selectionGroupManager.deleteSelections();
+  }
+  moveSelections(offsetX: number, offsetY: number) {
+    this.selectionGroupManager.moveSelections(offsetX);
   }
 }
 
@@ -304,5 +330,8 @@ export class MainViewKonvaManager {
   }
   deleteSelections() {
     this.stageKonva.deleteSelections();
+  }
+  moveSelections(offsetX: number, offsetY: number) {
+    this.stageKonva.moveSelections(offsetX, offsetY);
   }
 }

@@ -15,18 +15,8 @@ export function copyTrains(props: DiagramProps, selectedTrains: Train[]) {
 
 export function deleteTrains(props: DiagramProps, selectedTrains: Train[]) {
   for (const selection of selectedTrains) {
-    const train = selection;
-    if (train.direction === 'Inbound') {
-      // 破壊的に削除する
-      const index = props.inboundTrains.findIndex((t) => t.trainId === train.trainId);
-      if (index >= 0) props.inboundTrains.splice(index, 1);
-    } else {
-      const index = props.outboundTrains.findIndex((t) => t.trainId === train.trainId);
-      if (index >= 0) props.outboundTrains.splice(index, 1);
-    }
+    props.crudTrain.deleteTrain(selection.trainId);
   }
-
-  props.setUpdate();
 }
 
 export function pasteTrains(props: DiagramProps): Train[] {
@@ -49,7 +39,7 @@ export function pasteTrains(props: DiagramProps): Train[] {
     // addTrainSelection(line, train);
   }
 
-  props.setUpdate();
+  props.updateTrains();
   copyTrains(props, newTrains);
 
   return newTrains;

@@ -70,6 +70,49 @@ export class OutlinedTimetableData {
     this.deleteNotUsedTrains();
   }
 
+  addTrains(
+    timetableId: string,
+    trains: Train[],
+    direction: 'Inbound' | 'Outbound',
+    beforeTrainId: string | null = null
+  ) {
+    const timetable = this.timetables.find((t) => t.timetableId === timetableId);
+    assert(timetable !== undefined);
+
+    this.trains.push(...trains);
+    if (direction === 'Inbound') {
+      if (beforeTrainId === null) {
+        timetable.inboundTrainIds.push(...trains.map((train) => train.trainId));
+      } else {
+        const index = timetable.inboundTrainIds.findIndex((id) => id === beforeTrainId);
+        assert(index !== -1);
+        timetable.inboundTrainIds.splice(index, 0, ...trains.map((train) => train.trainId));
+      }
+    } else {
+      if (beforeTrainId === null) {
+        timetable.outboundTrainIds.push(...trains.map((train) => train.trainId));
+      } else {
+        const index = timetable.outboundTrainIds.findIndex((id) => id === beforeTrainId);
+        assert(index !== -1);
+        timetable.outboundTrainIds.splice(index, 0, ...trains.map((train) => train.trainId));
+      }
+    }
+  }
+
+  deleteTrain(trainId: string) {
+    this.trains = this.trains.filter((train) => train.trainId !== trainId);
+    for (const timetable of this.timetables) {
+      timetable.inboundTrainIds = timetable.inboundTrainIds.filter((id) => id !== trainId);
+      timetable.outboundTrainIds = timetable.outboundTrainIds.filter((id) => id !== trainId);
+    }
+  }
+
+  updateTrain(trainId: string, updater: (train: Train) => Train) {
+    const trainIndex = this.trains.findIndex((t) => t.trainId === trainId);
+    assert(trainIndex !== -1);
+    this.trains[trainIndex] = updater(this.trains[trainIndex]);
+  }
+
   setTrains(timetableId: string, trains: Train[], direction: 'Inbound' | 'Outbound') {
     const timetable = this.timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);

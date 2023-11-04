@@ -1,5 +1,6 @@
 import Konva from 'konva';
 import { CrudTrain, Train } from '../../model';
+import { OutlinedTimetable } from '../../outlinedTimetableData';
 import { pasteTrains } from './diagram-core';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps } from './drawer-util';
@@ -30,6 +31,12 @@ interface StagePosition {
   scale: number;
 }
 
+export interface OutlinedTimetableHistoryItemContext {
+  timetable: OutlinedTimetable;
+}
+
+// やることは、オブジェクトへの反映。ただし、undo / redoのために、undo / redo用の関数を返す必要がある。
+
 function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void) {
   return {
     addTrains: (trains: Train[]) => {
@@ -42,8 +49,8 @@ function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void) {
       hook();
       return result;
     },
-    deleteTrain: (trainId: string) => {
-      const result = crudTrain.deleteTrain(trainId);
+    deleteTrains: (trainIds: string[]) => {
+      const result = crudTrain.deleteTrains(trainIds);
       hook();
       return result;
     },

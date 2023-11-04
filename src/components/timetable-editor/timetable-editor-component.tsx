@@ -172,8 +172,10 @@ export function TimetableEditorComponent({
       timetableData.addTrains(timetable.timetableId, trains, timetableDirection, beforeTrainId);
       update();
     },
-    deleteTrain: (trainId: string) => {
-      timetableData.deleteTrain(trainId);
+    deleteTrains: (trainIds: string[]) => {
+      for (const trainId of trainIds) {
+        timetableData.deleteTrain(trainId);
+      }
       update();
     },
     updateTrain: (trainId: string, updater: (source: Train) => Train) => {
@@ -319,6 +321,7 @@ export function TimetableEditorComponent({
                     inboundTrains={inboundTrains}
                     outboundTrains={outboundTrains}
                     operations={timetable.operations}
+                    timetable={timetable}
                     setUpdate={() => {
                       update();
                     }}

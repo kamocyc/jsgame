@@ -46,7 +46,7 @@ function TrainContextMenuComponent({
           label: '列車を削除',
           onClick: () => {
             if (selectedTrain != null) {
-              crudTrain.deleteTrain(selectedTrain.trainId);
+              crudTrain.deleteTrains([selectedTrain.trainId]);
               setContextData({ ...contextData, visible: false });
             }
           },
@@ -412,7 +412,7 @@ export function TrainListComponent({
           <div>
             <button
               onClick={() => {
-                crudTrain.deleteTrain(train.trainId);
+                crudTrain.deleteTrains([train.trainId]);
               }}
             >
               削除
@@ -439,7 +439,6 @@ export function TrainListComponent({
               trainCode: newTrainCode,
               firstStationOperation: getDefaultConnectionType(),
               lastStationOperation: getDefaultConnectionType(),
-              direction: timetableDirection,
             };
             crudTrain.addTrains([newTrain]);
           }}

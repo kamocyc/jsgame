@@ -128,7 +128,6 @@ export interface Train {
   diaTimes: DiaTime[];
   firstStationOperation: StationOperation;
   lastStationOperation: StationOperation;
-  direction: TimetableDirection | null;
 }
 
 export function cloneTrain(train: Train): Train {
@@ -140,7 +139,6 @@ export function cloneTrain(train: Train): Train {
     diaTimes: train.diaTimes.map((diaTime) => ({ ...diaTime, diaTimeId: generateId() })),
     firstStationOperation: train.firstStationOperation,
     lastStationOperation: train.lastStationOperation,
-    direction: train.direction,
   };
 }
 
@@ -261,6 +259,6 @@ export interface DetailedTimetable {
 
 export interface CrudTrain {
   addTrains: (trains: Train[], beforeTrainId?: string | null) => void;
-  deleteTrain: (trainId: string) => void;
+  deleteTrains: (trainIds: string[]) => void;
   updateTrain: (trainId: string, updater: (train: Train) => Train) => void;
 }

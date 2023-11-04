@@ -3,7 +3,7 @@ import { KonvaEventObject } from 'konva/lib/Node';
 import { Shape, ShapeConfig } from 'konva/lib/Shape';
 import { Stage } from 'konva/lib/Stage';
 import { assert, nn, toStringFromSeconds } from '../../common';
-import { Point } from '../../model';
+import { Point, Train } from '../../model';
 import { copyTrains, deleteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
 import { ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
@@ -48,7 +48,7 @@ class TrainDragManager {
 
   setDraggingPoint(timeDiff: number) {
     for (const selection of this.selections) {
-      this.processTrainDragMove(selection, timeDiff);
+      this.processTrainDragMove(selection.getTrain(), timeDiff);
     }
   }
 
@@ -84,13 +84,10 @@ class TrainDragManager {
   }
 
   // 列車線をドラッグしたときの処理
-  private processTrainDragMove(trainSelection: TrainKonva, timeDiff: number) {
-    const train = trainSelection.getTrain();
-
-    const startTimes = this.dragStartTrainTimes.find((t) => t.trainId === trainSelection.getTrain().trainId);
+  private processTrainDragMove(train: Train, timeDiff: number) {
+    const startTimes = this.dragStartTrainTimes.find((t) => t.trainId === train.trainId);
     assert(startTimes != null);
 
-    const a = (train: Train) => {};
     let i = 0;
     for (const diaTime of train.diaTimes) {
       if (diaTime.departureTime != null) {
@@ -105,8 +102,6 @@ class TrainDragManager {
       }
       i++;
     }
-
-    trainSelection.updateShape();
   }
 }
 
@@ -177,6 +172,8 @@ export class SelectionGroupManager {
     const scale = this.stageKonva.scale;
 
     for (const selection of this.trainDragManager.selections) {
+      selection.updateShape();
+
       const train = selection.getTrain();
       for (const diaTime of train.diaTimes) {
         if (diaTime.departureTime != null) {

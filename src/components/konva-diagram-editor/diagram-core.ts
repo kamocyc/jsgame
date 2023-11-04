@@ -1,4 +1,5 @@
 import { Train, cloneTrain } from '../../model';
+import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { DiagramProps } from './drawer-util';
 
 export function copyTrains(props: DiagramProps, selectedTrains: Train[]) {
@@ -14,9 +15,7 @@ export function copyTrains(props: DiagramProps, selectedTrains: Train[]) {
 }
 
 export function deleteTrains(props: DiagramProps, selectedTrains: Train[]) {
-  for (const selection of selectedTrains) {
-    props.crudTrain.deleteTrain(selection.trainId);
-  }
+  props.crudTrain.deleteTrains(selectedTrains.map((selectedTrain) => selectedTrain.trainId));
 }
 
 export function pasteTrains(props: DiagramProps): Train[] {
@@ -43,4 +42,8 @@ export function pasteTrains(props: DiagramProps): Train[] {
   copyTrains(props, newTrains);
 
   return newTrains;
+}
+
+export function getDirection(train: Train, timetableData: OutlinedTimetableData) {
+  timetableData.
 }

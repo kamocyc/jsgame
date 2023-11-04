@@ -82,7 +82,6 @@ export class TrainCollectionKonva {
         trainType: undefined,
         diaTimes: diaTimes,
         trainCode: '',
-        direction: direction,
         firstStationOperation: getDefaultConnectionType(),
         lastStationOperation: getDefaultConnectionType(),
       };

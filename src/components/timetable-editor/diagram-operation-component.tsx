@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { toStringFromSeconds } from '../../common';
 import { Operation, Train } from '../../model';
+import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonComponent';
 import './operation-table.css';
 
@@ -9,6 +10,7 @@ export interface DiagramOperationProps {
   inboundTrains: Train[];
   outboundTrains: Train[];
   operations: Operation[];
+  timetable: OutlinedTimetable;
 }
 
 interface DiagramOperationSubProps extends DiagramOperationProps {
@@ -62,13 +64,14 @@ export function DiagramOperationSubComponent(props: DiagramOperationSubProps) {
         </thead>
         <tbody>
           {operation.trains.map((train, i) => {
+            const direction = getDirection(props.timetable, train.trainId);
             // 上り -> 下り を 左 -> 右 にする
-            const [diaTime1, direction, diaTime2] =
-              train.direction === 'Inbound'
+            const [diaTime1, directionText, diaTime2] =
+              direction === 'Inbound'
                 ? [train.diaTimes[0], '→', train.diaTimes[train.diaTimes.length - 1]]
                 : [train.diaTimes[train.diaTimes.length - 1], '←', train.diaTimes[0]];
             const [time1, time2] =
-              train.direction === 'Inbound'
+              direction === 'Inbound'
                 ? [diaTime1.departureTime, diaTime2.arrivalTime]
                 : [diaTime1.arrivalTime, diaTime2.departureTime];
             return (
@@ -78,7 +81,7 @@ export function DiagramOperationSubComponent(props: DiagramOperationSubProps) {
                 <td>{train.trainName}</td>
                 <td>{diaTime1.station.stationName}</td>
                 <td>{time1 !== null ? toStringFromSeconds(time1) : ''}</td>
-                <td>{direction}</td>
+                <td>{directionText}</td>
                 <td>{diaTime2.station.stationName}</td>
                 <td>{time2 !== null ? toStringFromSeconds(time2) : ''}</td>
               </tr>

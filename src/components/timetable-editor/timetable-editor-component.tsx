@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
 import { RailwayLine } from '../../mapEditorModel';
 import {
@@ -13,7 +13,7 @@ import {
 } from '../../model';
 import { AddingNewTrain, HistoryItem, OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
 import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
-import { DiagramPageComponent } from './diagram-component';
+import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
 import { StationOperationSettingComponent } from './station-operation-setting-component';
@@ -123,6 +123,8 @@ export function TimetableEditorComponent({
     trains: [],
     originalTrains: [],
   });
+  const clipboardRef = useRef({ clipboard });
+  console.log({ clipboard });
   const [settingData, setSettingData] = useState<SettingData | null>(null);
 
   function mergeTimetable(diagram: [OutlinedTimetable, Train[]]) {
@@ -305,7 +307,7 @@ export function TimetableEditorComponent({
                 tabId: 5,
                 tabText: 'ダイヤグラム',
                 component: () => (
-                  <DiagramPageComponent
+                  <KonvaCanvas
                     timetable={timetable}
                     stations={timetable.stations}
                     inboundTrains={inboundTrains}

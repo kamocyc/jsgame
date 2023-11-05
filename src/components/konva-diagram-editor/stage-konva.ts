@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import { CrudTrain, Train } from '../../model';
+import { AppClipboard, CrudTrain, Train } from '../../model';
 import { AddingNewTrain, HistoryItem, OutlinedTimetable } from '../../outlinedTimetableData';
 import { pasteTrains } from './diagram-core';
 import { DragRectKonva } from './drag-rect-konva';
@@ -61,6 +61,7 @@ function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void): CrudTrain {
     },
   };
 }
+
 export class StageKonva {
   private stage: Konva.Stage;
   private layer: Konva.Layer;
@@ -104,11 +105,14 @@ export class StageKonva {
 
     this.diagramProps = {
       ...diagramProps,
+      setClipboard: (clipboard: AppClipboard) => {
+        this.diagramProps.clipboard = clipboard;
+        diagramProps.setClipboard(clipboard);
+      },
       crudTrain: setHookToCrudTrain(diagramProps.crudTrain, () => {
         const [inboundTrains, outboundTrains] = this.diagramProps.getTrainsWithDirections();
         this.diagramProps.inboundTrains = inboundTrains;
         this.diagramProps.outboundTrains = outboundTrains;
-        this.diagramProps.clipboard = diagramProps.clipboard;
         this.operationCollectionKonva.updateShape();
       }),
     };
@@ -169,7 +173,7 @@ export class StageKonva {
     this.mouseEventManager.registerDragEndHandler(this.stage.id(), (e) => {
       if (this.dragRectKonva.isDragging()) {
         this.selectionGroupManager.destroySelections();
-        this.trainCollectionKonva.addSelectedTrains();
+        this.trainCollectionKonva.addSelectedTrainsWithinDragged();
 
         // if (diagramState.selections.length === 2) {
         //   console.log({
@@ -291,10 +295,13 @@ export class StageKonva {
     this.selectionGroupManager.copySelections();
   }
   pasteTrains() {
-    pasteTrains(this.diagramProps);
+    const newTrains = pasteTrains(this.diagramProps);
+    this.trainCollectionKonva.updateShape();
+    this.trainCollectionKonva.addSelectedTrains(newTrains);
   }
   deleteSelections() {
     this.selectionGroupManager.deleteSelections();
+    this.trainCollectionKonva.updateShape();
   }
   moveSelections(offsetX: number, offsetY: number) {
     this.selectionGroupManager.moveSelections(offsetX);

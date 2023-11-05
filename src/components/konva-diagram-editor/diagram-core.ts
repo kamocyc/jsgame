@@ -12,6 +12,8 @@ export function copyTrains(props: DiagramProps, selectedTrains: Train[]) {
     trains: trains,
     originalTrains: selectedTrains,
   });
+
+  console.log('copied: ' + trains.length);
 }
 
 export function deleteTrains(props: DiagramProps, selectedTrains: Train[]) {

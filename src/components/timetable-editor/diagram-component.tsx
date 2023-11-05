@@ -58,7 +58,3 @@ export function KonvaCanvas(props: DiagramProps) {
     </div>
   );
 }
-
-export function DiagramPageComponent(props: DiagramProps) {
-  return <KonvaCanvas {...props} />;
-}

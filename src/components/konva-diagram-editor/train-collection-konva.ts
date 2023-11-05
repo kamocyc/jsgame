@@ -102,7 +102,16 @@ export class TrainCollectionKonva {
     return overlappedTrainLines;
   }
 
-  addSelectedTrains() {
+  addSelectedTrains(trains: Train[]) {
+    for (const train of trains) {
+      const trainKonva = this.trainKonvas.get(train.trainId);
+      assert(trainKonva != null);
+
+      this.context.selectionGroupManager.addTrainSelection(trainKonva);
+    }
+  }
+
+  addSelectedTrainsWithinDragged() {
     const rect = this.context.dragRectKonva.getDragRect();
     if (rect != null) {
       const overlappedTrainLines = this.getOverlappedTrainLines(rect);
@@ -115,7 +124,6 @@ export class TrainCollectionKonva {
         if (train == null) continue;
 
         this.context.selectionGroupManager.addTrainSelection(trainLine);
-        console.log(train);
       }
     }
   }

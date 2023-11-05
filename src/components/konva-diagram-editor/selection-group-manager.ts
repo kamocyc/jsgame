@@ -199,7 +199,7 @@ export class SelectionGroupManager {
             fill: 'blue',
             stroke: 'black',
             strokeWidth: 0,
-            id: 'timeBox-' + selection.getTrain().trainId + '-' + diaTime.diaTimeId + '-' + timeType,
+            id: 'timeBox-' + train.trainId + '-' + diaTime.diaTimeId + '-' + timeType,
           });
           this.mouseEventManager.registerDragStartHandler(square.id(), this.onDragStart.bind(this));
           this.mouseEventManager.registerDragMoveHandler(square.id(), this.onDragMove.bind(this));
@@ -216,6 +216,9 @@ export class SelectionGroupManager {
         }
       }
     }
+
+    // TODO: 本来は定期的に呼び出すべき
+    // this.mouseEventManager.deleteDestroyedShapes();
   }
 
   updateShape() {
@@ -300,6 +303,16 @@ export class SelectionGroupManager {
   onDragEnd() {
     this.dragStartPoint = null;
     this.currentPosition = null;
+    this.updateShape();
+  }
+
+  addTrainSelections(trainKonvas: TrainKonva[]) {
+    this.selectionGroup.add(...trainKonvas.map((t) => t.getTrainLine()));
+    this.trainDragManager.selections.push(...trainKonvas);
+    this.createMarkers();
+    for (const trainKonva of trainKonvas) {
+      trainKonva.setSelectTrainLine(true);
+    }
     this.updateShape();
   }
 

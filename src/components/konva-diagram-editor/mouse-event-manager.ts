@@ -119,7 +119,5 @@ export class MouseEventManager {
   }
   registerDragEndHandler(shapeId: string, handler: HandlerType) {
     this.dragEndHandlerMap.set(shapeId, handler);
-    // TODO: 本来は定期的に呼び出すべき
-    this.deleteDestroyedShapes();
   }
 }

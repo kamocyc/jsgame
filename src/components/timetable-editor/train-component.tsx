@@ -1,23 +1,23 @@
 import { useState } from 'preact/hooks';
+import { assert } from '../../common';
 import {
   AppClipboard,
   ContextData,
   CrudTrain,
   DiaTime,
   PlatformLike,
-  SettingData,
   StationLike,
   StationOperation,
   TimetableDirection,
   Train,
-  TrainType,
   cloneTrain,
   generateId,
   getDefaultConnectionType,
 } from '../../model';
 import { HistoryItem } from '../../outlinedTimetableData';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
-import { getDefaultPlatform } from './timetable-util';
+import { TimetableEditorDirectedProps } from './timetable-editor-component';
+import { getFirstOrLast, getRailwayPlatform } from './timetable-util';
 
 function TrainContextMenuComponent({
   trains,
@@ -262,11 +262,14 @@ function showStationOperation(stationOperation: StationOperation | undefined, fi
 // 新しい列車番号を生成する（ロジックは適当）
 function getNewTrainCode(trains: readonly Train[]) {
   const codes = trains.map((train) => train.trainCode);
-  const symbolInTrainCode = codes[codes.length - 1].replace(/[^A-Z]/g, '');
-  const maxCode = codes.map((code) => code.replace(/[^0-9]/g, '')).sort((a, b) => parseInt(b) - parseInt(a))[0];
+  const symbolInTrainCode = codes.length === 0 ? 'M' : codes[codes.length - 1].replace(/[^A-Z]/g, '');
+  const maxCode =
+    codes.length === 0
+      ? '0'
+      : codes.map((code) => code.replace(/[^0-9]/g, '')).sort((a, b) => parseInt(b) - parseInt(a))[0];
   const newCode = (parseInt(maxCode) + 2)
     .toString()
-    .padStart(codes[codes.length - 1].replace(/[^0-9]/g, '').length, '0');
+    .padStart(codes.length === 0 ? 3 : codes[codes.length - 1].replace(/[^0-9]/g, '').length, '0');
   return symbolInTrainCode + newCode;
 }
 
@@ -279,16 +282,9 @@ export function TrainListComponent({
   clipboard,
   setClipboard,
   setSettingData,
-}: {
-  trains: readonly Train[];
-  stations: StationLike[];
-  timetableDirection: TimetableDirection;
-  crudTrain: CrudTrain;
-  trainTypes: TrainType[];
-  clipboard: AppClipboard;
-  setClipboard: (clipboard: AppClipboard) => void;
-  setSettingData: (settingData: SettingData) => void;
-}) {
+  railwayLine,
+  timetable,
+}: TimetableEditorDirectedProps) {
   const [contextData, setContextData] = useState<ContextData>({
     visible: false,
     posX: 0,
@@ -481,15 +477,25 @@ export function TrainListComponent({
             const newTrain: Train = {
               trainId: generateId(),
               trainName: '',
-              diaTimes: stations.map((diaStation) => ({
-                diaTimeId: generateId(),
-                arrivalTime: null,
-                departureTime: null,
-                isPassing: false,
-                station: diaStation,
-                platform: getDefaultPlatform(diaStation, timetableDirection),
-                isInService: true,
-              })),
+              diaTimes: stations.map((station) => {
+                const platform = getRailwayPlatform(
+                  railwayLine,
+                  station.stationId,
+                  getFirstOrLast(timetableDirection, timetable.inboundIsFirstHalf)
+                );
+                const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platform.platformId);
+                assert(stop != null);
+                return {
+                  diaTimeId: generateId(),
+                  arrivalTime: null,
+                  departureTime: null,
+                  isPassing: false,
+                  station: station,
+                  platform: platform,
+                  isInService: true,
+                  trackId: stop.platformTrack.trackId,
+                };
+              }),
               trainCode: newTrainCode,
               firstStationOperation: getDefaultConnectionType(),
               lastStationOperation: getDefaultConnectionType(),

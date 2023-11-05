@@ -139,6 +139,10 @@ export interface RailwayLine {
   railwayLineName: string;
   railwayLineColor: string;
   stops: RailwayLineStop[];
+  /**
+   * 折り返しのStop
+   */
+  returnStopId: string;
 }
 
 export interface AppStates {
@@ -169,4 +173,27 @@ export interface AppStates {
   selectedRailwayLineId: string | null;
   moneyManager: MoneyManager;
   mapManager: MapManager;
+}
+
+export function splitStops(stops: RailwayLineStop[], returnStopId: string) {
+  const preStops = [];
+  const postStops = [];
+
+  let isPre = true;
+  for (const stop of stops) {
+    if (isPre) {
+      preStops.push(stop);
+    } else {
+      postStops.push(stop);
+    }
+
+    if (stop.stopId === returnStopId) {
+      isPre = false;
+      postStops.push(stop);
+    }
+  }
+
+  postStops.push(stops[0]);
+
+  return { preStops, postStops };
 }

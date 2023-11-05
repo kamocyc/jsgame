@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
 import { RailwayLine } from '../../mapEditorModel';
 import {
@@ -38,8 +38,8 @@ export function TrainListRowHeaderComponent({ diaStations }: { diaStations: Stat
 }
 
 export function TimetableEditorTableComponent({
-  diaStations: stations,
-  setDiaStations,
+  stations,
+  setStations,
   trains,
   otherDirectionTrains,
   crudTrain,
@@ -48,18 +48,9 @@ export function TimetableEditorTableComponent({
   setSettingData,
   clipboard,
   setClipboard,
-}: {
-  diaStations: StationLike[];
-  setDiaStations: (diaStations: StationLike[]) => void;
-  trains: readonly Train[];
-  otherDirectionTrains: readonly Train[];
-  crudTrain: CrudTrain;
-  timetableDirection: 'Inbound' | 'Outbound';
-  trainTypes: TrainType[];
-  setSettingData: (settingData: SettingData) => void;
-  clipboard: AppClipboard;
-  setClipboard: (clipboard: AppClipboard) => void;
-}) {
+  railwayLine,
+  timetable,
+}: TimetableEditorDirectedProps) {
   return (
     <div style={{ display: 'flex' }}>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -73,7 +64,7 @@ export function TimetableEditorTableComponent({
             diaStations: stations,
             trains,
             otherDirectionTrains,
-            setDiaStations,
+            setDiaStations: setStations,
             timetableDirection,
             setSettingData,
           }}
@@ -89,18 +80,37 @@ export function TimetableEditorTableComponent({
       </div>
       <TrainListComponent
         {...{
-          stations: stations,
-          trains: trains,
-          crudTrain: crudTrain,
-          timetableDirection: timetableDirection,
+          stations,
+          setStations,
+          trains,
+          otherDirectionTrains,
+          crudTrain,
+          timetableDirection,
           trainTypes,
+          setSettingData,
           clipboard,
           setClipboard,
-          setSettingData: setSettingData,
+          railwayLine,
+          timetable,
         }}
       />
     </div>
   );
+}
+
+export interface TimetableEditorDirectedProps {
+  stations: StationLike[];
+  setStations: (diaStations: StationLike[]) => void;
+  trains: readonly Train[];
+  otherDirectionTrains: readonly Train[];
+  crudTrain: CrudTrain;
+  timetableDirection: TimetableDirection;
+  trainTypes: TrainType[];
+  setSettingData: (settingData: SettingData) => void;
+  clipboard: AppClipboard;
+  setClipboard: (clipboard: AppClipboard) => void;
+  railwayLine: RailwayLine;
+  timetable: OutlinedTimetable;
 }
 
 export function TimetableEditorComponent({
@@ -123,8 +133,6 @@ export function TimetableEditorComponent({
     trains: [],
     originalTrains: [],
   });
-  const clipboardRef = useRef({ clipboard });
-  console.log({ clipboard });
   const [settingData, setSettingData] = useState<SettingData | null>(null);
 
   function mergeTimetable(diagram: [OutlinedTimetable, Train[]]) {
@@ -237,6 +245,14 @@ export function TimetableEditorComponent({
         >
           初期化
         </button>
+        <button
+          onClick={() => {
+            timetableData.repeatTimetable(timetable.timetableId);
+            update();
+          }}
+        >
+          繰り返し
+        </button>
       </div>
       <div style={{ display: 'flex' }}>
         <div style={{ flex: '1 1 auto' }}>
@@ -251,8 +267,8 @@ export function TimetableEditorComponent({
                 component: () => (
                   <TimetableEditorTableComponent
                     {...{
-                      diaStations: timetable.stations,
-                      setDiaStations: setDiaStations,
+                      stations: timetable.stations,
+                      setStations: setDiaStations,
                       trains: inboundTrains,
                       otherDirectionTrains: outboundTrains,
                       crudTrain: crudTrain,
@@ -261,6 +277,8 @@ export function TimetableEditorComponent({
                       setSettingData,
                       clipboard,
                       setClipboard,
+                      railwayLine,
+                      timetable,
                     }}
                   />
                 ),
@@ -271,8 +289,8 @@ export function TimetableEditorComponent({
                 component: () => (
                   <TimetableEditorTableComponent
                     {...{
-                      diaStations: reverseArray(timetable.stations),
-                      setDiaStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
+                      stations: reverseArray(timetable.stations),
+                      setStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
                       trains: outboundTrains,
                       otherDirectionTrains: inboundTrains,
                       crudTrain: crudTrain,
@@ -281,6 +299,8 @@ export function TimetableEditorComponent({
                       setSettingData,
                       clipboard,
                       setClipboard,
+                      railwayLine,
+                      timetable,
                     }}
                   />
                 ),
@@ -316,6 +336,7 @@ export function TimetableEditorComponent({
                     crudTrain={crudTrain}
                     clipboard={clipboard}
                     setClipboard={setClipboard}
+                    railwayLine={railwayLine}
                     getTrainsWithDirections={() => {
                       return getTrainsWithDirections();
                     }}

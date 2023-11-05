@@ -1,4 +1,4 @@
-import { deepEqual, generatePlaceName, getNewName, getRandomColor } from '../../common';
+import { assert, deepEqual, generatePlaceName, getNewName, getRandomColor } from '../../common';
 import {
   AppStates,
   Cell,
@@ -86,6 +86,7 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
   }
 }
 
+// 種度づえ連射を置くのはアレだが、後で取り入れるか？
 function placeTrain(
   trainMove: ITrainMove,
   mapTotalHeight: number,
@@ -727,21 +728,28 @@ export function addPlatformToLine(
       appStates.railwayLines.map((line) => line.railwayLineName),
       '路線'
     );
+    const newStop = {
+      stopId: generateId(),
+      platform: platform,
+      platformPaths: null,
+      platformTrack: platformTrack,
+    };
     appStates.currentRailwayLine = {
       railwayLineId: id,
       railwayLineName: newName,
       railwayLineColor: getRandomColor(),
-      stops: [
-        {
-          stopId: generateId(),
-          platform: platform,
-          platformPaths: null,
-          platformTrack: platformTrack,
-        },
-      ],
+      stops: [newStop],
+      returnStopId: newStop.stopId,
     };
   } else {
     const stops = appStates.currentRailwayLine.stops;
+
+    assert(platformTrack.track.platform !== null);
+    if (platformTrack.track.platform.platformId === stops[stops.length - 1].platform.platformId) {
+      return {
+        error: 'addPlatformToLine (same platform)',
+      };
+    }
     const pathToNewStop = searchTrackPath2(stops[stops.length - 1].platformTrack, platformTrack);
     if (pathToNewStop == null) {
       return {
@@ -761,6 +769,12 @@ export function addPlatformToLine(
       platformPaths: pathToLoop ?? null,
       platformTrack: pathToLoop === undefined ? platformTrack : pathToLoop[0],
     });
+
+    if (pathToLoop !== undefined) {
+      if (pathToNewStop[pathToNewStop.length - 1].trackId === pathToLoop[0].reverseTrack.trackId) {
+        appStates.currentRailwayLine.returnStopId = stops[stops.length - 1].stopId;
+      }
+    }
   }
 
   return null;

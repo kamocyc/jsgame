@@ -1,3 +1,4 @@
+import { RailwayLine } from '../../mapEditorModel';
 import { AppClipboard, CrudTrain, Operation, StationLike, Train } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 
@@ -9,6 +10,7 @@ export interface DiagramProps {
   operations: Operation[];
   timetable: OutlinedTimetable;
   clipboard: AppClipboard;
+  railwayLine: RailwayLine;
   setClipboard: (clipboard: AppClipboard) => void;
   getTrainsWithDirections: () => [readonly Train[], readonly Train[]];
 }

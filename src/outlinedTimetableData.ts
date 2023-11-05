@@ -4,6 +4,7 @@ import { Operation, StationLike, Train, TrainType, generateId } from './model';
 
 export interface OutlinedTimetable {
   railwayLineId: string;
+  inboundIsFirstHalf: boolean;
   timetableId: string;
   inboundTrainIds: string[];
   outboundTrainIds: string[];
@@ -83,6 +84,35 @@ export interface UpdatingTrain {
   updater: (train: Train) => void;
 }
 
+function repeatTrains(trains: Train[]): Train[] {
+  const minTime = trains.map((train) => train.diaTimes[0].departureTime ?? 0).reduce((a, b) => Math.min(a, b));
+  const maxTime = trains
+    .map((train) => train.diaTimes[train.diaTimes.length - 1].arrivalTime ?? 0)
+    .reduce((a, b) => Math.max(a, b));
+  const timeDiff = maxTime - minTime;
+  if (timeDiff <= 0) {
+    return [];
+  }
+
+  const newTrains: Train[] = [];
+  for (const train of trains) {
+    const newTrain: Train = {
+      ...train,
+      trainId: generateId(),
+      diaTimes: train.diaTimes.map((diaTime) => {
+        return {
+          ...diaTime,
+          arrivalTime: diaTime.arrivalTime !== null ? diaTime.arrivalTime + timeDiff + 3 * 60 : null,
+          departureTime: diaTime.departureTime !== null ? diaTime.departureTime + timeDiff + 3 * 60 : null,
+        };
+      }),
+    };
+    newTrains.push(newTrain);
+  }
+
+  return newTrains;
+}
+
 // Timetableを含む全てのデータ
 export class OutlinedTimetableData {
   constructor(
@@ -102,6 +132,23 @@ export class OutlinedTimetableData {
       trains: this.trains,
       timetables: this.timetables,
     };
+  }
+
+  repeatTimetable(timetableId: string) {
+    const timetable = this.timetables.find((t) => t.timetableId === timetableId);
+    assert(timetable !== undefined);
+
+    {
+      const newTrains = repeatTrains(timetable.inboundTrainIds.map((trainId) => this.getTrain(trainId)));
+      this.trains.push(...newTrains);
+      timetable.inboundTrainIds.push(...newTrains.map((t) => t.trainId));
+    }
+
+    {
+      const newTrains = repeatTrains(timetable.outboundTrainIds.map((trainId) => this.getTrain(trainId)));
+      this.trains.push(...newTrains);
+      timetable.outboundTrainIds.push(...newTrains.map((t) => t.trainId));
+    }
   }
 
   public addTimetable(timetable: OutlinedTimetable, trains: Train[]) {
@@ -171,6 +218,7 @@ export class OutlinedTimetableData {
     timetable.outboundTrainIds = [];
     timetable.operations = [];
     timetable.trainTypes = [];
+    timetable.inboundIsFirstHalf = true;
 
     this.deleteNotUsedTrains();
   }
@@ -178,8 +226,6 @@ export class OutlinedTimetableData {
   addTrain(timetableId: string, train: Train, direction: 'Inbound' | 'Outbound') {
     this.addTrains(timetableId, [{ train: train, beforeTrainId: null, direction: direction }]);
   }
-
-  updateTrains(timetableId: string, newTrains: UpdatingTrain[]) {}
 
   addTrains(timetableId: string, newTrains: AddingNewTrain[]) {
     const timetable = this.timetables.find((t) => t.timetableId === timetableId);
@@ -263,6 +309,7 @@ export class OutlinedTimetableData {
     timetable.inboundTrainIds = inboundTrains.map((train) => train.trainId);
     timetable.outboundTrainIds = outboundTrains.map((train) => train.trainId);
     timetable.stations = timetable.stations.slice().reverse();
+    timetable.inboundIsFirstHalf = !timetable.inboundIsFirstHalf;
     timetable.operations = createOperations(trains);
 
     this.trains.push(...trains);

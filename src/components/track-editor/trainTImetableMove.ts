@@ -1,5 +1,5 @@
 import { assert, nn } from '../../common.js';
-import { DetailedTimetable, DiaTime, Operation, Point, Track, generateId } from '../../model.js';
+import { DetailedTimetable, DiaTime, Operation, Point, Track, Train, generateId } from '../../model.js';
 import {
   getDistance,
   getMidPoint,
@@ -12,7 +12,7 @@ import {
 import { GlobalTimeManager } from './globalTimeManager.js';
 import { ITrainMove, PlacedTrain, TrainMoveProps, getMinTimetableTime, getStopPosition } from './trainMoveBase.js';
 
-function getNextTrainId(operation: Operation, currentTrainId: string): string | null {
+function getNextTrain(operation: Operation, currentTrainId: string): Train | null {
   const index = operation.trains.findIndex((train) => train.trainId === currentTrainId);
   if (index === -1) {
     throw new Error('currentTrainIdが見つからない');
@@ -22,7 +22,7 @@ function getNextTrainId(operation: Operation, currentTrainId: string): string | 
     return null;
   }
 
-  return operation.trains[index + 1].trainId;
+  return operation.trains[index + 1];
 }
 
 export class TrainTimetableMove implements ITrainMove {
@@ -46,10 +46,6 @@ export class TrainTimetableMove implements ITrainMove {
     this.placedTrains = [];
     globalTimeManager.resetGlobalTime(getMinTimetableTime(this.timetable));
   }
-
-  // private shouldStopTrain(train: PlacedTrain) {
-  //   // やるとしたら、直前の出発した駅の情報を保持しておく
-  // }
 
   private getNextTrack(track: Track, placedTrain: PlacedTrain): Track {
     const currentSwitch = track.nextSwitch;
@@ -77,36 +73,62 @@ export class TrainTimetableMove implements ITrainMove {
     }
   }
 
-  private waitInStation(placedTrain: PlacedTrain, globalTimeManager: GlobalTimeManager): boolean {
+  private setTrainForOperation(placedTrain: PlacedTrain, operationTrain: Train, props: TrainMoveProps) {
+    const firstDiaTime = operationTrain.diaTimes[0];
+    const track = props.tracks.find(
+      (t) => t.track.platform?.platformId != null && t.track.platform?.platformId === firstDiaTime.platform?.platformId
+    );
+    assert(track != undefined);
+
+    placedTrain.train = operationTrain;
+    placedTrain.placedTrainName = operationTrain.trainName;
+    placedTrain.trainId = operationTrain.trainId;
+    placedTrain.speed = 10;
+    placedTrain.stationWaitTime = 0;
+    placedTrain.stationStatus = 'Arrived';
+    placedTrain.operatingStatus = firstDiaTime.isInService ? 'InService' : 'OutOfService';
+    placedTrain.track = track;
+    placedTrain.position = getMidPoint(track.begin, track.end);
+    placedTrain.placedRailwayLineId = null;
+    placedTrain.stopId = null;
+    placedTrain.justDepartedPlatformId = null;
+    placedTrain.diaTimeId = firstDiaTime.diaTimeId;
+  }
+
+  private waitInStation(placedTrain: PlacedTrain, props: TrainMoveProps): boolean {
     const platformTimetable = this.timetable.platformTimetableMap.get(placedTrain.track.track.platform!.platformId);
     assert(platformTimetable !== undefined, 'platformTimetable !== undefined');
     const ttItem = platformTimetable.getPlatformTTItem(placedTrain.trainId);
     if (ttItem.departureTime === null) {
       // 出発時刻が設定されていないときは、運用の次の列車に付け替える
-      {
-        const nextDiaTime = this.getNextDiaTime(placedTrain);
-        assert(nextDiaTime !== null, 'nextDiaTime !== null');
-        assert(
-          this.getNextDiaTime({ ...placedTrain, diaTimeId: nextDiaTime.diaTimeId }) === null,
-          'this.getNextDiaTime({ ...placedTrain, diaTimeId: nextDiaTime.diaTimeId }) === null'
-        );
-      }
+      // {
+      //   const nextDiaTime = this.getNextDiaTime(placedTrain);
+      //   assert(nextDiaTime !== null, 'nextDiaTime !== null');
+      //   assert(
+      //     this.getNextDiaTime({ ...placedTrain, diaTimeId: nextDiaTime.diaTimeId }) === null,
+      //     'this.getNextDiaTime({ ...placedTrain, diaTimeId: nextDiaTime.diaTimeId }) === null'
+      //   );
+      // }
       // assert(platformTimetable.isLastTTItem(ttItem));
 
       const operation = this.timetable.operations.find((o) => o.operationId === placedTrain.operationId);
       assert(operation !== undefined, 'operation !== undefined');
-      const nextTrainId = getNextTrainId(operation, placedTrain.trainId);
-      if (nextTrainId === null) {
+      const nextTrain = getNextTrain(operation, placedTrain.trainId);
+      if (nextTrain === null) {
         // 次の運用がないときは、留置にする
         placedTrain.operatingStatus = 'Parking';
         return false;
       }
 
-      placedTrain.trainId = nextTrainId;
-      return true;
+      // 次の運用に設定
+      this.setTrainForOperation(placedTrain, nextTrain, props);
+      return false;
     }
 
-    if (globalTimeManager.globalTime >= ttItem.departureTime) {
+    if (props.globalTimeManager.globalTime >= ttItem.departureTime) {
+      console.log(
+        'departed: globalTime=' + props.globalTimeManager.globalTime + ' / departureTime=' + ttItem.departureTime
+      );
       // 出発時刻を過ぎたら出発する
       placedTrain.stationStatus = 'Running';
       const nextDiaTime = this.getNextDiaTime(placedTrain)?.diaTimeId;
@@ -119,11 +141,16 @@ export class TrainTimetableMove implements ITrainMove {
     return false;
   }
 
-  private getNextDiaTime(placedTrain: PlacedTrain): DiaTime | null {
+  private getDiaTimes(placedTrain: PlacedTrain): DiaTime[] {
     const diaTimes = this.timetable.operations
       .find((o) => o.operationId === placedTrain.operationId)
       ?.trains.find((t) => t.trainId === placedTrain.trainId)?.diaTimes;
     assert(diaTimes !== undefined, 'diaTimes !== undefined');
+    return diaTimes;
+  }
+
+  private getNextDiaTime(placedTrain: PlacedTrain): DiaTime | null {
+    const diaTimes = this.getDiaTimes(placedTrain);
     const diaTimeIndex = diaTimes.findIndex((d) => d.diaTimeId === placedTrain.diaTimeId);
     assert(diaTimeIndex !== -1, 'diaTimeIndex !== -1');
 
@@ -146,7 +173,9 @@ export class TrainTimetableMove implements ITrainMove {
       return false;
     }
 
-    const nextStopPlatform = this.getNextDiaTime(train)?.platform?.platformId;
+    const diaTime = this.getDiaTimes(train).find((diaTime) => diaTime.diaTimeId === train.diaTimeId);
+    assert(diaTime !== undefined);
+    const nextStopPlatform = diaTime.platform?.platformId;
     if (nextStopPlatform !== stationTrack.track.platform?.platformId) {
       return false;
     }
@@ -162,10 +191,10 @@ export class TrainTimetableMove implements ITrainMove {
     return stopPosition;
   }
 
-  private moveTrain(placedTrain: PlacedTrain, globalTimeManager: GlobalTimeManager) {
+  private moveTrain(placedTrain: PlacedTrain, props: TrainMoveProps) {
     // 現在stationだったら出発条件を満たすまで停止する
     if (placedTrain.track.track.platform !== null && placedTrain.stationStatus === 'Arrived') {
-      const shouldProceed = this.waitInStation(placedTrain, globalTimeManager);
+      const shouldProceed = this.waitInStation(placedTrain, props);
       if (!shouldProceed) {
         return;
       }
@@ -177,6 +206,15 @@ export class TrainTimetableMove implements ITrainMove {
     placedTrain.stationWaitTime = 0;
 
     while (true) {
+      // stationの停止位置か、それを過ぎた場合 => 停止位置に止めて停止状態にする
+      const stopPosition = this.shouldStopTrain(placedTrain);
+      if (stopPosition) {
+        placedTrain.position.x = stopPosition.x;
+        placedTrain.position.y = stopPosition.y;
+        placedTrain.stationStatus = 'Arrived';
+        break;
+      }
+
       // trainがtrackの外に出たら、次の線路に移動する
       if (isTrainOutTrack(placedTrain.position, placedTrain.track)) {
         placedTrain.stationWaitTime = 0;
@@ -195,15 +233,6 @@ export class TrainTimetableMove implements ITrainMove {
 
         // 線路内に入るまでループ
         continue;
-      }
-
-      // stationの停止位置か、それを過ぎた場合 => 停止位置に止めて停止状態にする
-      const stopPosition = this.shouldStopTrain(placedTrain);
-      if (stopPosition) {
-        placedTrain.position.x = stopPosition.x;
-        placedTrain.position.y = stopPosition.y;
-        placedTrain.stationStatus = 'Arrived';
-        break;
       }
 
       // track内を移動しただけ
@@ -227,7 +256,9 @@ export class TrainTimetableMove implements ITrainMove {
         const track = props.tracks.find((t) => t.trackId === operation.firstOperation.trackId);
         assert(track != null);
 
-        const existingPlacedTrain = placedTrains.find((t) => t.track.trackId === track.trackId);
+        const existingPlacedTrain = placedTrains.find(
+          (t) => t.track.trackId === track.trackId || t.track.reverseTrack.trackId === track.trackId
+        );
         if (existingPlacedTrain === undefined) {
           // この場合は無くすべき
           placedTrains.push({
@@ -238,7 +269,7 @@ export class TrainTimetableMove implements ITrainMove {
             trainId: firstTrain.trainId,
             speed: 10,
             stationWaitTime: 0,
-            stationStatus: 'Running',
+            stationStatus: 'Arrived',
             operatingStatus: firstDiaTime.isInService ? 'InService' : 'OutOfService',
             track: track,
             position: getMidPoint(track.begin, track.end),
@@ -248,28 +279,12 @@ export class TrainTimetableMove implements ITrainMove {
             justDepartedPlatformId: null,
             diaTimeId: firstDiaTime.diaTimeId,
           });
-        } else {
-          existingPlacedTrain.train = firstTrain;
-          existingPlacedTrain.placedTrainName = firstTrain.trainName;
-          existingPlacedTrain.operationId = operation.operationId;
-          existingPlacedTrain.trainId = firstTrain.trainId;
-          existingPlacedTrain.speed = 10;
-          existingPlacedTrain.stationWaitTime = 0;
-          existingPlacedTrain.stationStatus = 'Running';
-          existingPlacedTrain.operatingStatus = firstDiaTime.isInService ? 'InService' : 'OutOfService';
-          existingPlacedTrain.track = track;
-          existingPlacedTrain.position = getMidPoint(track.begin, track.end);
-          existingPlacedTrain.operation = operation;
-          existingPlacedTrain.placedRailwayLineId = null;
-          existingPlacedTrain.stopId = null;
-          existingPlacedTrain.justDepartedPlatformId = null;
-          existingPlacedTrain.diaTimeId = firstDiaTime.diaTimeId;
         }
       }
     }
 
     for (const train of placedTrains) {
-      this.moveTrain(train, props.globalTimeManager);
+      this.moveTrain(train, props);
       // 運行費を消費する
       props.moneyManager.addMoney(-10);
     }

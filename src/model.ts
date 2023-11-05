@@ -86,6 +86,7 @@ export interface DiaTime {
   departureTime: number | null;
   isPassing: boolean;
   isInService: boolean;
+  trackId: string | null;
   station: StationLike;
   platform: PlatformLike | null;
 }

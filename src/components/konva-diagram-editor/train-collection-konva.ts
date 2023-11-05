@@ -1,23 +1,8 @@
 import { assert } from '../../common';
 import { DiaTime, StationLike, Train, generateId, getDefaultConnectionType } from '../../model';
-import { fillMissingTimes, getDefaultPlatform } from '../timetable-editor/timetable-util';
+import { fillMissingTimes, getFirstOrLast, getRailwayPlatform } from '../timetable-editor/timetable-util';
 import { DiagramKonvaContext, RectState } from './konva-util';
 import { TrainKonva } from './train-konva';
-
-// interface HistoryItem {
-//   undo: () => void;
-//   redo: () => void;
-// }
-
-// class HistoryManager {
-//   private histories: HistoryItem[] = [];
-//   private currentIndex: number = 0;
-
-//   push(item: HistoryItem) {
-//   }
-// }
-
-// const historyManager = new HistoryManager();
 
 export class TrainCollectionKonva {
   private trainKonvas: Map<string, TrainKonva> = new Map();
@@ -64,15 +49,25 @@ export class TrainCollectionKonva {
       const trains =
         direction === 'Inbound' ? this.context.diagramProps.inboundTrains : this.context.diagramProps.outboundTrains;
 
-      const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime) => ({
-        station: drawingLineTime.station,
-        departureTime: drawingLineTime.time,
-        arrivalTime: null,
-        diaTimeId: generateId(),
-        isPassing: false,
-        platform: getDefaultPlatform(drawingLineTime.station, direction),
-        isInService: true,
-      }));
+      const firstOrLast = getFirstOrLast(direction, this.context.diagramProps.timetable.inboundIsFirstHalf);
+      const railwayLine = this.context.diagramProps.railwayLine;
+
+      const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime) => {
+        const platform = getRailwayPlatform(railwayLine, drawingLineTime.station.stationId, firstOrLast);
+        const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platform.platformId);
+        assert(stop != null);
+        return {
+          station: drawingLineTime.station,
+          departureTime: drawingLineTime.time,
+          arrivalTime: null,
+          diaTimeId: generateId(),
+          isPassing: false,
+          platform: platform,
+          isInService: true,
+          railwayLine: railwayLine,
+          trackId: stop.platformTrack.trackId,
+        };
+      });
 
       const newTrain: Train = {
         trainId: generateId(),
@@ -103,12 +98,14 @@ export class TrainCollectionKonva {
   }
 
   addSelectedTrains(trains: Train[]) {
+    const trainLines = [];
     for (const train of trains) {
       const trainKonva = this.trainKonvas.get(train.trainId);
       assert(trainKonva != null);
 
-      this.context.selectionGroupManager.addTrainSelection(trainKonva);
+      trainLines.push(trainKonva);
     }
+    this.context.selectionGroupManager.addTrainSelections(trainLines);
   }
 
   addSelectedTrainsWithinDragged() {
@@ -116,6 +113,7 @@ export class TrainCollectionKonva {
     if (rect != null) {
       const overlappedTrainLines = this.getOverlappedTrainLines(rect);
 
+      const trainLines = [];
       for (const trainLine of overlappedTrainLines) {
         const trainId = trainLine.getTrain().trainId;
         const train = this.context.diagramProps.inboundTrains
@@ -123,8 +121,10 @@ export class TrainCollectionKonva {
           .find((train) => train.trainId === trainId);
         if (train == null) continue;
 
-        this.context.selectionGroupManager.addTrainSelection(trainLine);
+        trainLines.push(trainLine);
       }
+
+      this.context.selectionGroupManager.addTrainSelections(trainLines);
     }
   }
 }

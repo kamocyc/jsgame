@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { ContextData, SettingData, StationLike, Train, generateId } from '../../model';
+import { ContextData, SettingData, StationLike, TimetableDirection, Train, generateId } from '../../model';
 import { ContextMenuComponent, EditableTextComponent } from './common-component';
 import './timetable-editor.css';
 import { createNewStation, getDefaultPlatform } from './timetable-util';
@@ -82,36 +82,15 @@ function StationContextMenuComponent({
         {
           label: '駅を追加',
           onClick: () => {
-            const newStation = createNewStation('-');
             // selectedStationの直前に挿入する
             const index = diaStations.findIndex((diaStation) => diaStation.stationId === selectedStation?.stationId);
             if (index === -1) {
               return;
             }
+            const newStation = createNewStation('-');
             diaStations.splice(index, 0, newStation);
 
-            trains.forEach((train) => {
-              train.diaTimes.push({
-                diaTimeId: generateId(),
-                arrivalTime: null,
-                departureTime: null,
-                isPassing: false,
-                station: newStation,
-                platform: getDefaultPlatform(newStation, timetableDirection),
-                isInService: true,
-              });
-            });
-            otherDirectionTrains.forEach((train) => {
-              train.diaTimes.push({
-                diaTimeId: generateId(),
-                arrivalTime: null,
-                departureTime: null,
-                isPassing: false,
-                station: newStation,
-                platform: getDefaultPlatform(newStation, timetableDirection),
-                isInService: true,
-              });
-            });
+            createNewStationAndUpdate(trains, otherDirectionTrains, newStation, timetableDirection);
 
             setDiaStations([...diaStations]);
             setContextData({ ...contextData, visible: false });
@@ -194,7 +173,11 @@ export function StationListComponent({
             <StationComponent
               diaStation={diaStation}
               setDiaStation={(diaStation) => {
-                diaStation.stationName = diaStation.stationName;
+                const newStation = createNewStation('-');
+                diaStations.push(newStation);
+
+                createNewStationAndUpdate(trains, otherDirectionTrains, newStation, timetableDirection);
+
                 setDiaStations([...diaStations]);
               }}
             />
@@ -202,43 +185,43 @@ export function StationListComponent({
         ))}
       </div>
       <div>
-        <button
-          onClick={() => {
-            const newStation = createNewStation('-');
-            diaStations.push(newStation);
-
-            trains.forEach((train) => {
-              train.diaTimes.push({
-                diaTimeId: generateId(),
-                arrivalTime: null,
-                departureTime: null,
-                isPassing: false,
-                station: newStation,
-                platform: getDefaultPlatform(newStation, timetableDirection),
-                isInService: true,
-              });
-            });
-
-            otherDirectionTrains.forEach((train) => {
-              train.diaTimes.unshift({
-                diaTimeId: generateId(),
-                arrivalTime: null,
-                departureTime: null,
-                isPassing: false,
-                station: newStation,
-                platform: getDefaultPlatform(newStation, timetableDirection),
-                isInService: true,
-              });
-            });
-
-            setDiaStations([...diaStations]);
-          }}
-        >
-          駅を追加
-        </button>
+        <button onClick={() => {}}>駅を追加</button>
       </div>
     </div>
   );
+}
+
+function createNewStationAndUpdate(
+  trains: readonly Train[],
+  otherDirectionTrains: readonly Train[],
+  newStation: StationLike,
+  timetableDirection: TimetableDirection
+) {
+  trains.forEach((train) => {
+    train.diaTimes.push({
+      diaTimeId: generateId(),
+      arrivalTime: null,
+      departureTime: null,
+      isPassing: false,
+      station: newStation,
+      platform: getDefaultPlatform(newStation, timetableDirection),
+      isInService: true,
+      trackId: null,
+    });
+  });
+
+  otherDirectionTrains.forEach((train) => {
+    train.diaTimes.unshift({
+      diaTimeId: generateId(),
+      arrivalTime: null,
+      departureTime: null,
+      isPassing: false,
+      station: newStation,
+      platform: getDefaultPlatform(newStation, timetableDirection),
+      isInService: true,
+      trackId: null,
+    });
+  });
 }
 
 export function StationDetailComponent({

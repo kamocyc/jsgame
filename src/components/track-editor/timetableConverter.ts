@@ -576,8 +576,12 @@ export function createOperations(trains: Train[], tracks: Track[] = []): Operati
       }
 
       const lastOperation = operationTrains[operationTrains.length - 1].lastStationOperation;
-      if (lastOperation == null || lastOperation.stationOperationType !== 'InOut') {
-        console.warn('lastOperation is null or not InOut');
+      if (lastOperation == null) {
+        console.warn('lastOperation is null.');
+        continue;
+      }
+      if (lastOperation.stationOperationType !== 'InOut') {
+        console.warn('lastOperation is not InOut.');
         continue;
       }
 
@@ -586,6 +590,7 @@ export function createOperations(trains: Train[], tracks: Track[] = []): Operati
         operationCode: generateOperationCode(operations),
         trains: operationTrains,
         firstOperation: train.firstStationOperation!,
+        // S-TODO:
         lastOperation: lastOperation,
       };
 

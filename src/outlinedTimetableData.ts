@@ -1,6 +1,6 @@
 import { assert } from './common';
 import { createOperations } from './components/track-editor/timetableConverter';
-import { Operation, StationLike, Train, TrainType, generateId } from './model';
+import { Operation, StationLike, StationOperation, Train, TrainType, generateId } from './model';
 
 export interface OutlinedTimetable {
   railwayLineId: string;
@@ -84,6 +84,20 @@ export interface UpdatingTrain {
   updater: (train: Train) => void;
 }
 
+function updateOperationTime(operation: StationOperation, newTime: number | null) {
+  assert(newTime != null);
+  if (operation.stationOperationType === 'InOut') {
+    return {
+      ...operation,
+      operationTime: newTime,
+    };
+  } else {
+    return {
+      ...operation,
+    };
+  }
+}
+
 function repeatTrains(trains: Train[]): Train[] {
   const minTime = trains.map((train) => train.diaTimes[0].departureTime ?? 0).reduce((a, b) => Math.min(a, b));
   const maxTime = trains
@@ -99,6 +113,11 @@ function repeatTrains(trains: Train[]): Train[] {
     const newTrain: Train = {
       ...train,
       trainId: generateId(),
+      firstStationOperation: updateOperationTime(train.firstStationOperation, train.diaTimes[0].arrivalTime),
+      lastStationOperation: updateOperationTime(
+        train.lastStationOperation,
+        train.diaTimes[train.diaTimes.length - 1].departureTime
+      ),
       diaTimes: train.diaTimes.map((diaTime) => {
         return {
           ...diaTime,

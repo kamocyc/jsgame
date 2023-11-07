@@ -75,9 +75,7 @@ export class TrainTimetableMove implements ITrainMove {
 
   private setTrainForOperation(placedTrain: PlacedTrain, operationTrain: Train, props: TrainMoveProps) {
     const firstDiaTime = operationTrain.diaTimes[0];
-    const track = props.tracks.find(
-      (t) => t.track.platform?.platformId != null && t.track.platform?.platformId === firstDiaTime.platform?.platformId
-    );
+    const track = props.tracks.find((t) => t.trackId === firstDiaTime.trackId);
     assert(track != undefined);
 
     placedTrain.train = operationTrain;
@@ -247,12 +245,15 @@ export class TrainTimetableMove implements ITrainMove {
     // 初期位置に列車を配置
     for (const operation of this.timetable.operations) {
       const firstTrain = operation.trains[0];
+      const firstDiaTime = firstTrain.diaTimes[0];
+      const nextDiaTime = firstTrain.diaTimes[1];
       if (
         operation.firstOperation.operationTime <= props.globalTimeManager.globalTime &&
         operation.lastOperation.operationTime >= props.globalTimeManager.globalTime &&
-        !placedTrains.some((placedTrain) => placedTrain.trainId === firstTrain.trainId)
+        !placedTrains.some((placedTrain) => placedTrain.trainId === firstTrain.trainId) &&
+        (nextDiaTime.arrivalTime != null || nextDiaTime.departureTime != null) &&
+        (nextDiaTime.arrivalTime ?? nextDiaTime.departureTime)! >= props.globalTimeManager.globalTime
       ) {
-        const firstDiaTime = firstTrain.diaTimes[0];
         const track = props.tracks.find((t) => t.trackId === operation.firstOperation.trackId);
         assert(track != null);
 

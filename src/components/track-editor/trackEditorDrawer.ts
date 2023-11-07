@@ -962,7 +962,11 @@ function drawTrain(
       const numberOfAgents = agentManager
         .getAgents()
         .filter((agent) => agent.placedTrain?.placedTrainId === train.placedTrainId).length;
-      ctx.fillStyle = '#ffffff';
+      if (train.operatingStatus === 'Parking') {
+        ctx.fillStyle = '#ff0000';
+      } else {
+        ctx.fillStyle = '#ffffff';
+      }
       ctx.font = '12px ' + fontName;
       drawText(ctx, mapContext, numberOfAgents.toString(), { x: position.x, y: position.y + 15 });
     }

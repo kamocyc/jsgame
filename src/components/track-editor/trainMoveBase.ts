@@ -3,7 +3,7 @@ import { getDistance, getMidPoint, getRadian } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
 import { MoneyManager } from './moneyManager.js';
 import { TrainRailwayMove, TrainRailwayMoveProps } from './trainRailwayMove.js';
-import { TrainTimetableMove } from './trainTImetableMove.js';
+import { TrainTimetableMove } from './trainTimetableMove.js';
 
 // 継承させるので名称はPlacedTrainに合わせた（それでいいのかは不明）
 export interface StoredTrain {

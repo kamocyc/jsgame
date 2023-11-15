@@ -23,7 +23,7 @@ import { generateTerrain } from './generateExtendedMap';
 import { MoneyManager } from './moneyManager';
 import { drawEditor } from './trackEditorDrawer';
 import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
-import { TrainTimetableMove } from './trainTImetableMove';
+import { TrainTimetableMove } from './trainTimetableMove';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -116,7 +116,11 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   const timetableDataRaw = obj['timetableData'];
   const timetableData: OutlinedTimetableData =
     timetableDataRaw.trains && timetableDataRaw.timetables
-      ? new OutlinedTimetableData(new HistoryManager(), timetableDataRaw.trains as Train[], timetableDataRaw.timetables as OutlinedTimetable[])
+      ? new OutlinedTimetableData(
+          new HistoryManager(),
+          timetableDataRaw.trains as Train[],
+          timetableDataRaw.timetables as OutlinedTimetable[]
+        )
       : new OutlinedTimetableData(new HistoryManager());
   const railwayLines = obj['railwayLines'] ?? [];
 
@@ -274,7 +278,7 @@ export function TrackEditorComponent({
         gameMap: appStates.map,
         placedTrains: appStates.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
-        timetableData: appStates.outlinedTimetableData,
+        outlinedTimetableData: appStates.outlinedTimetableData,
         trainMove: appStates.trainMove as TrainTimetableMove,
         moneyManager: appStates.moneyManager,
         globalTimeManager: appStates.globalTimeManager,

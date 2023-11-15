@@ -132,6 +132,20 @@ export interface Train {
   lastStationOperation: StationOperation;
 }
 
+function cloneOperation(operation: StationOperation): StationOperation {
+  if (operation.stationOperationType === 'InOut') {
+    return {
+      ...operation,
+      stationOperationType: 'InOut',
+    };
+  } else {
+    return {
+      ...operation,
+      stationOperationType: 'Connection',
+    };
+  }
+}
+
 export function cloneTrain(train: Train): Train {
   return {
     trainId: generateId(),
@@ -139,8 +153,8 @@ export function cloneTrain(train: Train): Train {
     trainName: train.trainName,
     trainType: train.trainType,
     diaTimes: train.diaTimes.map((diaTime) => ({ ...diaTime, diaTimeId: generateId() })),
-    firstStationOperation: train.firstStationOperation,
-    lastStationOperation: train.lastStationOperation,
+    firstStationOperation: cloneOperation(train.firstStationOperation),
+    lastStationOperation: cloneOperation(train.lastStationOperation),
   };
 }
 

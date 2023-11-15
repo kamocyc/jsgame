@@ -327,7 +327,7 @@ export function getEkiJikokus(oudBuf: string): [OutlinedTimetable, Train[]] {
         .map((station, index) => [station, index] as const)
         .sort((a, b) => b[1] - a[1])
         .map(([station, _]) => station), // stationは逆順にする
-      operations: createOperations(trains),
+      operations: createOperations(trains).operations,
     },
     trains,
   ];

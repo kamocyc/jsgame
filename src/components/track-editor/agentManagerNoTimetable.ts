@@ -1,9 +1,10 @@
-import { CountBag, FuncDefinition, assert, getInterpolatedFunctionValue } from '../../common';
+import { CountBag, assert } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { Point, StationLike, generateId } from '../../model';
 import { abstractSearch, getDistance, getMidPoint } from '../../trackUtil';
-import { CellPoint, ConstructType, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
-import { AgentManagerBase, getStationPositions } from './agentManager';
+import { CellPoint, ExtendedCellConstruct, toCellPosition, toPixelPosition } from '../extendedMapModel';
+import { getAgentDestination, getStationPositions } from './agentDestination';
+import { AgentManagerBase } from './agentManager';
 import { GlobalTimeManager } from './globalTimeManager';
 import { MoneyManager } from './moneyManager';
 import { PlacedTrain } from './trainMoveBase';
@@ -331,146 +332,12 @@ export interface AgentManager2Props {
   globalTimeManager: GlobalTimeManager;
 }
 
-type MoveProbFunc = { [key in ConstructType]: { [key in ConstructType]: FuncDefinition } };
-
-const moveProbFuncs: MoveProbFunc = {
-  House: {
-    House: [
-      [0, 0],
-      [5, 0],
-      [6, 1],
-      [7, 3],
-      [8, 5],
-      [9, 5],
-      [10, 5],
-      [12, 5],
-      [16, 5],
-      [19, 5],
-      [21, 5],
-      [23, 3],
-      [24, 0],
-    ],
-    Shop: [
-      [0, 0],
-      [5, 0],
-      [6, 1],
-      [7, 3],
-      [8, 5],
-      [9, 10],
-      [10, 15],
-      [12, 15],
-      [16, 25],
-      [19, 20],
-      [21, 5],
-      [23, 1],
-      [24, 0],
-    ],
-    Office: [
-      [0, 0],
-      [5, 0],
-      [6, 5],
-      [7, 70],
-      [8, 100],
-      [9, 80],
-      [10, 30],
-      [12, 10],
-      [16, 10],
-      [19, 10],
-      [21, 5],
-      [23, 5],
-      [24, 0],
-    ],
-  },
-  Shop: {
-    House: [
-      [0, 0],
-      [5, 0],
-      [6, 1],
-      [7, 1],
-      [8, 1],
-      [9, 3],
-      [10, 10],
-      [12, 15],
-      [16, 25],
-      [19, 20],
-      [21, 15],
-      [23, 5],
-      [24, 0],
-    ],
-    Shop: [
-      [0, 0],
-      [24, 0],
-    ],
-    Office: [
-      [0, 0],
-      [24, 0],
-    ],
-  },
-  Office: {
-    House: [
-      [0, 0],
-      [5, 0],
-      [6, 5],
-      [7, 5],
-      [8, 5],
-      [9, 5],
-      [10, 10],
-      [12, 15],
-      [16, 20],
-      [19, 100],
-      [21, 80],
-      [23, 20],
-      [24, 0],
-    ],
-    Shop: [
-      [0, 0],
-      [5, 0],
-      [6, 1],
-      [7, 3],
-      [8, 5],
-      [9, 5],
-      [10, 5],
-      [12, 5],
-      [16, 20],
-      [19, 20],
-      [21, 10],
-      [23, 1],
-      [24, 0],
-    ],
-    Office: [
-      [0, 0],
-      [5, 0],
-      [6, 1],
-      [7, 1],
-      [8, 5],
-      [9, 10],
-      [10, 15],
-      [12, 15],
-      [16, 15],
-      [19, 10],
-      [21, 5],
-      [23, 1],
-      [24, 0],
-    ],
-  },
-};
-
-function getMoveProbs(fromConstructType: ConstructType, globalTimeManager: GlobalTimeManager) {
-  const hour = globalTimeManager.globalTime / 60 / 60;
-  const probs = {
-    House: getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['House'], hour),
-    Shop: getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['Shop'], hour),
-    Office: getInterpolatedFunctionValue(moveProbFuncs[fromConstructType]['Office'], hour),
-  };
-  return probs;
-}
-
-// 時刻表ベースの実装
-export class AgentManager2 implements AgentManagerBase {
-  readonly agentManagerType = 'AgentManager2';
+// 時刻表ベースではない実装
+export class AgentManagerNoTimetable implements AgentManagerBase {
   readonly agentMax = 30;
+  readonly agentManagerType = 'AgentManager2';
 
-  agents: Agent[];
+  agents: Agent[] = [];
 
   constructor() {
     this.agents = [];
@@ -483,26 +350,14 @@ export class AgentManager2 implements AgentManagerBase {
     return this.agents;
   }
 
+  remove(agentId: string) {
+    this.agents = this.agents.filter((a) => a.id !== agentId);
+  }
+
   addAgentsRandomly(position: Point, cell: ExtendedCellConstruct, props: AgentManager2Props): boolean {
     if (this.agents.length >= this.agentMax) return false;
 
-    const probCoefficient = 1000;
-    const probs = getMoveProbs(cell.constructType, props.globalTimeManager);
-    const r = Math.random();
-    let destinationType: ConstructType | null = null;
-    if (r < probs.House / probCoefficient) {
-      destinationType = 'House';
-    }
-    if (r < probs.Shop / probCoefficient) {
-      destinationType = 'Shop';
-    }
-    if (r < probs.Office / probCoefficient) {
-      destinationType = 'Office';
-    }
-
-    if (destinationType === null) return false;
-
-    const destination = this.getRandomDestination(position, props, destinationType);
+    const destination = getAgentDestination(cell, position, props);
     if (destination) {
       const agent = this.createRawAgent(position);
       agent.destination = destination;
@@ -531,42 +386,6 @@ export class AgentManager2 implements AgentManagerBase {
       placedTrain: null,
     };
     return agent;
-  }
-
-  remove(agentId: string) {
-    this.agents = this.agents.filter((a) => a.id !== agentId);
-  }
-
-  private getDestinationCandidates(agentPosition: Point, props: AgentManager2Props) {
-    const candidates = props.extendedMap.flatMap((row) =>
-      row.filter(
-        (cell) =>
-          cell.type === 'Construct' && getDistance(toPixelPosition(cell.position), agentPosition) > CellHeight * 1.4
-      )
-    ) as ExtendedCellConstruct[];
-    return candidates;
-  }
-
-  // ランダムな目的地を決める
-  // もっとうまくやりたいところ
-  getRandomDestination(
-    agentPosition: Point,
-    props: AgentManager2Props,
-    destinationType: ConstructType
-  ): ExtendedCellConstruct {
-    const [stationPositions, platforms] = getStationPositions(props.stations, props.gameMap);
-
-    const candidates = this.getDestinationCandidates(agentPosition, props).filter(
-      (cell) => cell.constructType === destinationType
-    );
-    // 今いる場所に近いか、駅の近くのみ選択可能とする
-    const candidates2 = candidates.filter(
-      (c) =>
-        getDistance(toPixelPosition(c.position), agentPosition) < CellHeight * 5 ||
-        (stationPositions.some((s) => getDistance(agentPosition, s.topPosition) < CellHeight * 5) &&
-          stationPositions.some((s) => getDistance(toPixelPosition(c.position), s.topPosition) < CellHeight * 5))
-    );
-    return candidates2[Math.floor(Math.random() * candidates2.length)];
   }
 
   getNumberOfAgentsInPlatform() {

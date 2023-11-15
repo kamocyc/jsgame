@@ -20,7 +20,6 @@ import { Point, StationLike, Track } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { CellPoint } from '../extendedMapModel';
 import { AgentBase, AgentManagerBase } from './agentManager';
-import { AgentManager2 } from './agentManager2';
 import { PlacedTrain } from './trainMoveBase';
 
 const hideDraw = false;
@@ -523,7 +522,7 @@ function drawText(ctx: CanvasRenderingContext2D, mapContext: MapContext, text: s
 
 function getPlatformAgentNumber(agentManager_: AgentManagerBase, platformId: string) {
   if (agentManager_.agentManagerType !== 'AgentManager2') return;
-  const agentManager = agentManager_ as AgentManager2;
+  const agentManager = agentManager_;
 
   const counts = agentManager.getNumberOfAgentsInPlatform();
   return sum(

@@ -1,6 +1,7 @@
 import { assert } from './common';
-import { createOperations } from './components/track-editor/timetableConverter';
-import { Operation, StationLike, StationOperation, Train, TrainType, generateId } from './model';
+import { checkStationTrackOccupation } from './components/track-editor/checkOperation';
+import { OperationError, createOperations } from './components/track-editor/timetableConverter';
+import { Operation, StationLike, StationOperation, Train, TrainType, cloneTrain, generateId } from './model';
 
 export interface OutlinedTimetable {
   railwayLineId: string;
@@ -84,12 +85,11 @@ export interface UpdatingTrain {
   updater: (train: Train) => void;
 }
 
-function updateOperationTime(operation: StationOperation, newTime: number | null) {
-  assert(newTime != null);
+function updateOperationTime(operation: StationOperation, timeDiff: number) {
   if (operation.stationOperationType === 'InOut') {
     return {
       ...operation,
-      operationTime: newTime,
+      operationTime: operation.operationTime + timeDiff,
     };
   } else {
     return {
@@ -110,15 +110,12 @@ function repeatTrains(trains: Train[]): Train[] {
 
   const newTrains: Train[] = [];
   for (const train of trains) {
-    const newTrain: Train = {
-      ...train,
-      trainId: generateId(),
-      firstStationOperation: updateOperationTime(train.firstStationOperation, train.diaTimes[0].arrivalTime),
-      lastStationOperation: updateOperationTime(
-        train.lastStationOperation,
-        train.diaTimes[train.diaTimes.length - 1].departureTime
-      ),
-      diaTimes: train.diaTimes.map((diaTime) => {
+    const clonedTrain = cloneTrain(train);
+    const newTrain = {
+      ...clonedTrain,
+      firstStationOperation: updateOperationTime(clonedTrain.firstStationOperation, timeDiff),
+      lastStationOperation: updateOperationTime(clonedTrain.lastStationOperation, timeDiff),
+      diaTimes: clonedTrain.diaTimes.map((diaTime) => {
         return {
           ...diaTime,
           arrivalTime: diaTime.arrivalTime !== null ? diaTime.arrivalTime + timeDiff + 3 * 60 : null,
@@ -329,7 +326,7 @@ export class OutlinedTimetableData {
     timetable.outboundTrainIds = outboundTrains.map((train) => train.trainId);
     timetable.stations = timetable.stations.slice().reverse();
     timetable.inboundIsFirstHalf = !timetable.inboundIsFirstHalf;
-    timetable.operations = createOperations(trains);
+    timetable.operations = createOperations(trains).operations;
 
     this.trains.push(...trains);
     this.deleteNotUsedTrains();
@@ -361,10 +358,17 @@ export class OutlinedTimetableData {
   }
 
   updateOperations() {
+    const errors: OperationError[] = [];
     for (const timetable of this.timetables) {
-      timetable.operations = createOperations(
-        timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(id))
-      );
+      const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(id));
+      const operationsAndErrors = createOperations(trains);
+      timetable.operations = operationsAndErrors.operations;
+      errors.push(...operationsAndErrors.errors);
+
+      const occupationErrors = checkStationTrackOccupation(trains, timetable.stations);
+      errors.push(...occupationErrors);
     }
+
+    return errors;
   }
 }

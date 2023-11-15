@@ -42,7 +42,7 @@ export function StationOperationSettingComponent({
   }
 
   const stationOperation_ = stationOperation ?? { stationOperationType: 'Connection' };
-  const textInOut = firstOrLast === 'First' ? '入区' : '出区';
+  const textInOut = firstOrLast === 'First' ? '出区' : '入区';
 
   return (
     <>

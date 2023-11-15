@@ -253,7 +253,7 @@ function showStationOperation(stationOperation: StationOperation | undefined, fi
   } else if (stationOperation.stationOperationType === 'Connection') {
     return '接続';
   } else if (stationOperation.stationOperationType === 'InOut') {
-    return firstOrLast === 'First' ? '入区' : '出区';
+    return firstOrLast === 'First' ? '出区' : '入区';
   } else {
     throw new Error('invalid');
   }

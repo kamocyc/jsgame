@@ -29,23 +29,16 @@ function parseInputTextAsTime(text: string): string | undefined {
   }
 }
 
-/**
- * Hook that alerts clicks outside of the passed ref
- */
+// このコールバックでsetXXXを実行すると当然ながらコンポーネントが再描画される。パフォーマンスやよきせぬ動作になるので注意。
 export function useOnClickOutside(ref: Ref<HTMLElement>, handler: () => void) {
   useEffect(() => {
-    /**
-     * Alert if clicked on outside of element
-     */
     function handleClickOutside(event: MouseEvent) {
       if (ref.current && (event.target == null || !ref.current.contains(event.target as Node))) {
         handler();
       }
     }
-    // Bind the event listener
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      // Unbind the event listener on clean up
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [ref]);
@@ -66,7 +59,9 @@ export function EditableTextComponent({
 
   // コントロール外をクリックしたときに編集を終了する
   const ref = useRef<HTMLInputElement>(null);
-  useOnClickOutside(ref, () => setIsEditing(false));
+  useOnClickOutside(ref, () => {
+    if (isEditing) setIsEditing(false);
+  });
 
   // 編集開始時にフォーカスする
   useEffect(() => {
@@ -113,7 +108,9 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
 
   // コントロール外をクリックしたときに編集を終了する
   const ref = useRef<HTMLInputElement>(null);
-  useOnClickOutside(ref, () => setIsEditing(false));
+  useOnClickOutside(ref, () => {
+    if (isEditing) setIsEditing(false);
+  });
 
   // 編集開始時にフォーカスする
   useEffect(() => {
@@ -229,7 +226,9 @@ export function ContextMenuComponent({
   menuItems: { label: string; onClick: () => void }[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useOnClickOutside(ref, () => setContextData({ ...contextData, visible: false }));
+  useOnClickOutside(ref, () => {
+    if (contextData.visible) setContextData({ ...contextData, visible: false });
+  });
 
   return (
     <div

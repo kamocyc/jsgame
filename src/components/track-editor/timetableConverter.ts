@@ -512,9 +512,21 @@ function generateOperationCode(operations: Operation[]) {
   return Math.random().toString().replace('.', '');
 }
 
-export function createOperations(trains: Train[], tracks: Track[] = []): Operation[] {
+export type OperationError = {
+  type: string;
+  trainId: string;
+  diaTimeId: string | null;
+  stationId: string | null;
+};
+
+export function createOperations(
+  trains: Train[],
+  tracks: Track[] = []
+): { operations: Operation[]; errors: OperationError[] } {
   const usedTrains = new Set<string>();
   const operations: Operation[] = [];
+
+  const errors = [];
 
   // TODO: とりあえず効率は悪いが毎回全件探索する。改善したい
 
@@ -527,6 +539,7 @@ export function createOperations(trains: Train[], tracks: Track[] = []): Operati
     if (lastDiaTime.platform == null) return null;
     if (lastDiaTime.arrivalTime == null) return null;
 
+    // 番線が同じで時刻が前後関係にある列車を列挙
     const candidateTrains = trains
       .filter((t) => {
         if (t.firstStationOperation == null || t.diaTimes.length === 0) return false;
@@ -576,12 +589,14 @@ export function createOperations(trains: Train[], tracks: Track[] = []): Operati
       }
 
       const lastOperation = operationTrains[operationTrains.length - 1].lastStationOperation;
-      if (lastOperation == null) {
-        console.warn('lastOperation is null.');
-        continue;
-      }
       if (lastOperation.stationOperationType !== 'InOut') {
         console.warn('lastOperation is not InOut.');
+        errors.push({
+          type: 'LastOperationIsNotInOut',
+          trainId: operationTrains[operationTrains.length - 1].trainId,
+          diaTimeId: null,
+          stationId: null,
+        });
         continue;
       }
 
@@ -598,7 +613,21 @@ export function createOperations(trains: Train[], tracks: Track[] = []): Operati
     }
   }
 
-  console.log({ operations });
+  for (const train of trains) {
+    if (!usedTrains.has(train.trainId)) {
+      errors.push({
+        type: 'FirstOperationIsNotInOut',
+        trainId: train.trainId,
+        diaTimeId: null,
+        stationId: null,
+      });
+    }
+  }
 
-  return operations;
+  console.log({ operations });
+  if (errors.length > 0) {
+    console.log({ errors });
+  }
+
+  return { operations, errors };
 }

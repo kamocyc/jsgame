@@ -173,7 +173,7 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
     timetableId: generateId(),
     inboundTrainIds: inboundTrains.map((diaTime) => diaTime.trainId),
     outboundTrainIds: outboundTrains.map((diaTime) => diaTime.trainId),
-    operations: createOperations(trains),
+    operations: createOperations(trains).operations,
     railwayLineId: railwayLine.railwayLineId,
     stations: stations,
     trainTypes: getInitialTrainTypes(),

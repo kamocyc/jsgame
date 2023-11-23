@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { importOutdiaFile } from '../../file';
-import { RailwayLine } from '../../mapEditorModel';
+import { OperationError, RailwayLine } from '../../mapEditorModel';
 import {
   AppClipboard,
   CrudTrain,
@@ -50,10 +50,12 @@ export function TimetableEditorTableComponent({
   setClipboard,
   railwayLine,
   timetable,
+  errors,
 }: TimetableEditorDirectedProps) {
   return (
     <div style={{ display: 'flex' }}>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '15px' }}></div>
         <div style={{ height: '24px' }}>列車番号</div>
         <div style={{ height: '24px' }}>列車名</div>
         <div style={{ height: '24px' }}>列車種別</div>
@@ -71,6 +73,7 @@ export function TimetableEditorTableComponent({
         />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '15px' }}></div>
         <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
@@ -80,6 +83,7 @@ export function TimetableEditorTableComponent({
       </div>
       <TrainListComponent
         {...{
+          errors,
           stations,
           setStations,
           trains,
@@ -111,6 +115,7 @@ export interface TimetableEditorDirectedProps {
   setClipboard: (clipboard: AppClipboard) => void;
   railwayLine: RailwayLine;
   timetable: OutlinedTimetable;
+  errors: OperationError[];
 }
 
 export function TimetableEditorComponent({
@@ -120,6 +125,7 @@ export function TimetableEditorComponent({
   tracks,
   setToast,
   update,
+  errors,
 }: {
   timetableData: OutlinedTimetableData;
   timetable: OutlinedTimetable;
@@ -127,6 +133,7 @@ export function TimetableEditorComponent({
   tracks: Track[];
   setToast: (message: string) => void;
   update: () => void;
+  errors: OperationError[];
 }) {
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
   const [clipboard, setClipboard] = useState<AppClipboard>({
@@ -279,6 +286,7 @@ export function TimetableEditorComponent({
                       setClipboard,
                       railwayLine,
                       timetable,
+                      errors,
                     }}
                   />
                 ),
@@ -301,6 +309,7 @@ export function TimetableEditorComponent({
                       setClipboard,
                       railwayLine,
                       timetable,
+                      errors,
                     }}
                   />
                 ),

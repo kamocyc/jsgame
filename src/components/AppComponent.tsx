@@ -5,7 +5,7 @@ import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData'
 import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
 import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
-import { ToastComponent } from './toast';
+import { ToastComponent } from './toast-component';
 import { TrackEditorComponent } from './track-editor/TrackEditorComponent';
 import { createAgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
@@ -69,6 +69,7 @@ export function getInitialAppStates(): AppStates {
     },
   ];
   const trainMove = createTrainMove(timetable);
+  const errors = timetableData.updateOperations();
   return {
     editMode: 'Create',
     globalTimeManager: new GlobalTimeManager(),
@@ -94,6 +95,7 @@ export function getInitialAppStates(): AppStates {
     selectedRailwayLineId: null,
     moneyManager: new MoneyManager(),
     mapManager: new MapManager(),
+    errors: errors,
   };
 }
 

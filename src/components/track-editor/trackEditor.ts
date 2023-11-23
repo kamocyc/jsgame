@@ -116,6 +116,8 @@ function getBranchTypeFromDirectionAndAngle(
       }
       break;
   }
+
+  return undefined;
 }
 
 function getBranchTypeFromCurveTypeAndAngle(

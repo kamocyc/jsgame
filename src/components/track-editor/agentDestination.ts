@@ -1,4 +1,4 @@
-import { FuncDefinition, getInterpolatedFunctionValue } from '../../common';
+import { FuncDefinition, assertNonEmpty, fst, getInterpolatedFunctionValue, getRandomElement, lst } from '../../common';
 import { CellHeight, GameMap } from '../../mapEditorModel';
 import { Point, StationLike } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
@@ -152,7 +152,7 @@ function getRandomDestination(
   agentPosition: Point,
   props: AgentDestinationProps,
   destinationType: ConstructType
-): ExtendedCellConstruct {
+): ExtendedCellConstruct | null {
   const [stationPositions, platforms] = getStationPositions(props.stations, props.gameMap);
 
   const candidates = getDestinationCandidates(agentPosition, props).filter(
@@ -165,7 +165,13 @@ function getRandomDestination(
       (stationPositions.some((s) => getDistance(agentPosition, s.topPosition) < CellHeight * 5) &&
         stationPositions.some((s) => getDistance(toPixelPosition(c.position), s.topPosition) < CellHeight * 5))
   );
-  return candidates2[Math.floor(Math.random() * candidates2.length)];
+
+  if (candidates2.length === 0) {
+    return null;
+  }
+
+  assertNonEmpty(candidates2);
+  return getRandomElement(candidates2);
 }
 
 function getDestinationCandidates(agentPosition: Point, props: AgentDestinationProps) {
@@ -178,7 +184,11 @@ function getDestinationCandidates(agentPosition: Point, props: AgentDestinationP
   return candidates;
 }
 
-export function getAgentDestination(cell: ExtendedCellConstruct, position: Point, props: AgentDestinationProps) {
+export function getAgentDestination(
+  cell: ExtendedCellConstruct,
+  position: Point,
+  props: AgentDestinationProps
+): ExtendedCellConstruct | null {
   const probCoefficient = 1000;
   const probs = getMoveProbs(cell.constructType, props.globalTimeManager);
   const r = Math.random();
@@ -214,8 +224,9 @@ export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
     // ホームは横向きになっている。その一番上と下のセルを取得する
     const stationPlatforms = platforms.filter((p) => p.track.platform!.station.stationId === station.stationId);
     stationPlatforms.sort((a, b) => a.begin.y - b.begin.y);
-    const topPlatform = stationPlatforms[0];
-    const bottomPlatform = stationPlatforms[stationPlatforms.length - 1];
+    assertNonEmpty(stationPlatforms);
+    const topPlatform = fst(stationPlatforms);
+    const bottomPlatform = lst(stationPlatforms);
     return {
       station: station,
       top: topPlatform,

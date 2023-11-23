@@ -126,7 +126,7 @@ export interface Train {
   trainId: string;
   trainCode: string; // 列車番号
   trainName: string;
-  trainType?: TrainType;
+  trainType: TrainType | undefined;
   diaTimes: DiaTime[];
   firstStationOperation: StationOperation;
   lastStationOperation: StationOperation;

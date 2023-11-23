@@ -1,41 +1,43 @@
 import { ComponentChild } from 'preact';
-import { Ref, useEffect, useRef, useState } from 'preact/hooks';
+import { Ref, StateUpdater, useEffect, useRef, useState } from 'preact/hooks';
 import { parseTime, toStringFromSeconds } from '../../common';
 import { ContextData, getDefaultTime } from '../../model';
 import './timetable-editor.css';
 
-function parseInputTextAsTime(text: string): string | undefined {
-  text = text.replace(/[^0-9]/g, '');
-  if (text.length <= 2) {
-    // 分のみ => TODO: 直前の時間の次の分を利用する
-  } else if (text.length === 3) {
-    // 時が1桁
-    const _hourText = text.substring(0, 1);
-    const minuteText = text.substring(1);
+// function parseInputTextAsTime(text: string): string | undefined {
+//   text = text.replace(/[^0-9]/g, '');
+//   if (text.length <= 2) {
+//     // 分のみ => TODO: 直前の時間の次の分を利用する
+//   } else if (text.length === 3) {
+//     // 時が1桁
+//     const _hourText = text.substring(0, 1);
+//     const minuteText = text.substring(1);
 
-    if (Number(minuteText) < 60) {
-      return text;
-    }
-  } else if (text.length === 4) {
-    // 時が2桁
-    const hourText = text.substring(0, 2);
-    const minuteText = text.substring(2);
+//     if (Number(minuteText) < 60) {
+//       return text;
+//     }
+//   } else if (text.length === 4) {
+//     // 時が2桁
+//     const hourText = text.substring(0, 2);
+//     const minuteText = text.substring(2);
 
-    if (Number(hourText) < 24 && Number(minuteText) < 60) {
-      return text;
-    }
-  } else {
-    return undefined;
-  }
-}
+//     if (Number(hourText) < 24 && Number(minuteText) < 60) {
+//       return text;
+//     }
+//   } else {
+//     return undefined;
+//   }
+// }
 
 // このコールバックでsetXXXを実行すると当然ながらコンポーネントが再描画される。パフォーマンスやよきせぬ動作になるので注意。
 export function useOnClickOutside(ref: Ref<HTMLElement>, handler: () => void) {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (ref.current && (event.target == null || !ref.current.contains(event.target as Node))) {
-        handler();
-      }
+      // if (ref.current && (event.target == null || !ref.current.contains(event.target as Node))) {
+      handler();
+      // } else {
+      //   console.log('hit');
+      // }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -222,12 +224,14 @@ export function ContextMenuComponent({
   menuItems,
 }: {
   contextData: ContextData;
-  setContextData: (contextData: ContextData) => void;
+  setContextData: StateUpdater<ContextData>;
   menuItems: { label: string; onClick: () => void }[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useOnClickOutside(ref, () => {
-    if (contextData.visible) setContextData({ ...contextData, visible: false });
+    setContextData((contextData) => {
+      return contextData.visible ? { ...contextData, visible: false } : contextData;
+    });
   });
 
   return (
@@ -288,7 +292,7 @@ export interface Tab {
   component: () => any /* JSX.Element */;
 }
 
-export function TabComponent({ tabs, onTabChange }: { tabs: Tab[]; onTabChange: (tabId: number) => void }) {
+export function TabComponent({ tabs, onTabChange }: { tabs: [Tab, ...Tab[]]; onTabChange: (tabId: number) => void }) {
   const [selectedTabId, setSelectedTabId] = useState<number>(tabs[0].tabId);
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>

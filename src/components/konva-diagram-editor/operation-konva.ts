@@ -1,4 +1,5 @@
 import Konva from 'konva';
+import { assert } from '../../common';
 import { hitStrokeWidth } from './drawer-util';
 import { DiagramKonvaContext, createPositionDiaTimeMap, generateKonvaId } from './konva-util';
 
@@ -26,7 +27,8 @@ export class OperationCollectionKonva {
     for (const operation of operations) {
       let prevTrain = operation.trains[0];
       for (let trainIndex = 1; trainIndex < operation.trains.length; trainIndex++) {
-        let currTrain = operation.trains[trainIndex];
+        let currTrain = operation.trains[trainIndex]!;
+        assert(prevTrain !== undefined);
 
         const prevTrainTimeData_ = createPositionDiaTimeMap(prevTrain.diaTimes, secondWidth, stationPositions);
         const prevTrainTimeData = prevTrainTimeData_[prevTrainTimeData_.length - 1];

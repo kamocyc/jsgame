@@ -436,6 +436,7 @@ export type AgentManagerCommonProps = AgentManagerProps & AgentManager2Props;
 
 export interface AgentManagerBase {
   agentManagerType: 'AgentManager' | 'AgentManager2';
+  addAgentsRandomly(position: Point, cell: ExtendedCellConstruct, props: AgentManagerCommonProps): boolean;
   clear(): void;
   // add(position: Point, props: AgentManagerCommonProps): void;
   remove(agentId: string): void;

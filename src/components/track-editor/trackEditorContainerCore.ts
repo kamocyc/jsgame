@@ -56,7 +56,7 @@ function mouseToMapPosition(
 
 function createPlatform(cell: Cell): [Platform, Station] | undefined {
   const tracks = cell.lineType?.tracks ?? [];
-  if (tracks.length > 0) {
+  if (tracks[0] !== undefined) {
     const track = tracks[0];
 
     const id = generateId();
@@ -84,6 +84,8 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
 
     return [newPlatform, newStation];
   }
+
+  return undefined;
 }
 
 // 種度づえ連射を置くのはアレだが、後で取り入れるか？

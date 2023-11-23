@@ -292,6 +292,7 @@ export class SelectionGroupManager {
     if (target.id().substring(0, 8) === 'timeBox-') {
       const [_, trainId, diaTimeId, timeType] = target.id().split('_');
       assert(timeType === 'Arrival' || timeType === 'Departure');
+      assert(trainId !== undefined && diaTimeId !== undefined && timeType !== undefined);
       historyItem = this.trainDragManager.setDraggingPointForTime(timeDiff, trainId, diaTimeId, timeType);
     } else {
       historyItem = this.trainDragManager.setDraggingPoint(timeDiff);

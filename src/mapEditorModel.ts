@@ -145,6 +145,14 @@ export interface RailwayLine {
   returnStopId: string;
 }
 
+export type OperationError = {
+  type: string;
+  trainId: string;
+  diaTimeId: string | null;
+  stationId: string | null;
+  platformId: string | null;
+};
+
 export interface AppStates {
   globalTimeManager: GlobalTimeManager;
   editMode: EditMode;
@@ -173,11 +181,15 @@ export interface AppStates {
   selectedRailwayLineId: string | null;
   moneyManager: MoneyManager;
   mapManager: MapManager;
+  errors: OperationError[];
 }
 
-export function splitStops(stops: RailwayLineStop[], returnStopId: string) {
-  const preStops = [];
-  const postStops = [];
+export function splitStops(
+  stops: RailwayLineStop[],
+  returnStopId: string
+): { preStops: RailwayLineStop[]; postStops: RailwayLineStop[] } {
+  const preStops: RailwayLineStop[] = [];
+  const postStops: RailwayLineStop[] = [];
 
   let isPre = true;
   for (const stop of stops) {
@@ -193,7 +205,9 @@ export function splitStops(stops: RailwayLineStop[], returnStopId: string) {
     }
   }
 
-  postStops.push(stops[0]);
+  if (stops[0] !== undefined) {
+    postStops.push(stops[0]);
+  }
 
   return { preStops, postStops };
 }

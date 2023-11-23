@@ -136,20 +136,39 @@ function hueToRgb(p: number, q: number, t: number) {
   return p;
 }
 
+// assert that the given array is not empty
+export function assertNonEmpty<T>(arr: T[]): asserts arr is [T, ...T[]] {
+  assert(arr.length > 0);
+}
+
+export function getRandomElement<T>(arr: [T, ...T[]]): T {
+  return arr[Math.floor(Math.random() * arr.length)] as T;
+}
+
+export function fst<T>(arr: [T, ...T[]]): T {
+  return arr[0];
+}
+
+export function lst<T>(arr: [T, ...T[]]): T {
+  return arr[arr.length - 1] as T;
+}
+
 export function generatePlaceName(): string {
   const names = namesJson.names as string[];
-  const name = names[Math.floor(Math.random() * names.length)];
+  assertNonEmpty(names);
+  const name = getRandomElement(names);
   return name;
 }
 
-export type FuncDefinition = [number, number][];
+type NumberPair = [number, number];
+export type FuncDefinition = [NumberPair, ...NumberPair[]];
 
 export function getInterpolatedFunctionValue(funcDefinition: FuncDefinition, x: number): number {
   if (funcDefinition.length === 0) return 0;
   if (funcDefinition.length === 1) return funcDefinition[0][1];
 
-  const xs = funcDefinition.map((p) => p[0]);
-  const ys = funcDefinition.map((p) => p[1]);
+  const xs: [number, ...number[]] = funcDefinition.map((p) => p[0]);
+  const ys: [number, ...number[]] = funcDefinition.map((p) => p[1]);
 
   const i = xs.findIndex((x0) => x0 > x);
   if (i === -1) {

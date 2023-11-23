@@ -43,7 +43,7 @@ export function TimetableEditorParentComponent({
   const [selectedRailwayLineId, setSelectedRailwayLineId] = useState<string | null>(defaultSelectedRailwayLineId);
 
   useEffect(() => {
-    if (selectedRailwayLineId == null && appStates.railwayLines.length > 0) {
+    if (selectedRailwayLineId == null && appStates.railwayLines[0] !== undefined) {
       setSelectedRailwayLineId(appStates.railwayLines[0].railwayLineId);
     }
   });
@@ -57,6 +57,7 @@ export function TimetableEditorParentComponent({
     // TODO: UIに表示する
     setAppStates((appStates) => ({
       ...appStates,
+      errors,
     }));
   };
 
@@ -175,6 +176,7 @@ export function TimetableEditorParentComponent({
             tracks={appStates.tracks}
             update={update}
             setToast={setToast}
+            errors={appStates.errors}
           />
         ) : (
           <></>

@@ -4,12 +4,12 @@ import { Point, Switch, Track, TrackProperty, generateId } from './model.js';
 import { Queue } from './queue.js';
 
 interface TrackWip {
-  trackId?: string;
+  trackId: string | undefined;
   begin: Point;
   end: Point;
-  nextSwitch?: Switch;
-  prevSwitch?: Switch;
-  reverseTrack?: Track;
+  nextSwitch: Switch | undefined;
+  prevSwitch: Switch | undefined;
+  reverseTrack: Track | undefined;
   track: TrackProperty;
 }
 
@@ -86,6 +86,11 @@ export function getNearestTrackPoint(tracks: Track[], point: Point) {
   return minTrackPoint as Point;
 }
 
+const x: { keyA: number; keyB: undefined } = { keyA: 42, keyB: undefined };
+const y: { keyA: number } = x;
+// z.keyB は存在して値は undefined
+const z: { keyA: number; keyB?: string } = y;
+
 // 接続しているtrackは、必ずswitchを共有することで、switchにより、列車のtrack間の移動を実現する。
 // prevTrack / nextTrackは、作るtrackの前後に移動できるtrackを指定する
 // prevTrack / nextTrackがあるときは、そのtrackのswitchを使う必要があるので、自動でそのswitchを使う
@@ -112,6 +117,7 @@ export function createNewTrack(
     track: {
       platform: null,
     },
+    reverseTrack: undefined,
   });
 
   const prevSwitch_ = newTrack[0].prevSwitch;

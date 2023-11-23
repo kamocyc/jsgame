@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { StateUpdater, useState } from 'preact/hooks';
 import { ContextData, SettingData, StationLike, TimetableDirection, Train, generateId } from '../../model';
 import { ContextMenuComponent, EditableTextComponent } from './common-component';
 import './timetable-editor.css';
@@ -37,7 +37,7 @@ function StationContextMenuComponent({
   timetableDirection,
 }: {
   contextData: ContextData;
-  setContextData: (contextData: ContextData) => void;
+  setContextData: StateUpdater<ContextData>;
   diaStations: StationLike[];
   setDiaStations: (diaStations: StationLike[]) => void;
   trains: readonly Train[];
@@ -160,7 +160,7 @@ export function StationListComponent({
 
           if (targetStation) {
             e.preventDefault();
-            setContextData({ visible: true, posX: e.clientX, posY: e.clientY });
+            setContextData({ visible: true, posX: e.pageX, posY: e.pageY });
             setSelectedStation(targetStation);
           }
         }}

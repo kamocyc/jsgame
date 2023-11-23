@@ -1,5 +1,5 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
-import { removeDuplicates } from '../../common';
+import { assert, nn, removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import {
@@ -23,7 +23,6 @@ import { generateTerrain } from './generateExtendedMap';
 import { MoneyManager } from './moneyManager';
 import { drawEditor } from './trackEditorDrawer';
 import { PlacedTrain, StoredTrain, createTrainMove } from './trainMoveBase';
-import { TrainTimetableMove } from './trainTimetableMove';
 
 export function ModeOptionRadioComponent({
   mode,
@@ -99,12 +98,14 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     alert('マップデータが不正です');
     return;
   }
+  assert(mapWidth !== undefined && mapHeight !== undefined);
+
   const extendedMap = obj['extendedMap'] as ExtendedGameMap;
 
   for (let i = 0; i < mapWidth; i++) {
     for (let j = 0; j < mapHeight; j++) {
-      const extendedCell = extendedMap[i][j];
-      if (mapData[i][j].lineType) {
+      const extendedCell = nn(nn(extendedMap[i])[j]);
+      if (nn(nn(mapData[i])[j]).lineType) {
         extendedCell.type = 'Railway';
       }
     }
@@ -272,14 +273,12 @@ export function TrackEditorComponent({
       });
       addAgents(appStates);
       appStates.agentManager.tick({
-        currentTime: appStates.globalTimeManager.globalTime,
         extendedMap: appStates.extendedMap,
         stations: appStates.stations,
         gameMap: appStates.map,
         placedTrains: appStates.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
         outlinedTimetableData: appStates.outlinedTimetableData,
-        trainMove: appStates.trainMove as TrainTimetableMove,
         moneyManager: appStates.moneyManager,
         globalTimeManager: appStates.globalTimeManager,
       });

@@ -1,6 +1,7 @@
 import { assert } from './common';
 import { checkStationTrackOccupation } from './components/track-editor/checkOperation';
-import { OperationError, createOperations } from './components/track-editor/timetableConverter';
+import { createOperations } from './components/track-editor/timetableConverter';
+import { OperationError } from './mapEditorModel';
 import { Operation, StationLike, StationOperation, Train, TrainType, cloneTrain, generateId } from './model';
 
 export interface OutlinedTimetable {
@@ -365,10 +366,12 @@ export class OutlinedTimetableData {
       timetable.operations = operationsAndErrors.operations;
       errors.push(...operationsAndErrors.errors);
 
-      const occupationErrors = checkStationTrackOccupation(trains, timetable.stations);
+      const platforms = timetable.stations.map((station) => station.platforms).flat();
+      const occupationErrors = checkStationTrackOccupation(trains, platforms);
       errors.push(...occupationErrors);
     }
 
+    console.log({ errors });
     return errors;
   }
 }

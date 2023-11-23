@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { assert } from '../../common';
+import { OperationError } from '../../mapEditorModel';
 import {
   AppClipboard,
   ContextData,
@@ -18,6 +19,7 @@ import { HistoryItem } from '../../outlinedTimetableData';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
 import { TimetableEditorDirectedProps } from './timetable-editor-component';
 import { getFirstOrLast, getRailwayPlatform } from './timetable-util';
+import { TooltipComponent } from './tooltip-component';
 
 function TrainContextMenuComponent({
   trains,
@@ -127,11 +129,20 @@ export function PlatformComponent({
 
 function TrainListItemComponent({
   diaTime,
+  errors,
   updateTrain,
 }: {
   diaTime: DiaTime;
+  errors: OperationError[];
   updateTrain: (historyItem: HistoryItem) => void;
 }) {
+  const errorMap = new Map<string, OperationError>();
+  for (const error of errors) {
+    if (error.diaTimeId) {
+      errorMap.set(error.diaTimeId, error);
+    }
+  }
+
   return (
     <div
       style={{
@@ -150,9 +161,10 @@ function TrainListItemComponent({
           flexDirection: 'column',
         }}
       >
+        <WarningMessageComponent error={errorMap.get(diaTime.diaTimeId)} />
         <div
           style={{
-            fontSize: '14px',
+            fontSize: '12px',
             width: '10px',
             color: diaTime.isPassing ? 'black' : 'lightgray',
             backgroundColor: diaTime.isPassing ? 'lightgreen' : 'white',
@@ -174,7 +186,7 @@ function TrainListItemComponent({
         </div>
         <div
           style={{
-            fontSize: '14px',
+            fontSize: '12px',
             width: '10px',
             color: !diaTime.isInService ? 'black' : 'lightgray',
             backgroundColor: !diaTime.isInService ? 'lightgreen' : 'white',
@@ -284,6 +296,7 @@ export function TrainListComponent({
   setSettingData,
   railwayLine,
   timetable,
+  errors,
 }: TimetableEditorDirectedProps) {
   const [contextData, setContextData] = useState<ContextData>({
     visible: false,
@@ -339,6 +352,17 @@ export function TrainListComponent({
       />
       {trains.map((train) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-around',
+            }}
+          >
+            <WarningMessageComponent
+              error={errors.find((error) => error.trainId === train.trainId && error.diaTimeId === null)}
+            />
+          </div>
           <div style={{ height: '24px', width: '56px' }}>
             {/* 列車番号 */}
             <EditableTextComponent
@@ -456,7 +480,7 @@ export function TrainListComponent({
           <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + train.trainId}>
             {/* 時刻リスト */}
             {getDiaTimesOfStations(train, stations).map((diaTime) => (
-              <TrainListItemComponent diaTime={diaTime} updateTrain={(h) => crudTrain.updateTrain(h)} />
+              <TrainListItemComponent errors={errors} diaTime={diaTime} updateTrain={(h) => crudTrain.updateTrain(h)} />
             ))}
           </div>
           <div>
@@ -477,6 +501,7 @@ export function TrainListComponent({
             const newTrain: Train = {
               trainId: generateId(),
               trainName: '',
+              trainType: undefined,
               diaTimes: stations.map((station) => {
                 const platform = getRailwayPlatform(
                   railwayLine,
@@ -507,5 +532,25 @@ export function TrainListComponent({
         </button>
       </div>
     </div>
+  );
+}
+
+export function WarningMessageComponent({ error }: { error: OperationError | undefined }) {
+  return error ? (
+    <TooltipComponent content={error.type}>
+      <div
+        style={{
+          fontSize: '12px',
+          width: '10px',
+          color: '#ff9000',
+          fontWeight: 'bold',
+          height: '15px',
+        }}
+      >
+        ⚠
+      </div>
+    </TooltipComponent>
+  ) : (
+    <div style={{ width: '10px', height: '15px' }}></div>
   );
 }

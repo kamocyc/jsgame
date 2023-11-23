@@ -21,7 +21,7 @@ export function getFirstOrLast(direction: TimetableDirection, inboundIsFirstHalf
 }
 
 export function getRailwayPlatform(railwayLine: RailwayLine, stationId: string, firstHalfOrLastHalf: 'First' | 'Last') {
-  const { preStops, postStops } = splitStops(railwayLine.stops, railwayLine.railwayLineId);
+  const { preStops, postStops } = splitStops(railwayLine.stops, railwayLine.returnStopId);
 
   const stops = firstHalfOrLastHalf === 'First' ? preStops : postStops;
   const stop = stops.find((stop) => stop.platform.station.stationId === stationId);
@@ -93,6 +93,7 @@ function createTrain(firstStop: RailwayLineStop, lastStop: RailwayLineStop, diaT
   const trainId = generateId();
   return {
     trainId: trainId,
+    trainType: undefined,
     trainName: '',
     trainCode: '001M',
     diaTimes: diaTimes,
@@ -145,8 +146,9 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
     currentTime = baseTime;
     inboundDiaTimes = preStops.map((stop, index) => {
       const newDiaTime = createDiaTime(stop, index, preStops.length);
-      if (index !== preStops.length - 1 && preStops[index].platformPaths != null) {
-        currentTime += preStops[index].platformPaths!.length * 0.5 * 60;
+      const platformPaths = preStops[index]?.platformPaths;
+      if (index !== preStops.length - 1 && platformPaths != null) {
+        currentTime += platformPaths.length * 0.5 * 60;
       }
       return newDiaTime;
     });
@@ -155,8 +157,9 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
     currentTime = baseTime;
     outboundDiaTimes = postStops.map((stop, index) => {
       const newDiaTime = createDiaTime(stop, index, postStops.length);
-      if (index !== postStops.length - 1 && postStops[index + 1].platformPaths != null) {
-        currentTime += postStops[index + 1].platformPaths!.length * 0.5 * 60;
+      const platformPaths = postStops[index + 1]?.platformPaths;
+      if (index !== postStops.length - 1 && platformPaths != null) {
+        currentTime += platformPaths.length * 0.5 * 60;
       }
       return newDiaTime;
     });

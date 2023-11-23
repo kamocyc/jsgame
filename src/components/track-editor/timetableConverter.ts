@@ -1,4 +1,5 @@
 import { assert, nn } from '../../common';
+import { OperationError } from '../../mapEditorModel';
 import {
   DetailedTimetable,
   Operation,
@@ -512,13 +513,6 @@ function generateOperationCode(operations: Operation[]) {
   return Math.random().toString().replace('.', '');
 }
 
-export type OperationError = {
-  type: string;
-  trainId: string;
-  diaTimeId: string | null;
-  stationId: string | null;
-};
-
 export function createOperations(
   trains: Train[],
   tracks: Track[] = []
@@ -526,7 +520,7 @@ export function createOperations(
   const usedTrains = new Set<string>();
   const operations: Operation[] = [];
 
-  const errors = [];
+  const errors: OperationError[] = [];
 
   // TODO: とりあえず効率は悪いが毎回全件探索する。改善したい
 

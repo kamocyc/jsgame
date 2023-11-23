@@ -3,6 +3,7 @@ import { SettingColumnComponent } from '../timetable-editor/common-component';
 
 export function ListSettingCommonComponent<T>({
   datas,
+  defaultData,
   setDatas,
   selectData,
   getSettingComponent,
@@ -12,15 +13,16 @@ export function ListSettingCommonComponent<T>({
   settingColumnWidth,
 }: {
   datas: T[];
+  defaultData?: T | undefined;
   setDatas: (datas: T[]) => void;
   selectData: (data: T) => void;
   getSettingComponent: (data: T) => any /* JSX.Element */;
   getDisplayName: (data: T) => string;
-  excludeFromDatas: (datas: T[], data: T) => T[] | false;
+  excludeFromDatas: ((datas: T[], data: T) => T[]) | null;
   getNewData: (() => T) | null;
   settingColumnWidth?: string;
 }) {
-  const [settingData, setSettingData] = useState<T | null>(null);
+  const [settingData, setSettingData] = useState<T | null>(defaultData ?? null);
 
   return (
     <div style={{ display: 'flex' }}>
@@ -38,16 +40,19 @@ export function ListSettingCommonComponent<T>({
                 {getDisplayName(data)}
               </div>
               <div>
-                <button
-                  onClick={() => {
-                    const result = excludeFromDatas(datas, data);
-                    if (result !== false) {
+                {excludeFromDatas !== null ? (
+                  <button
+                    onClick={() => {
+                      const result = excludeFromDatas(datas, data);
+
                       setDatas(result);
-                    }
-                  }}
-                >
-                  削除
-                </button>
+                    }}
+                  >
+                    削除
+                  </button>
+                ) : (
+                  <></>
+                )}
               </div>
             </div>
           ))}

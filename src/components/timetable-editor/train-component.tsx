@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { StateUpdater, useState } from 'preact/hooks';
 import { assert } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import {
@@ -35,7 +35,7 @@ function TrainContextMenuComponent({
   crudTrain: CrudTrain;
   contextData: ContextData;
 
-  setContextData: (contextData: ContextData) => void;
+  setContextData: StateUpdater<ContextData>;
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;
   selectedTrain: Train | null;
@@ -333,7 +333,7 @@ export function TrainListComponent({
 
         if (targetTrain) {
           e.preventDefault();
-          setContextData({ visible: true, posX: e.clientX, posY: e.clientY });
+          setContextData({ visible: true, posX: e.pageX, posY: e.pageY });
           setSelectedTrain(targetTrain);
         }
       }}
@@ -450,6 +450,7 @@ export function TrainListComponent({
           </div>
 
           <div style={{ height: '24px' }}>
+            {/* このあたり、自動的に作るようにしたい。 */}
             {/* 始発駅作業 */}
             <button
               onClick={() => {

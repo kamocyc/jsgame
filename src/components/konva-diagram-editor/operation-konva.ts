@@ -1,5 +1,6 @@
 import Konva from 'konva';
 import { assert } from '../../common';
+import { getDirection } from '../../outlinedTimetableData';
 import { hitStrokeWidth } from './drawer-util';
 import { DiagramKonvaContext, createPositionDiaTimeMap, generateKonvaId } from './konva-util';
 
@@ -19,23 +20,27 @@ export class OperationCollectionKonva {
 
     this.operationGroup.destroyChildren();
 
-    const [secondWidth, stationPositions] = [
-      this.diagramKonvaContext.viewStateManager.getSecondWidth(),
-      this.diagramKonvaContext.viewStateManager.getStationPositions(),
-    ];
-
     for (const operation of operations) {
       let prevTrain = operation.trains[0];
       for (let trainIndex = 1; trainIndex < operation.trains.length; trainIndex++) {
         let currTrain = operation.trains[trainIndex]!;
         assert(prevTrain !== undefined);
 
-        const prevTrainTimeData_ = createPositionDiaTimeMap(prevTrain.diaTimes, secondWidth, stationPositions);
+        const direction = getDirection(this.diagramKonvaContext.diagramProps.timetable, currTrain.trainId);
+        const prevTrainTimeData_ = createPositionDiaTimeMap(
+          prevTrain.diaTimes,
+          this.diagramKonvaContext.viewStateManager,
+          direction
+        );
         const prevTrainTimeData = prevTrainTimeData_[prevTrainTimeData_.length - 1];
-        const currTrainTimeData = createPositionDiaTimeMap(currTrain.diaTimes, secondWidth, stationPositions)[0];
+        const currTrainTimeData = createPositionDiaTimeMap(
+          currTrain.diaTimes,
+          this.diagramKonvaContext.viewStateManager,
+          direction
+        )[0];
 
-        const stationIndex = stationPositions.findIndex(
-          (station) => station.station.stationId === currTrain.diaTimes[0].station.stationId
+        const stationIndex = this.diagramKonvaContext.diagramProps.stations.findIndex(
+          (station) => station.stationId === currTrain.diaTimes[0].station.stationId
         );
         const isTop = stationIndex === 0;
 

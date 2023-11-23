@@ -4,9 +4,11 @@ import { StationLike } from '../../model';
 import { hitStrokeWidth } from './drawer-util';
 import { DrawingTrainLineKonva } from './drawing-train-line-konva';
 import { DiagramKonvaContext, generateKonvaId, getPointerPosition, virtualCanvasWidth } from './konva-util';
+import { getPlatformPositions } from './station-view-konva';
 
 export class StationLineKonva {
   private stationLine: Konva.Line;
+  private readonly platformGroup: Konva.Group;
 
   constructor(
     private context: DiagramKonvaContext,
@@ -22,9 +24,33 @@ export class StationLineKonva {
     this.stationLine.on('mouseover', this.onMouseover.bind(this));
     this.stationLine.on('click', this.onClick.bind(this));
 
+    this.platformGroup = this.createPlatformShapes(this.station, virtualCanvasWidth);
+
     this.context.topLayer.add(this.stationLine);
 
     this.updateShape();
+  }
+
+  private createPlatformShapes(station: StationLike, width: number): Konva.Group {
+    const platforms = station.platforms;
+    const platformPositions = getPlatformPositions(platforms);
+    const platformShapes: Konva.Shape[] = [];
+    for (let platformIndex = 0; platformIndex < platforms.length; platformIndex++) {
+      const platformPosition = platformPositions[platformIndex];
+      const platformLine = new Konva.Line({
+        points: [0, platformPosition, width, platformPosition],
+        stroke: 'black',
+        strokeWidth: 1,
+        id: generateKonvaId(),
+      });
+      platformShapes.push(platformLine);
+    }
+
+    const group = new Konva.Group({
+      id: generateKonvaId(),
+    });
+    group.add(...platformShapes);
+    return group;
   }
 
   onMouseover(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -56,6 +82,14 @@ export class StationLineKonva {
     const diagramPosition = this.context.viewStateManager.getStationPosition(this.station.stationId);
     assert(diagramPosition != null);
     this.stationLine.points([0, diagramPosition, virtualCanvasWidth, diagramPosition]);
+
+    if (this.context.viewStateManager.isStationExpanded(this.station.stationId)) {
+      this.platformGroup.remove();
+      this.platformGroup.y(diagramPosition);
+      this.context.topLayer.add(this.platformGroup);
+    } else {
+      this.platformGroup.remove();
+    }
   }
 }
 

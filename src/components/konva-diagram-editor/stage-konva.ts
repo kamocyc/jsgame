@@ -63,17 +63,17 @@ function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void): CrudTrain {
 }
 
 export class StageKonva {
-  private stage: Konva.Stage;
-  private layer: Konva.Layer;
-  private dragRectKonva: DragRectKonva;
-  private timeGridKonva: TimeGridKonva;
-  private stationLineCollectionKonva: StationLineCollectionKonva;
-  private trainCollectionKonva: TrainCollectionKonva;
-  private drawingTrainLineKonva: DrawingTrainLineKonva;
-  private operationCollectionKonva: OperationCollectionKonva;
-  private selectionGroupManager: SelectionGroupManager;
-  private diagramProps: DiagramProps;
-  private mouseEventManager: MouseEventManager;
+  private readonly stage: Konva.Stage;
+  private readonly layer: Konva.Layer;
+  private readonly dragRectKonva: DragRectKonva;
+  private readonly timeGridKonva: TimeGridKonva;
+  private readonly stationLineCollectionKonva: StationLineCollectionKonva;
+  private readonly trainCollectionKonva: TrainCollectionKonva;
+  private readonly drawingTrainLineKonva: DrawingTrainLineKonva;
+  private readonly operationCollectionKonva: OperationCollectionKonva;
+  private readonly selectionGroupManager: SelectionGroupManager;
+  private readonly diagramProps: DiagramProps;
+  private readonly mouseEventManager: MouseEventManager;
 
   private stagePosition = {
     x: 0,
@@ -86,9 +86,9 @@ export class StageKonva {
   constructor(
     minTime: number,
     diagramProps: DiagramProps,
-    private viewStateManager: ViewStateManager,
-    private container: HTMLDivElement,
-    private stationViewKonva: StationViewKonva
+    private readonly viewStateManager: ViewStateManager,
+    private readonly container: HTMLDivElement,
+    private readonly stationViewKonva: StationViewKonva
   ) {
     this.stagePosition.x = Math.min(
       0,
@@ -186,6 +186,10 @@ export class StageKonva {
       }
     });
 
+    this.stationViewKonva.setStationPositionChangeHandler(() => {
+      this.updateStationPositions();
+    });
+
     this.stationViewKonva.adjustStationPosition(this.stagePosition);
     this.updateShape();
   }
@@ -266,6 +270,15 @@ export class StageKonva {
     this.stage.scaleY(this.stagePosition.scale);
   }
 
+  updateStationPositions() {
+    this.selectionGroupManager.updateShape();
+    this.timeGridKonva.updateShape();
+    this.trainCollectionKonva.updateShape();
+    this.drawingTrainLineKonva.updateShape();
+    this.stationLineCollectionKonva.updateShape();
+    this.operationCollectionKonva.updateShape();
+  }
+
   private adjustStagePosition(stage: StagePosition, container: HTMLDivElement) {
     const containerWidth = container.clientWidth;
     const scale = stage.scale;
@@ -311,7 +324,12 @@ export class StageKonva {
 export class MainViewKonvaManager {
   public stageKonva: StageKonva;
 
-  constructor(container: HTMLDivElement, diagramProps: DiagramProps, stationViewKonva: StationViewKonva) {
+  constructor(
+    container: HTMLDivElement,
+    diagramProps: DiagramProps,
+    viewStateManger: ViewStateManager,
+    stationViewKonva: StationViewKonva
+  ) {
     const minTime = Math.min(
       ...(diagramProps.inboundTrains
         .map((train) => train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat())
@@ -323,13 +341,6 @@ export class MainViewKonvaManager {
         .flat()
         .filter((t) => t != null) as number[])
     );
-
-    const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
-    const stationPositions = diagramProps.stations.map((station, index) => ({
-      station,
-      diagramPosition: index * 50 + 50,
-    }));
-    const viewStateManger = new ViewStateManager(secondWidth, stationPositions);
 
     this.stageKonva = new StageKonva(minTime, diagramProps, viewStateManger, container, stationViewKonva);
 

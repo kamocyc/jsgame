@@ -1,5 +1,6 @@
 import Konva from 'konva';
 import { Train } from '../../model';
+import { getDirection } from '../../outlinedTimetableData';
 import { Polygon, sat } from '../../sat';
 import { DiagramKonvaContext, RectState, createPositionDiaTimeMap } from './konva-util';
 
@@ -45,11 +46,8 @@ export class TrainKonva {
   }
 
   private getPoints() {
-    return createPositionDiaTimeMap(
-      this.train.diaTimes,
-      this.context.viewStateManager.getSecondWidth(),
-      this.context.viewStateManager.getStationPositions()
-    )
+    const direction = getDirection(this.context.diagramProps.timetable, this.train.trainId);
+    return createPositionDiaTimeMap(this.train.diaTimes, this.context.viewStateManager, direction)
       .map(([_, __, position]) => position)
       .flat();
   }

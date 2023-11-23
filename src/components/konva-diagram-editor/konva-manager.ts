@@ -1,4 +1,5 @@
 import { DiagramProps } from './drawer-util';
+import { ViewStateManager } from './konva-util';
 import { MainViewKonvaManager } from './stage-konva';
 import { StationViewKonva } from './station-view-konva';
 
@@ -8,10 +9,11 @@ export class KonvaManager {
 
   private readonly stationCanvasWidth = 100;
 
-  constructor(stationContainer: HTMLDivElement, private diagramProps: DiagramProps, mainContainer: HTMLDivElement) {
-    this.stationViewKonva = new StationViewKonva(stationContainer, this.stationCanvasWidth, diagramProps.stations);
+  constructor(stationContainer: HTMLDivElement, diagramProps: DiagramProps, mainContainer: HTMLDivElement) {
+    const viewStateManger = new ViewStateManager(diagramProps.stations);
 
-    this.mainKonva = new MainViewKonvaManager(mainContainer, diagramProps, this.stationViewKonva);
+    this.stationViewKonva = new StationViewKonva(stationContainer, this.stationCanvasWidth, viewStateManger);
+    this.mainKonva = new MainViewKonvaManager(mainContainer, diagramProps, viewStateManger, this.stationViewKonva);
   }
 
   copySelections() {

@@ -33,8 +33,9 @@ import './timetable-editor.css';
 export function useOnClickOutside(ref: Ref<HTMLElement>, handler: () => void) {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      // if (ref.current && (event.target == null || !ref.current.contains(event.target as Node))) {
-      handler();
+      if (ref.current && (event.target == null || !ref.current.contains(event.target as Node))) {
+        handler();
+      }
       // } else {
       //   console.log('hit');
       // }

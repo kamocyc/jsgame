@@ -239,3 +239,7 @@ export function nn<T>(v: T | undefined | null): T {
   assert(v != null);
   return v;
 }
+
+export function upto(n: number): number[] {
+  return [...Array(n).keys()].map((i) => i);
+}

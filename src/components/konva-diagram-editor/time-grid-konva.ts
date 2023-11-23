@@ -31,6 +31,15 @@ export class TimeGridKonva {
     for (const text of this.timeGridTextGroup.children) {
       (text as Konva.Text).fontSize(20 / scale);
     }
+    assert(this.timeGrid.children != null);
+    for (const line of this.timeGrid.children) {
+      if (line instanceof Konva.Line) {
+        const stationPositions = this.context.viewStateManager.getStationPositions();
+
+        const [x1, y1, x2, _] = line.points();
+        line.points([x1, y1, x2, stationPositions[stationPositions.length - 1].diagramPosition + 50]);
+      }
+    }
   }
 
   createTimeGrid(layerHeight: number, secondWidth: number) {

@@ -1,9 +1,11 @@
 import Konva from 'konva';
-import { DiaTime } from '../../model';
+import { assert } from '../../common';
+import { DiaTime, StationLike, TimetableDirection } from '../../model';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps, StationPosition } from './drawer-util';
 import { MouseEventManager } from './mouse-event-manager';
 import { SelectionGroupManager } from './selection-group-manager';
+import { getPlatformPositions } from './station-view-konva';
 
 export const canvasHeight = 600;
 export const canvasWidth = 600; // dummy width (will be set by initializeKonva)
@@ -24,40 +26,99 @@ export function getPointerPosition(stage: Konva.Stage) {
 
 export function createPositionDiaTimeMap(
   diaTimes: DiaTime[],
-  secondWidth: number,
-  stationPositions: StationPosition[]
+  viewStateManager: ViewStateManager,
+  direction: TimetableDirection
 ) {
+  const secondWidth = viewStateManager.getSecondWidth();
+  const stationPositions = viewStateManager.getStationPositions();
+
   const positionDiaTimeMap = diaTimes.flatMap((diaTime) => {
     const stationPosition = stationPositions.find((station) => station.station.stationId === diaTime.station.stationId);
     if (!stationPosition) {
       throw new Error(`station ${diaTime.station.stationId} not found`);
     }
 
-    if (diaTime.departureTime == null && diaTime.arrivalTime == null) {
-      return [];
-    } else if (diaTime.departureTime != null && diaTime.arrivalTime == null) {
-      return [
-        [diaTime, 'departureTime', [diaTime.departureTime * secondWidth, stationPosition.diagramPosition]] as const,
-      ];
-    } else if (diaTime.departureTime == null && diaTime.arrivalTime != null) {
-      return [[diaTime, 'arrivalTime', [diaTime.arrivalTime * secondWidth, stationPosition.diagramPosition]] as const];
-    } else {
-      return [
-        [diaTime, 'arrivalTime', [diaTime.arrivalTime! * secondWidth, stationPosition.diagramPosition]] as const,
-        [diaTime, 'departureTime', [diaTime.departureTime! * secondWidth, stationPosition.diagramPosition]] as const,
-      ];
+    const isStationExpanded = viewStateManager.isStationExpanded(diaTime.station.stationId);
+
+    let [departureTime, arrivalTime] = [diaTime.departureTime, diaTime.arrivalTime];
+    if (departureTime === null && arrivalTime === null) return [];
+
+    if (departureTime === null) departureTime = arrivalTime;
+    if (arrivalTime === null) arrivalTime = departureTime;
+    assert(departureTime !== null && arrivalTime !== null);
+
+    const stationY = stationPosition.diagramPosition;
+    const positions = [];
+
+    if (isStationExpanded) {
+      const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
+      if (platformIndex !== -1) {
+        const platformPositions = getPlatformPositions(diaTime.station.platforms);
+        const platformPosition = platformPositions[platformIndex];
+        assert(platformPosition !== undefined);
+        const lastPosition = platformPositions[platformPositions.length - 1];
+
+        if (direction === 'Inbound') {
+          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY]] as const);
+          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY + platformPosition]] as const);
+          positions.push([
+            diaTime,
+            'departureTime',
+            [departureTime * secondWidth, stationY + platformPosition],
+          ] as const);
+          positions.push([diaTime, 'departureTime', [departureTime * secondWidth, stationY + lastPosition]] as const);
+        } else {
+          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY + lastPosition]] as const);
+          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY + platformPosition]] as const);
+          positions.push([
+            diaTime,
+            'departureTime',
+            [departureTime * secondWidth, stationY + platformPosition],
+          ] as const);
+          positions.push([diaTime, 'departureTime', [departureTime * secondWidth, stationY]] as const);
+        }
+        return positions;
+      }
     }
+    positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY]] as const);
+    positions.push([diaTime, 'departureTime', [departureTime * secondWidth, stationY]] as const);
+
+    return positions;
   });
   return positionDiaTimeMap;
 }
 
 export class ViewStateManager {
-  private stationPositions: StationPosition[];
-  private secondWidth: number;
+  private stationPositions: ReadonlyArray<StationPosition>;
+  private readonly isStationExpandedMap: Map<string, boolean>;
+  private readonly secondWidth: number;
 
-  constructor(secondWidth: number, stationPositions: StationPosition[]) {
+  constructor(stations: StationLike[]) {
+    const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
+    const stationPositions = this.createStationPositions(stations);
+
     this.stationPositions = stationPositions;
     this.secondWidth = secondWidth;
+
+    this.isStationExpandedMap = new Map();
+    for (const stationPosition of stationPositions) {
+      this.isStationExpandedMap.set(stationPosition.station.stationId, false);
+    }
+  }
+
+  private createStationPositions(stations: StationLike[]): StationPosition[] {
+    let position = 50;
+
+    const stationPositions: StationPosition[] = [];
+    for (const station of stations) {
+      stationPositions.push({ station, diagramPosition: position });
+      position += 50;
+      if (this.isStationExpandedMap && this.isStationExpandedMap.get(station.stationId)) {
+        position += 30 * station.platforms.length + 20;
+      }
+    }
+
+    return stationPositions;
   }
 
   getSecondWidth() {
@@ -75,6 +136,15 @@ export class ViewStateManager {
     if (stationPosition == null) return null;
 
     return stationPosition.diagramPosition;
+  }
+
+  setStationIsExpanded(stationId: string, isExpanded: boolean) {
+    this.isStationExpandedMap.set(stationId, isExpanded);
+    this.stationPositions = this.createStationPositions(this.stationPositions.map((s) => s.station));
+  }
+
+  isStationExpanded(stationId: string) {
+    return this.isStationExpandedMap.get(stationId) ?? false;
   }
 
   getPositionFromTime(time: number): number {

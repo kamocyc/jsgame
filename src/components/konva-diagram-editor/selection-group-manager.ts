@@ -3,12 +3,13 @@ import { KonvaEventObject } from 'konva/lib/Node';
 import { Shape, ShapeConfig } from 'konva/lib/Shape';
 import { Stage } from 'konva/lib/Stage';
 import { assert, nn, toStringFromSeconds } from '../../common';
-import { Point } from '../../model';
-import { HistoryItem } from '../../outlinedTimetableData';
+import { DiaTime, Point, Train } from '../../model';
+import { HistoryItem, getDirection } from '../../outlinedTimetableData';
 import { copyTrains, deleteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
 import { ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
 import { MouseEventManager } from './mouse-event-manager';
+import { getPlatformPositions } from './station-view-konva';
 import { TrainKonva } from './train-konva';
 
 interface DiaTimePartial {
@@ -231,6 +232,8 @@ export class SelectionGroupManager {
       for (const diaTime of train.diaTimes) {
         if (diaTime.departureTime != null) {
           this.setMarkerPosition(
+            train,
+            diaTime,
             diaTime.departureTime,
             diaTime.diaTimeId,
             diaTime.station.stationId,
@@ -240,6 +243,8 @@ export class SelectionGroupManager {
         }
         if (diaTime.arrivalTime != null) {
           this.setMarkerPosition(
+            train,
+            diaTime,
             diaTime.arrivalTime,
             diaTime.diaTimeId,
             diaTime.station.stationId,
@@ -252,6 +257,8 @@ export class SelectionGroupManager {
   }
 
   private setMarkerPosition(
+    train: Train,
+    diaTime: DiaTime,
     time: number,
     diaTimeId: string,
     stationId: string,
@@ -261,8 +268,23 @@ export class SelectionGroupManager {
     const timeLabel = nn(this.markers.get(diaTimeId + '-' + timeType))[1];
     timeLabel.text(toStringFromSeconds(nn(time)));
 
+    const direction = getDirection(this.diagramProps.timetable, train.trainId);
+
+    const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
+    assert(platformIndex !== -1);
+    const platformPositions = getPlatformPositions(diaTime.station.platforms);
+    const isStationExpanded = this.viewStateManager.isStationExpanded(diaTime.station.stationId);
+
     const positionX = this.viewStateManager.getPositionFromTime(nn(time));
-    const positionY = nn(this.viewStateManager.getStationPosition(nn(stationId)));
+    let positionY = nn(this.viewStateManager.getStationPosition(nn(stationId)));
+    if (isStationExpanded) {
+      if (
+        (direction === 'Outbound' && timeType === 'arrivalTime') ||
+        (direction === 'Inbound' && timeType === 'departureTime')
+      ) {
+        positionY += platformPositions[platformPositions.length - 1];
+      }
+    }
 
     const marker = nn(this.markers.get(diaTimeId + '-' + timeType))[0];
     marker.x(positionX - 5 / scale);

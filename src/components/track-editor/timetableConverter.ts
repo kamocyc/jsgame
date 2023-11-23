@@ -588,6 +588,7 @@ export function createOperations(
         errors.push({
           type: 'LastOperationIsNotInOut',
           trainId: operationTrains[operationTrains.length - 1].trainId,
+          platformId: null,
           diaTimeId: null,
           stationId: null,
         });
@@ -612,6 +613,7 @@ export function createOperations(
       errors.push({
         type: 'FirstOperationIsNotInOut',
         trainId: train.trainId,
+        platformId: null,
         diaTimeId: null,
         stationId: null,
       });

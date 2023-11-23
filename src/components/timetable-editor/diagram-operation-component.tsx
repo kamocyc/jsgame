@@ -1,5 +1,4 @@
-import { useState } from 'preact/hooks';
-import { toStringFromSeconds } from '../../common';
+import { toStringFromSeconds, upto } from '../../common';
 import { Operation, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonComponent';
@@ -17,31 +16,127 @@ interface DiagramOperationSubProps extends DiagramOperationProps {
   operation: Operation;
 }
 
-export function DiagramOperationComponent(props: DiagramOperationProps) {
-  const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null);
+type OperationTypeAll = { type: 'all'; operationCode: 'all' };
 
-  console.log(props.operations);
+export function DiagramOperationComponent(props: DiagramOperationProps) {
+  const operations = [{ type: 'all', operationCode: '一覧' } as Operation | OperationTypeAll].concat(props.operations);
+
   return (
-    <ListSettingCommonComponent<Operation>
-      datas={props.operations}
-      setDatas={(operations) => {
-        props.setUpdate();
-      }}
-      selectData={(operation) => {
-        setSelectedOperationId(operation.operationId);
-      }}
+    <ListSettingCommonComponent<Operation | OperationTypeAll>
+      datas={operations}
+      defaultData={operations[0]}
+      setDatas={() => {}}
+      selectData={() => {}}
       getSettingComponent={(operation) => {
-        return <DiagramOperationSubComponent {...props} operation={operation} />;
+        if ('type' in operation) {
+          return <DiagramOperationSubAllComponent operations={props.operations} />;
+        } else {
+          return <DiagramOperationSubComponent {...props} operation={operation} />;
+        }
       }}
       getDisplayName={(operation) => {
         return operation.operationCode;
       }}
-      excludeFromDatas={(operations, operation) => {
-        return operations.filter((o) => o.operationId !== operation.operationId);
-      }}
+      excludeFromDatas={null}
       getNewData={null}
       settingColumnWidth='700px'
     />
+  );
+}
+
+export function DiagramOperationSubAllComponent({ operations }: { operations: Operation[] }) {
+  const maxTrainCount = Math.max(...operations.map((operation) => operation.trains.length));
+  return (
+    <>
+      <table class='operation-table'>
+        <thead>
+          <tr>
+            <th>運用番号</th>
+            {upto(maxTrainCount).map((i) => (
+              <>
+                <th key={(i + 1).toString()} colSpan={2}>
+                  {i + 1}
+                </th>
+              </>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {operations.map((operation, i) => {
+            return (
+              <>
+                {/* 列車番号 */}
+                <tr key={i.toString() + '_01'}>
+                  <th rowSpan={3}>{operation.operationCode}</th>
+                  {upto(maxTrainCount).map((i) => {
+                    const train = operation.trains[i];
+                    if (train === undefined) {
+                      return (
+                        <>
+                          <td></td>
+                          <td></td>
+                        </>
+                      );
+                    } else {
+                      return (
+                        <>
+                          <td>{train.trainCode}</td>
+                          <td>{train.trainName}</td>
+                        </>
+                      );
+                    }
+                  })}
+                </tr>
+                {/* 始発、終了時刻 */}
+                <tr key={i.toString() + '_02'}>
+                  {upto(maxTrainCount).map((i) => {
+                    const train = operation.trains[i];
+                    if (train === undefined || train.diaTimes.length === 0) {
+                      return (
+                        <>
+                          <td></td>
+                          <td></td>
+                        </>
+                      );
+                    } else {
+                      const departureTime = train.diaTimes[0].departureTime;
+                      const arrivalTime = train.diaTimes[train.diaTimes.length - 1].arrivalTime;
+                      return (
+                        <>
+                          <td>{departureTime !== null ? toStringFromSeconds(departureTime) : ''}</td>
+                          <td>{arrivalTime !== null ? toStringFromSeconds(arrivalTime) : ''}</td>
+                        </>
+                      );
+                    }
+                  })}
+                </tr>
+                {/* 始発、終了駅 */}
+                <tr key={i.toString() + '_03'}>
+                  {upto(maxTrainCount).map((i) => {
+                    const train = operation.trains[i];
+                    if (train === undefined || train.diaTimes.length === 0) {
+                      return (
+                        <>
+                          <td></td>
+                          <td></td>
+                        </>
+                      );
+                    } else {
+                      return (
+                        <>
+                          <td>{train.diaTimes[0].station.stationName}</td>
+                          <td>{train.diaTimes[train.diaTimes.length - 1].station.stationName}</td>
+                        </>
+                      );
+                    }
+                  })}
+                </tr>
+              </>
+            );
+          })}
+        </tbody>
+      </table>
+    </>
   );
 }
 

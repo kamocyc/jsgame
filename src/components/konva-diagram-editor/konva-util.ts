@@ -28,7 +28,14 @@ export function createPositionDiaTimeMap(
   diaTimes: DiaTime[],
   viewStateManager: ViewStateManager,
   direction: TimetableDirection
-) {
+): { diaTime: DiaTime; type: 'arrivalTime' | 'departureTime'; x: number; y: number }[] {
+  const create = (diaTime: DiaTime, type: 'arrivalTime' | 'departureTime', x: number, y: number) => ({
+    diaTime,
+    type,
+    x,
+    y,
+  });
+
   const secondWidth = viewStateManager.getSecondWidth();
   const stationPositions = viewStateManager.getStationPositions();
 
@@ -48,7 +55,6 @@ export function createPositionDiaTimeMap(
     assert(departureTime !== null && arrivalTime !== null);
 
     const stationY = stationPosition.diagramPosition;
-    const positions = [];
 
     if (isStationExpanded) {
       const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
@@ -59,32 +65,29 @@ export function createPositionDiaTimeMap(
         const lastPosition = platformPositions[platformPositions.length - 1];
 
         if (direction === 'Inbound') {
-          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY]] as const);
-          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY + platformPosition]] as const);
-          positions.push([
-            diaTime,
-            'departureTime',
-            [departureTime * secondWidth, stationY + platformPosition],
-          ] as const);
-          positions.push([diaTime, 'departureTime', [departureTime * secondWidth, stationY + lastPosition]] as const);
+          return [
+            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY),
+            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition),
+            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition),
+            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + lastPosition),
+          ];
         } else {
-          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY + lastPosition]] as const);
-          positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY + platformPosition]] as const);
-          positions.push([
-            diaTime,
-            'departureTime',
-            [departureTime * secondWidth, stationY + platformPosition],
-          ] as const);
-          positions.push([diaTime, 'departureTime', [departureTime * secondWidth, stationY]] as const);
+          return [
+            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + lastPosition),
+            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition),
+            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition),
+            create(diaTime, 'departureTime', departureTime * secondWidth, stationY),
+          ];
         }
-        return positions;
       }
     }
-    positions.push([diaTime, 'arrivalTime', [arrivalTime * secondWidth, stationY]] as const);
-    positions.push([diaTime, 'departureTime', [departureTime * secondWidth, stationY]] as const);
 
-    return positions;
+    return [
+      create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY),
+      create(diaTime, 'departureTime', departureTime * secondWidth, stationY),
+    ];
   });
+
   return positionDiaTimeMap;
 }
 

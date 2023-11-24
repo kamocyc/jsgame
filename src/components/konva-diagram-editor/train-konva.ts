@@ -48,7 +48,7 @@ export class TrainKonva {
   private getPoints() {
     const direction = getDirection(this.context.diagramProps.timetable, this.train.trainId);
     return createPositionDiaTimeMap(this.train.diaTimes, this.context.viewStateManager, direction)
-      .map(([_, __, position]) => position)
+      .map(({ x, y }) => [x, y])
       .flat();
   }
 

@@ -145,11 +145,11 @@ export function getRandomElement<T>(arr: [T, ...T[]]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
 }
 
-export function fst<T>(arr: [T, ...T[]]): T {
+export function fst<T>(arr: T[]): T {
   return arr[0];
 }
 
-export function lst<T>(arr: [T, ...T[]]): T {
+export function lst<T>(arr: T[]): T {
   return arr[arr.length - 1] as T;
 }
 
@@ -167,8 +167,8 @@ export function getInterpolatedFunctionValue(funcDefinition: FuncDefinition, x: 
   if (funcDefinition.length === 0) return 0;
   if (funcDefinition.length === 1) return funcDefinition[0][1];
 
-  const xs: [number, ...number[]] = funcDefinition.map((p) => p[0]);
-  const ys: [number, ...number[]] = funcDefinition.map((p) => p[1]);
+  const xs: number[] = funcDefinition.map((p) => p[0]);
+  const ys: number[] = funcDefinition.map((p) => p[1]);
 
   const i = xs.findIndex((x0) => x0 > x);
   if (i === -1) {

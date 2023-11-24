@@ -27,17 +27,27 @@ export class OperationCollectionKonva {
         assert(prevTrain !== undefined);
 
         const direction = getDirection(this.diagramKonvaContext.diagramProps.timetable, currTrain.trainId);
-        const prevTrainTimeData_ = createPositionDiaTimeMap(
+
+        const prevTrainTimeDatas = createPositionDiaTimeMap(
           prevTrain.diaTimes,
           this.diagramKonvaContext.viewStateManager,
           direction
         );
-        const prevTrainTimeData = prevTrainTimeData_[prevTrainTimeData_.length - 1];
-        const currTrainTimeData = createPositionDiaTimeMap(
+
+        console.log({
+          n: prevTrainTimeDatas.length,
+          m: prevTrain.diaTimes.length,
+        });
+        const prevTrainTimeData =
+          prevTrain.diaTimes.length * 2 < prevTrainTimeDatas.length
+            ? prevTrainTimeDatas[prevTrainTimeDatas.length - 4]
+            : prevTrainTimeDatas[prevTrainTimeDatas.length - 1];
+        const currTrainTimeDatas = createPositionDiaTimeMap(
           currTrain.diaTimes,
           this.diagramKonvaContext.viewStateManager,
           direction
-        )[0];
+        );
+        const currTrainTimeData = currTrainTimeDatas[0];
 
         const stationIndex = this.diagramKonvaContext.diagramProps.stations.findIndex(
           (station) => station.stationId === currTrain.diaTimes[0].station.stationId
@@ -46,14 +56,14 @@ export class OperationCollectionKonva {
 
         const line = new Konva.Line({
           points: [
-            prevTrainTimeData[2][0],
-            prevTrainTimeData[2][1],
-            prevTrainTimeData[2][0],
-            isTop ? prevTrainTimeData[2][1] - 10 : prevTrainTimeData[2][1] + 10,
-            currTrainTimeData[2][0],
-            isTop ? currTrainTimeData[2][1] - 10 : currTrainTimeData[2][1] + 10,
-            currTrainTimeData[2][0],
-            currTrainTimeData[2][1],
+            prevTrainTimeData.x,
+            prevTrainTimeData.y,
+            prevTrainTimeData.x,
+            isTop ? prevTrainTimeData.y - 10 : prevTrainTimeData.y + 10,
+            currTrainTimeData.x,
+            isTop ? currTrainTimeData.y - 10 : currTrainTimeData.y + 10,
+            currTrainTimeData.x,
+            currTrainTimeData.y,
           ],
           stroke: 'orange',
           strokeWidth: 1,

@@ -362,16 +362,12 @@ export class OutlinedTimetableData {
     const errors: OperationError[] = [];
     for (const timetable of this.timetables) {
       const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(id));
-      const operationsAndErrors = createOperations(trains);
-      timetable.operations = operationsAndErrors.operations;
-      errors.push(...operationsAndErrors.errors);
-
       const platforms = timetable.stations.map((station) => station.platforms).flat();
-      const occupationErrors = checkStationTrackOccupation(trains, platforms);
+      const { errors: occupationErrors, operations } = checkStationTrackOccupation(trains, platforms);
       errors.push(...occupationErrors);
+      timetable.operations = operations;
     }
 
-    // console.log({ errors });
     return errors;
   }
 }

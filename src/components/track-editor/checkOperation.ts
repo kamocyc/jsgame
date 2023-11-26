@@ -1,16 +1,20 @@
-import { nn, toStringFromSeconds } from '../../common';
+import { assert, nn, toStringFromSeconds } from '../../common';
 import { OperationError } from '../../mapEditorModel';
-import { PlatformLike, Train } from '../../model';
+import { Operation, PlatformLike, Train, generateId } from '../../model';
+import { generateOperationCode } from './timetableConverter';
 
 type StationTimeItem = {
   arrivalOrDeparture: 'Arrival' | 'Departure';
   diaTimeId: string;
-  trainId: string;
+  train: Train;
   time: number;
 };
 type StationTimes = StationTimeItem[];
 
-export function checkStationTrackOccupation(trains: Train[], platforms: PlatformLike[]): OperationError[] {
+export function checkStationTrackOccupation(
+  trains: Train[],
+  platforms: PlatformLike[]
+): { errors: OperationError[]; operations: Operation[] } {
   const errors: OperationError[] = [];
 
   // プラットフォーム -> 出発、到着時刻の一覧を作る。
@@ -28,7 +32,7 @@ export function checkStationTrackOccupation(trains: Train[], platforms: Platform
           nn(platformTimesMap.get(diaTime.platform?.platformId)).push({
             arrivalOrDeparture: 'Arrival',
             diaTimeId: diaTime.diaTimeId,
-            trainId: train.trainId,
+            train: train,
             time: diaTime.arrivalTime,
           });
         }
@@ -41,7 +45,7 @@ export function checkStationTrackOccupation(trains: Train[], platforms: Platform
           nn(platformTimesMap.get(diaTime.platform?.platformId)).push({
             arrivalOrDeparture: 'Departure',
             diaTimeId: diaTime.diaTimeId,
-            trainId: train.trainId,
+            train: train,
             time: diaTime.departureTime,
           });
         }
@@ -71,7 +75,7 @@ export function checkStationTrackOccupation(trains: Train[], platforms: Platform
           stationId: platform.station.stationId,
           platform: platform.platformName,
           platformId: platform.platformId,
-          trainId: times[index].trainId,
+          train: times[index].train,
           diaTimeId: times[index].diaTimeId,
           second: times[index].time,
           time: toStringFromSeconds(times[index].time),
@@ -81,7 +85,7 @@ export function checkStationTrackOccupation(trains: Train[], platforms: Platform
           stationId: platform.station.stationId,
           platformId: platform.platformId,
           diaTimeId: times[index].diaTimeId,
-          trainId: times[index].trainId,
+          trainId: times[index].train.trainId,
         });
       }
 
@@ -91,7 +95,7 @@ export function checkStationTrackOccupation(trains: Train[], platforms: Platform
           stationId: platform.station.stationId,
           platformId: platform.platformId,
           diaTimeId: times[index].diaTimeId,
-          trainId: times[index].trainId,
+          trainId: times[index].train.trainId,
         });
       }
 
@@ -103,5 +107,83 @@ export function checkStationTrackOccupation(trains: Train[], platforms: Platform
     }
   }
 
-  return errors;
+  const operations = createOperations(trains, platformTimesMap);
+  return { errors, operations };
+}
+
+type OperationSimple = {
+  operationId: string;
+  trains: Train[];
+};
+
+export function createOperations(trains: Train[], platformTimesMap: Map<string, StationTimes>): Operation[] {
+  const platformIds = platformTimesMap.keys();
+  const trainIdToOperationId = new Map<string, string>();
+  const operations = new Map<string, OperationSimple>();
+  for (const train of trains) {
+    const operationId = generateId();
+    trainIdToOperationId.set(train.trainId, operationId);
+    operations.set(operationId, { operationId, trains: [train] });
+  }
+
+  const isFirstDiaTime = (train: Train, diaTimeId: string) => {
+    return train.diaTimes[0].diaTimeId === diaTimeId;
+  };
+  const isLastDiaTime = (train: Train, diaTimeId: string) => {
+    return train.diaTimes[train.diaTimes.length - 1].diaTimeId === diaTimeId;
+  };
+
+  const mergeOperations = (prevTrainId: string, currTrainId: string) => {
+    const operationIdOfPrevTrain = nn(trainIdToOperationId.get(prevTrainId));
+    const operationIdOfCurrTrain = nn(trainIdToOperationId.get(currTrainId));
+    assert(operationIdOfPrevTrain !== operationIdOfCurrTrain);
+    const prevOperationTrains = nn(operations.get(operationIdOfPrevTrain)).trains;
+    const currOperationTrains = nn(operations.get(operationIdOfCurrTrain)).trains;
+
+    const mergedOperations = [...prevOperationTrains, ...currOperationTrains];
+    for (const train of mergedOperations) {
+      trainIdToOperationId.set(train.trainId, operationIdOfPrevTrain);
+    }
+    operations.set(operationIdOfPrevTrain, {
+      operationId: operationIdOfPrevTrain,
+      trains: mergedOperations,
+    });
+
+    operations.delete(operationIdOfCurrTrain);
+  };
+
+  for (const platformId of platformIds) {
+    const times = nn(platformTimesMap.get(platformId));
+
+    if (times.length <= 1) {
+      continue;
+    }
+
+    // 接続する列車のoperationをマージする。
+    let prevTrain = times[0].train;
+    for (let index = 1; index < times.length; index++) {
+      if (prevTrain.trainId !== times[index].train.trainId) {
+        if (
+          times[index - 1].arrivalOrDeparture === 'Arrival' &&
+          times[index].arrivalOrDeparture === 'Departure' &&
+          isLastDiaTime(prevTrain, times[index - 1].diaTimeId) &&
+          isFirstDiaTime(times[index].train, times[index].diaTimeId)
+        ) {
+          mergeOperations(prevTrain.trainId, times[index].train.trainId);
+        }
+      }
+
+      prevTrain = times[index].train;
+    }
+  }
+
+  const result: Operation[] = [];
+  for (const operation of operations.values()) {
+    result.push({
+      operationId: operation.operationId,
+      operationCode: generateOperationCode(result),
+      trains: operation.trains,
+    });
+  }
+  return result;
 }

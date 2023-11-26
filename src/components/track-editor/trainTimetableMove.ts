@@ -1,4 +1,4 @@
-import { assert, nn } from '../../common.js';
+import { assert, fst, lst, nn } from '../../common.js';
 import { DetailedTimetable, DiaTime, Operation, Point, Track, Train, generateId } from '../../model.js';
 import {
   getDistance,
@@ -10,7 +10,15 @@ import {
   isTrainOutTrack,
 } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
-import { ITrainMove, PlacedTrain, TrainMoveProps, getMinTimetableTime, getStopPosition } from './trainMoveBase.js';
+import {
+  ITrainMove,
+  PlacedTrain,
+  TrainMoveProps,
+  getFirstTimeOfTrain,
+  getLastTimeOfTrain,
+  getMinTimetableTime,
+  getStopPosition,
+} from './trainMoveBase.js';
 
 function getNextTrain(operation: Operation, currentTrainId: string): Train | null {
   const index = operation.trains.findIndex((train) => train.trainId === currentTrainId);
@@ -248,13 +256,14 @@ export class TrainTimetableMove implements ITrainMove {
       const firstDiaTime = firstTrain.diaTimes[0];
       const nextDiaTime = firstTrain.diaTimes[1];
       if (
-        operation.firstOperation.operationTime <= props.globalTimeManager.globalTime &&
-        operation.lastOperation.operationTime >= props.globalTimeManager.globalTime &&
+        getFirstTimeOfTrain(fst(operation.trains)) <= props.globalTimeManager.globalTime &&
+        getLastTimeOfTrain(lst(operation.trains)) >= props.globalTimeManager.globalTime &&
         !placedTrains.some((placedTrain) => placedTrain.trainId === firstTrain.trainId) &&
         (nextDiaTime.arrivalTime != null || nextDiaTime.departureTime != null) &&
         (nextDiaTime.arrivalTime ?? nextDiaTime.departureTime)! >= props.globalTimeManager.globalTime
       ) {
-        const track = props.tracks.find((t) => t.trackId === operation.firstOperation.trackId);
+        const operationTrackId = fst(fst(operation.trains).diaTimes).trackId;
+        const track = props.tracks.find((t) => t.trackId === operationTrackId);
         assert(track != null);
 
         const existingPlacedTrain = placedTrains.find(

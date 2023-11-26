@@ -25,7 +25,7 @@ export class StationLineKonva {
     this.stationLine.on('click', this.onClick.bind(this));
 
     this.platformGroup = this.createPlatformShapes(this.station, virtualCanvasWidth);
-
+    this.context.topLayer.add(this.platformGroup);
     this.context.topLayer.add(this.stationLine);
 
     this.updateShape();
@@ -56,6 +56,7 @@ export class StationLineKonva {
 
     const group = new Konva.Group({
       id: generateKonvaId(),
+      visible: false,
     });
     group.add(...platformShapes);
     return group;
@@ -92,11 +93,10 @@ export class StationLineKonva {
     this.stationLine.points([0, diagramPosition, virtualCanvasWidth, diagramPosition]);
 
     if (this.context.viewStateManager.isStationExpanded(this.station.stationId)) {
-      this.platformGroup.remove();
       this.platformGroup.y(diagramPosition);
-      this.context.topLayer.add(this.platformGroup);
+      this.platformGroup.visible(true);
     } else {
-      this.platformGroup.remove();
+      this.platformGroup.visible(false);
     }
   }
 }

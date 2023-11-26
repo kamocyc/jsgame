@@ -15,7 +15,6 @@ export class OperationCollectionKonva {
   }
 
   updateShape() {
-    console.log('updateShape (operation-konva.ts)');
     const operations = this.diagramKonvaContext.diagramProps.timetable.operations;
     if (operations.length === 0) return;
 

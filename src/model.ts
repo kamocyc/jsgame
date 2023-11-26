@@ -205,8 +205,6 @@ export interface Operation {
   operationId: string;
   operationCode: string;
   trains: Train[];
-  firstOperation: InOutOperation;
-  lastOperation: InOutOperation;
 }
 
 export interface PlatformTTItem {

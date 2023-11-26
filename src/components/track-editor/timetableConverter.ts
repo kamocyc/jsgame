@@ -502,7 +502,7 @@ export function getReasonOfNotConnected(train1: Train, train2: Train): string[] 
   return reasons;
 }
 
-function generateOperationCode(operations: Operation[]) {
+export function generateOperationCode(operations: Operation[]) {
   const operationCodes = operations.map((o) => o.operationCode);
   for (let i = 1; i < 1000; i++) {
     const operationCode = 'O' + i.toString().padStart(3, '0');
@@ -599,9 +599,6 @@ export function createOperations(
         operationId: generateId(),
         operationCode: generateOperationCode(operations),
         trains: operationTrains,
-        firstOperation: train.firstStationOperation!,
-        // S-TODO:
-        lastOperation: lastOperation,
       };
 
       operations.push(operation);

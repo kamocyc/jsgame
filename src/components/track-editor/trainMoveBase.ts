@@ -1,3 +1,4 @@
+import { fst, nn } from '../../common.js';
 import { ArrivalAndDepartureStatus, DetailedTimetable, Operation, Point, Track, Train } from '../../model.js';
 import { getDistance, getMidPoint, getRadian } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
@@ -81,8 +82,18 @@ export function shouldStopTrain(train: PlacedTrain): false | Point {
 const TimeActionMode: 'Just' | 'After' = 'After';
 const StartIfNoTimetable = true;
 
+export function getFirstTimeOfTrain(train: Train) {
+  return nn(train.diaTimes[0].arrivalTime ?? train.diaTimes[0].departureTime);
+}
+
+export function getLastTimeOfTrain(train: Train) {
+  return nn(
+    train.diaTimes[train.diaTimes.length - 1].departureTime ?? train.diaTimes[train.diaTimes.length - 1].arrivalTime
+  );
+}
+
 export function getMinTimetableTime(timetable: DetailedTimetable): number {
-  const minTimetableTime = Math.min(...timetable.operations.map((o) => o.firstOperation.operationTime - 60));
+  const minTimetableTime = Math.min(...timetable.operations.map((o) => getFirstTimeOfTrain(fst(o.trains)) - 60));
   return minTimetableTime;
 }
 

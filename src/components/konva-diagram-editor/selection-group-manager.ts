@@ -453,7 +453,12 @@ export class SelectionGroupManager {
     ) {
       marker.y(positionY + lastLinePosition - 5 / scale);
       timeLabel.y(positionY + lastLinePosition + 5 / scale);
+    } else {
+      marker.y(positionY - 5 / scale);
+      timeLabel.y(positionY + 5 / scale);
+    }
 
+    if (isStationExpanded) {
       // ホームの位置
       const markerPlatform = nn(this.markers.get(diaTimeId + '-' + timeType)).squarePlatform;
       if (markerPlatform !== null) {
@@ -464,9 +469,6 @@ export class SelectionGroupManager {
         markerPlatform.width(10 / scale);
         markerPlatform.height(10 / scale);
       }
-    } else {
-      marker.y(positionY - 5 / scale);
-      timeLabel.y(positionY + 5 / scale);
     }
 
     timeLabel.x(positionX - 30 / scale);

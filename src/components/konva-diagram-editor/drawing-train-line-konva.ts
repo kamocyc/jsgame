@@ -5,22 +5,25 @@ import { DiagramKonvaContext, generateKonvaId } from './konva-util';
 import { TrainCollectionKonva } from './train-collection-konva';
 
 export class DrawingTrainLineKonva {
-  private drawingTrainLine!: Konva.Line;
+  private drawingTrainLine: Konva.Line;
 
   private drawingLineTimes: { station: StationLike; time: number }[] = [];
   private isDrawing: boolean = false;
 
   private tempDrawingLineTime: { station: StationLike; time: number } | null = null;
 
-  constructor(private context: DiagramKonvaContext, private trainCollectionKonva: TrainCollectionKonva) {}
-
-  createShape() {
+  constructor(private context: DiagramKonvaContext, private trainCollectionKonva: TrainCollectionKonva) {
     this.drawingTrainLine = new Konva.Line({
       stroke: 'red',
       strokeWidth: 1,
-      hitFunc: function (context, shape) {},
+      hitFunc: () => {},
       id: generateKonvaId(),
     });
+  }
+
+  moveShapesToTop() {
+    // この時点ではまだ登録されてない
+    // this.drawingTrainLine.moveToTop();
   }
 
   startDrawing(station: StationLike, newTime: number) {

@@ -243,3 +243,14 @@ export function nn<T>(v: T | undefined | null): T {
 export function upto(n: number): number[] {
   return [...Array(n).keys()].map((i) => i);
 }
+
+export function toMap<T>(arr: T[], key: (v: T) => string | undefined): Map<string, T> {
+  const map = new Map<string, T>();
+  for (const v of arr) {
+    const k = key(v);
+    if (k !== undefined) {
+      map.set(k, v);
+    }
+  }
+  return map;
+}

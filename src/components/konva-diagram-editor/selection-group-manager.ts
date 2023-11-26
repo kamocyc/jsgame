@@ -10,6 +10,7 @@ import { DiagramProps } from './drawer-util';
 import { ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
 import { MouseEventManager } from './mouse-event-manager';
 import { getPlatformPositions } from './station-view-konva';
+import { TrainCollectionKonva } from './train-collection-konva';
 import { TrainKonva } from './train-konva';
 
 interface DiaTimePartial {
@@ -270,16 +271,25 @@ function getKey(train: Train, diaTime: DiaTime, timeType: 'arrivalTime' | 'depar
   return `timeBox-${train.trainId}-${diaTime.diaTimeId}-${isPlatform ? 'platform' : 'station'}-${timeType}`;
 }
 
+type MakerShapeBag = {
+  square: Konva.Rect;
+  squarePlatform: Konva.Rect | null;
+  timeText: Konva.Text;
+  warningText: Konva.Text;
+};
+
 /**
  * オブジェクトの初期化順序が重なり順序になるため、createShapeを初期化時に実行する必要がある
  */
 export class SelectionGroupManager {
-  private selectionGroup!: Konva.Group;
-  private markerGroup!: Konva.Group;
-  private markers: Map<string, { square: Konva.Rect; squarePlatform: Konva.Rect | null; text: Konva.Text }> = new Map();
+  private selectionGroup: Konva.Group;
+  private markerGroup: Konva.Group;
+  private markers: Map<string, MakerShapeBag> = new Map();
   private dragStartPoint: Point | null = null;
   private currentPosition: Point | null = null;
-  private trainDragManager!: TrainDragManager;
+  private trainDragManager: TrainDragManager;
+  private warningLabelGroup: Konva.Group;
+  private trainCollectionKonva: TrainCollectionKonva | undefined;
 
   constructor(
     private layer: Konva.Layer,
@@ -287,9 +297,7 @@ export class SelectionGroupManager {
     private diagramProps: DiagramProps,
     private mouseEventManager: MouseEventManager,
     private stageKonva: { scale: number }
-  ) {}
-
-  createShapes() {
+  ) {
     this.selectionGroup = new Konva.Group({ id: generateKonvaId() });
     this.mouseEventManager.registerDragStartHandler(this.selectionGroup.id(), this.onDragStart.bind(this));
     this.mouseEventManager.registerDragMoveHandler(this.selectionGroup.id(), this.onDragMove.bind(this));
@@ -301,10 +309,23 @@ export class SelectionGroupManager {
       id: generateKonvaId(),
     });
 
+    this.warningLabelGroup = new Konva.Group({
+      id: generateKonvaId(),
+    });
     this.layer.add(this.selectionGroup);
     this.layer.add(this.markerGroup);
+    this.layer.add(this.warningLabelGroup);
 
     this.updateShape();
+  }
+
+  setTrainCollectionKonva(trainCollectionKonva: TrainCollectionKonva) {
+    this.trainCollectionKonva = trainCollectionKonva;
+  }
+  
+  moveShapesToTop() {
+    this.selectionGroup.moveToTop();
+    this.markerGroup.moveToTop();
   }
 
   private createMarkers() {
@@ -324,16 +345,30 @@ export class SelectionGroupManager {
           this.mouseEventManager.registerDragStartHandler(square.id(), this.onDragStart.bind(this));
           this.mouseEventManager.registerDragMoveHandler(square.id(), this.onDragMove.bind(this));
           this.mouseEventManager.registerDragEndHandler(square.id(), this.onDragEnd.bind(this));
+          this.mouseEventManager.registerClickHandler(square.id(), this.onClickTimeMarker.bind(this));
 
-          const text = new Konva.Text({
+          const timeText = new Konva.Text({
             fill: 'black',
             hitFunc: () => {},
             id: generateKonvaId(),
           });
-          this.markerGroup.add(square);
-          this.markerGroup.add(text);
 
-          this.markers.set(diaTime.diaTimeId + '-' + timeType, { square, squarePlatform: null, text });
+          const warningText = new Konva.Text({
+            fill: '#ff9000',
+            hitFunc: () => {},
+            id: generateKonvaId(),
+          });
+
+          this.markerGroup.add(square);
+          this.markerGroup.add(timeText);
+          this.markerGroup.add(warningText);
+
+          this.markers.set(diaTime.diaTimeId + '-' + timeType, {
+            square,
+            squarePlatform: null,
+            timeText: timeText,
+            warningText,
+          });
         }
       }
     }
@@ -342,6 +377,22 @@ export class SelectionGroupManager {
 
     // TODO: 本来は定期的に呼び出すべき
     // this.mouseEventManager.deleteDestroyedShapes();
+  }
+
+  private onClickTimeMarker() {}
+
+  private updatePlatformMakerMap(
+    makersMap: Map<string, MakerShapeBag>,
+    key: string,
+    squarePlatform: Konva.Rect | null
+  ) {
+    const oldMarkers = nn(makersMap.get(key));
+    makersMap.set(key, {
+      square: oldMarkers.square,
+      squarePlatform,
+      timeText: oldMarkers.timeText,
+      warningText: oldMarkers.warningText,
+    });
   }
 
   updateIsExpanded() {
@@ -363,12 +414,7 @@ export class SelectionGroupManager {
             this.mouseEventManager.registerDragEndHandler(squarePlatform.id(), this.onDragEnd.bind(this));
             this.markerGroup.add(squarePlatform);
 
-            const oldMarkers = nn(this.markers.get(diaTime.diaTimeId + '-' + timeType));
-            this.markers.set(diaTime.diaTimeId + '-' + timeType, {
-              square: oldMarkers.square,
-              squarePlatform,
-              text: oldMarkers.text,
-            });
+            this.updatePlatformMakerMap(this.markers, diaTime.diaTimeId + '-' + timeType, squarePlatform);
           } else if (
             !isPlatformExpanded &&
             this.markerGroup.find('#' + getKey(train, diaTime, timeType, true)).length > 0
@@ -376,20 +422,39 @@ export class SelectionGroupManager {
             squarePlatform = nn(this.markerGroup.find('#' + getKey(train, diaTime, timeType, true))[0]) as Konva.Rect;
             squarePlatform.destroy();
 
-            const oldMarkers = nn(this.markers.get(diaTime.diaTimeId + '-' + timeType));
-            this.markers.set(diaTime.diaTimeId + '-' + timeType, {
-              square: oldMarkers.square,
-              squarePlatform: null,
-              text: oldMarkers.text,
-            });
+            this.updatePlatformMakerMap(this.markers, diaTime.diaTimeId + '-' + timeType, null);
           }
         }
       }
     }
   }
 
+  private updateWarnings(scale: number) {
+    this.warningLabelGroup.destroyChildren();
+
+    for (const error of this.diagramProps.errors) {
+      const trainKonva = this.trainCollectionKonva!.getTrainKonva(error.trainId);
+      if (trainKonva !== undefined) {
+        const diaTime = trainKonva.getTrain().diaTimes.find((d) => d.diaTimeId === error.diaTimeId);
+        error.
+        const position = this.getTextLabelPosition(train, diaTime, , error.stationId, scale, );
+        const warningLabel = new Konva.Text({
+          text: error.type,
+          x: position.x,
+          y: position.y - 20 / scale,
+          fill: '#ff9000',
+          hitFunc: () => {},
+          id: generateKonvaId(),
+        });
+        this.warningLabelGroup.add(warningLabel);
+      }
+    }
+  }
+
   updateShape() {
     const scale = this.stageKonva.scale;
+
+    this.updateWarnings(scale);
 
     for (const selection of this.trainDragManager.selections) {
       selection.updateShape();
@@ -441,6 +506,36 @@ export class SelectionGroupManager {
     }
   }
 
+  private getTextLabelPosition(
+    train: Train,
+    diaTime: DiaTime,
+    time: number,
+    stationId: string,
+    scale: number,
+    timeType: 'departureTime' | 'arrivalTime'
+  ) {
+    const direction = getDirection(this.diagramProps.timetable, train.trainId);
+
+    const [_platformPositions, lastLinePosition] = getPlatformPositions(diaTime.station.platforms);
+    const isStationExpanded = this.viewStateManager.isStationExpanded(diaTime.station.stationId);
+
+    const positionX = this.viewStateManager.getPositionFromTime(nn(time));
+    const positionY = nn(this.viewStateManager.getStationPosition(nn(stationId)));
+
+    const { x: timeOffsetX, y: timeOffsetY } = this.getTextMakerPositionOffset(timeType, direction);
+
+    const y =
+      isStationExpanded &&
+      ((direction === 'Outbound' && timeType === 'arrivalTime') ||
+        (direction === 'Inbound' && timeType === 'departureTime'))
+        ? positionY + lastLinePosition + timeOffsetY / scale
+        : positionY + timeOffsetY / scale;
+
+    const x = positionX - ((20 / 2) * 4) / scale + timeOffsetX / scale;
+
+    return { x, y };
+  }
+
   private setMarkerPosition(
     train: Train,
     diaTime: DiaTime,
@@ -454,7 +549,7 @@ export class SelectionGroupManager {
 
     const markersShapes = nn(this.markers.get(diaTimeId + '-' + timeType));
 
-    const timeLabel = markersShapes.text;
+    const timeLabel = markersShapes.timeText;
     timeLabel.text(toStringFromSeconds(nn(time)));
 
     const direction = getDirection(this.diagramProps.timetable, train.trainId);

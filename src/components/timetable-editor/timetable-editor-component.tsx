@@ -352,6 +352,7 @@ export function TimetableEditorComponent({
                     clipboard={clipboard}
                     setClipboard={setClipboard}
                     railwayLine={railwayLine}
+                    errors={errors}
                     getTrainsWithDirections={() => {
                       return getTrainsWithDirections();
                     }}

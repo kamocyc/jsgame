@@ -22,6 +22,10 @@ export class TrainKonva {
     this.updateShape();
   }
 
+  moveShapesToTop() {
+    this.trainLine.moveToTop();
+  }
+
   getTrainLine() {
     return this.trainLine;
   }

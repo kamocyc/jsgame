@@ -8,7 +8,11 @@ export class TrainCollectionKonva {
   private trainKonvas: Map<string, TrainKonva> = new Map();
 
   constructor(private context: DiagramKonvaContext) {
-    // グリッドの後に描画するために、updateShapeは後で呼ぶ想定
+    this.updateShape();
+  }
+
+  getTrainKonva(trainId: string) {
+    return this.trainKonvas.get(trainId);
   }
 
   updateShape() {
@@ -33,6 +37,12 @@ export class TrainCollectionKonva {
 
       trainKonva.destroy();
       this.trainKonvas.delete(trainId);
+    }
+  }
+
+  moveShapesToTop() {
+    for (const trainKonva of this.trainKonvas.values()) {
+      trainKonva.moveShapesToTop();
     }
   }
 

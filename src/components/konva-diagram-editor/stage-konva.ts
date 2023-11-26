@@ -138,9 +138,10 @@ export class StageKonva {
     this.drawingTrainLineKonva = new DrawingTrainLineKonva(context, this.trainCollectionKonva);
     this.stationLineCollectionKonva = new StationLineCollectionKonva(context, this.drawingTrainLineKonva);
     this.operationCollectionKonva = new OperationCollectionKonva(context);
-    this.trainCollectionKonva.updateShape();
-    this.drawingTrainLineKonva.createShape();
-    this.selectionGroupManager.createShapes();
+    this.selectionGroupManager.setTrainCollectionKonva(this.trainCollectionKonva);
+    this.trainCollectionKonva.moveShapesToTop;
+    this.drawingTrainLineKonva.moveShapesToTop();
+    this.selectionGroupManager.moveShapesToTop();
 
     // stageに対するイベント
     this.stage.on('wheel', this.onWheel.bind(this));

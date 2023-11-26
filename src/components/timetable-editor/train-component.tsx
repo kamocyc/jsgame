@@ -1,5 +1,5 @@
 import { StateUpdater, useState } from 'preact/hooks';
-import { assert } from '../../common';
+import { assert, toMap } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import {
   AppClipboard,
@@ -136,12 +136,7 @@ function TrainListItemComponent({
   errors: OperationError[];
   updateTrain: (historyItem: HistoryItem) => void;
 }) {
-  const errorMap = new Map<string, OperationError>();
-  for (const error of errors) {
-    if (error.diaTimeId) {
-      errorMap.set(error.diaTimeId, error);
-    }
-  }
+  const errorMap = toMap(errors, (error) => error.diaTimeId ?? undefined);
 
   return (
     <div

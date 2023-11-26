@@ -41,7 +41,13 @@ export class TrainKonva {
 
   setSelectTrainLine(isSelected: boolean) {
     this.isSelected = isSelected;
-    this.updateShape();
+
+    const stroke = this.isSelected ? 'red' : this.train.trainType?.trainTypeColor ?? '#5a5a5a';
+    this.trainLine.stroke(stroke);
+
+    if (this.isSelected) {
+      this.trainLine.moveToTop();
+    }
   }
 
   private getPoints() {
@@ -55,7 +61,7 @@ export class TrainKonva {
     // 列車線（スジ）を描画
     const positions = this.getPoints();
     this.trainLine.points(positions);
-    const stroke = this.isSelected ? 'red' : this.train.trainType?.trainTypeColor ?? 'black';
+    const stroke = this.isSelected ? 'red' : this.train.trainType?.trainTypeColor ?? '#5a5a5a';
     this.trainLine.stroke(stroke);
   }
 

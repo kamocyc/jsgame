@@ -135,7 +135,7 @@ export class StageKonva {
     );
     this.trainCollectionKonva = new TrainCollectionKonva(context);
     this.timeGridKonva = new TimeGridKonva(context);
-    this.drawingTrainLineKonva = new DrawingTrainLineKonva(context, this.trainCollectionKonva.commitDrawingLine);
+    this.drawingTrainLineKonva = new DrawingTrainLineKonva(context, this.trainCollectionKonva);
     this.stationLineCollectionKonva = new StationLineCollectionKonva(context, this.drawingTrainLineKonva);
     this.operationCollectionKonva = new OperationCollectionKonva(context);
     this.trainCollectionKonva.updateShape();

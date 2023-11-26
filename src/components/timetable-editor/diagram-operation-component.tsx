@@ -66,14 +66,14 @@ export function DiagramOperationSubAllComponent({ operations }: { operations: Op
             return (
               <>
                 {/* 列車番号 */}
-                <tr key={i.toString() + '_01'}>
+                <tr class='operation-row' key={i.toString() + '_01'}>
                   <th rowSpan={3}>{operation.operationCode}</th>
                   {upto(maxTrainCount).map((i) => {
                     const train = operation.trains[i];
                     if (train === undefined) {
                       return (
                         <>
-                          <td></td>
+                          <td style={{ height: '19.1px' }}></td>
                           <td></td>
                         </>
                       );
@@ -88,7 +88,7 @@ export function DiagramOperationSubAllComponent({ operations }: { operations: Op
                   })}
                 </tr>
                 {/* 始発、終了時刻 */}
-                <tr key={i.toString() + '_02'}>
+                <tr class='operation-row' key={i.toString() + '_02'}>
                   {upto(maxTrainCount).map((i) => {
                     const train = operation.trains[i];
                     if (train === undefined || train.diaTimes.length === 0) {
@@ -111,7 +111,7 @@ export function DiagramOperationSubAllComponent({ operations }: { operations: Op
                   })}
                 </tr>
                 {/* 始発、終了駅 */}
-                <tr key={i.toString() + '_03'}>
+                <tr class='operation-row' key={i.toString() + '_03'}>
                   {upto(maxTrainCount).map((i) => {
                     const train = operation.trains[i];
                     if (train === undefined || train.diaTimes.length === 0) {

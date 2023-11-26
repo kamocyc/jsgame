@@ -116,7 +116,7 @@ type OperationSimple = {
   trains: Train[];
 };
 
-export function createOperations(trains: Train[], platformTimesMap: Map<string, StationTimes>): Operation[] {
+function createOperations(trains: Train[], platformTimesMap: Map<string, StationTimes>): Operation[] {
   const platformIds = platformTimesMap.keys();
   const trainIdToOperationId = new Map<string, string>();
   const operations = new Map<string, OperationSimple>();

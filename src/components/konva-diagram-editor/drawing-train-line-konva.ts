@@ -2,6 +2,7 @@ import Konva from 'konva';
 import { assert } from '../../common';
 import { StationLike } from '../../model';
 import { DiagramKonvaContext, generateKonvaId } from './konva-util';
+import { TrainCollectionKonva } from './train-collection-konva';
 
 export class DrawingTrainLineKonva {
   private drawingTrainLine!: Konva.Line;
@@ -11,15 +12,7 @@ export class DrawingTrainLineKonva {
 
   private tempDrawingLineTime: { station: StationLike; time: number } | null = null;
 
-  constructor(
-    private context: DiagramKonvaContext,
-    private commitDrawingLineToTrainCollection: (
-      times: {
-        station: StationLike;
-        time: number;
-      }[]
-    ) => void
-  ) {}
+  constructor(private context: DiagramKonvaContext, private trainCollectionKonva: TrainCollectionKonva) {}
 
   createShape() {
     this.drawingTrainLine = new Konva.Line({
@@ -92,7 +85,7 @@ export class DrawingTrainLineKonva {
 
   commitDrawingLine() {
     this.isDrawing = false;
-    this.commitDrawingLineToTrainCollection(this.drawingLineTimes);
+    this.trainCollectionKonva.commitDrawingLine(this.drawingLineTimes);
     this.drawingLineTimes = [];
     this.drawingTrainLine.remove();
 

@@ -59,8 +59,8 @@ export function TimetableEditorTableComponent({
         <div style={{ height: '24px' }}>列車番号</div>
         <div style={{ height: '24px' }}>列車名</div>
         <div style={{ height: '24px' }}>列車種別</div>
-        <div style={{ height: '24px' }}>始発駅作業</div>
-        <div style={{ height: '24px' }}>終着駅作業</div>
+        {/* <div style={{ height: '24px' }}>始発駅作業</div>
+        <div style={{ height: '24px' }}>終着駅作業</div> */}
         <StationListComponent
           {...{
             diaStations: stations,
@@ -77,8 +77,8 @@ export function TimetableEditorTableComponent({
         <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div>
-        <div style={{ height: '24px' }}></div>
-        <div style={{ height: '24px' }}></div>
+        {/* <div style={{ height: '24px' }}></div>
+        <div style={{ height: '24px' }}></div> */}
         <TrainListRowHeaderComponent diaStations={stations} />
       </div>
       <TrainListComponent

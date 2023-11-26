@@ -1,5 +1,4 @@
 import { fillMissingTimes } from './components/timetable-editor/timetable-util';
-import { createOperations } from './components/track-editor/timetableConverter';
 import { DiaTime, Platform, Station, StationLike, StationOperation, Train, TrainType, generateId } from './model';
 import { OutlinedTimetable } from './outlinedTimetableData';
 

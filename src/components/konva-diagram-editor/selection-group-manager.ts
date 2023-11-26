@@ -74,7 +74,7 @@ function getNewTime(
 
 function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewStateManager: ViewStateManager) {
   const stationPositions = viewStateManager.getStationPositions();
-  const stationLineWidth = 20;
+  const stationLineWidth = 16;
   const foundStations = stationPositions.map((station) => {
     const isPlatformExpanded = viewStateManager.isStationExpanded(station.station.stationId);
     const stationY = station.diagramPosition;
@@ -84,10 +84,10 @@ function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewSt
       if (stationY < y) {
         const [platformPositions, _] = getPlatformPositions(station.station.platforms);
 
-        const platformPositionIndex = platformPositions.findIndex((platformPosition) => {
+        const platformPositionIndex = platformPositions.findIndex((platformPosition, i) => {
           const platformY = station.diagramPosition + platformPosition;
-          const platformYStart = platformY - (stationLineWidth * stageKonva.scale) / 2;
-          const platformYEnd = platformY + (stationLineWidth * stageKonva.scale) / 2;
+          const platformYStart = platformY - stationLineWidth / 2;
+          const platformYEnd = platformY + stationLineWidth / 2;
           return platformYStart <= y && y <= platformYEnd;
         });
         if (platformPositionIndex !== -1) {
@@ -100,8 +100,8 @@ function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewSt
       }
     } else {
       // 駅
-      const stationYStart = stationY - (stationLineWidth * stageKonva.scale) / 2;
-      const stationYEnd = stationY + (stationLineWidth * stageKonva.scale) / 2;
+      const stationYStart = stationY - stationLineWidth / 2;
+      const stationYEnd = stationY + stationLineWidth / 2;
       if (stationYStart <= y && y <= stationYEnd) {
         return { platform: null, station };
       } else {
@@ -327,7 +327,7 @@ export class SelectionGroupManager {
 
           const text = new Konva.Text({
             fill: 'black',
-            hitFunc: function (context, shape) {},
+            hitFunc: () => {},
             id: generateKonvaId(),
           });
           this.markerGroup.add(square);
@@ -422,6 +422,25 @@ export class SelectionGroupManager {
     }
   }
 
+  private getTextMakerPositionOffset(
+    timeType: 'arrivalTime' | 'departureTime',
+    direction: 'Inbound' | 'Outbound'
+  ): Point {
+    if (timeType === 'arrivalTime') {
+      if (direction === 'Inbound') {
+        return { x: -15, y: -22 };
+      } else {
+        return { x: -15, y: 5 };
+      }
+    } else {
+      if (direction === 'Inbound') {
+        return { x: 0, y: 5 };
+      } else {
+        return { x: 0, y: -22 };
+      }
+    }
+  }
+
   private setMarkerPosition(
     train: Train,
     diaTime: DiaTime,
@@ -431,7 +450,11 @@ export class SelectionGroupManager {
     scale: number,
     timeType: 'departureTime' | 'arrivalTime'
   ) {
-    const timeLabel = nn(this.markers.get(diaTimeId + '-' + timeType)).text;
+    this.markerGroup.moveToTop();
+
+    const markersShapes = nn(this.markers.get(diaTimeId + '-' + timeType));
+
+    const timeLabel = markersShapes.text;
     timeLabel.text(toStringFromSeconds(nn(time)));
 
     const direction = getDirection(this.diagramProps.timetable, train.trainId);
@@ -442,7 +465,9 @@ export class SelectionGroupManager {
     const positionX = this.viewStateManager.getPositionFromTime(nn(time));
     const positionY = nn(this.viewStateManager.getStationPosition(nn(stationId)));
 
-    const marker = nn(this.markers.get(diaTimeId + '-' + timeType)).square;
+    const { x: timeOffsetX, y: timeOffsetY } = this.getTextMakerPositionOffset(timeType, direction);
+
+    const marker = markersShapes.square;
     marker.x(positionX - 5 / scale);
     marker.width(10 / scale);
     marker.height(10 / scale);
@@ -452,15 +477,15 @@ export class SelectionGroupManager {
         (direction === 'Inbound' && timeType === 'departureTime'))
     ) {
       marker.y(positionY + lastLinePosition - 5 / scale);
-      timeLabel.y(positionY + lastLinePosition + 5 / scale);
+      timeLabel.y(positionY + lastLinePosition + timeOffsetY / scale);
     } else {
       marker.y(positionY - 5 / scale);
-      timeLabel.y(positionY + 5 / scale);
+      timeLabel.y(positionY + timeOffsetY / scale);
     }
 
     if (isStationExpanded) {
       // ホームの位置
-      const markerPlatform = nn(this.markers.get(diaTimeId + '-' + timeType)).squarePlatform;
+      const markerPlatform = markersShapes.squarePlatform;
       if (markerPlatform !== null) {
         const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
         assert(platformIndex !== -1);
@@ -471,7 +496,7 @@ export class SelectionGroupManager {
       }
     }
 
-    timeLabel.x(positionX - 30 / scale);
+    timeLabel.x(positionX - ((20 / 2) * timeLabel.text().length) / scale + timeOffsetX / scale);
     timeLabel.fontSize(20 / scale);
   }
 

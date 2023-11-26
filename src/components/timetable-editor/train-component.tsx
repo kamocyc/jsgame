@@ -448,10 +448,9 @@ export function TrainListComponent({
               ))}
             </select>
           </div>
-
+          {/* 
           <div style={{ height: '24px' }}>
-            {/* このあたり、自動的に作るようにしたい。 */}
-            {/* 始発駅作業 */}
+            {/* 始発駅作業 * /}
             <button
               onClick={() => {
                 setSettingData({
@@ -465,7 +464,7 @@ export function TrainListComponent({
             </button>
           </div>
           <div style={{ height: '24px' }}>
-            {/* 終着駅作業 */}
+            {/* 終着駅作業 * /}
             <button
               onClick={() => {
                 setSettingData({
@@ -477,7 +476,7 @@ export function TrainListComponent({
             >
               {showStationOperation(train.lastStationOperation, 'Last')}
             </button>
-          </div>
+          </div> */}
           <div style={{ display: 'flex', flexDirection: 'column' }} id={'dia-train-block-' + train.trainId}>
             {/* 時刻リスト */}
             {getDiaTimesOfStations(train, stations).map((diaTime) => (

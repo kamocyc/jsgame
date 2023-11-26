@@ -1,6 +1,5 @@
 import { assert } from './common';
 import { checkStationTrackOccupation } from './components/track-editor/checkOperation';
-import { createOperations } from './components/track-editor/timetableConverter';
 import { OperationError } from './mapEditorModel';
 import { Operation, StationLike, StationOperation, Train, TrainType, cloneTrain, generateId } from './model';
 
@@ -327,7 +326,10 @@ export class OutlinedTimetableData {
     timetable.outboundTrainIds = outboundTrains.map((train) => train.trainId);
     timetable.stations = timetable.stations.slice().reverse();
     timetable.inboundIsFirstHalf = !timetable.inboundIsFirstHalf;
-    timetable.operations = createOperations(trains).operations;
+    timetable.operations = checkStationTrackOccupation(
+      trains,
+      timetable.stations.map((s) => s.platforms).flat()
+    ).operations;
 
     this.trains.push(...trains);
     this.deleteNotUsedTrains();

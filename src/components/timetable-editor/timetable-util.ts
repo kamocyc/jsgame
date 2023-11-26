@@ -13,7 +13,7 @@ import {
   generateId,
 } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
-import { createOperations } from '../track-editor/timetableConverter';
+import { checkStationTrackOccupation } from '../track-editor/checkOperation';
 import './timetable-editor.css';
 
 export function getFirstOrLast(direction: TimetableDirection, inboundIsFirstHalf: boolean) {
@@ -176,7 +176,7 @@ export function getInitialTimetable(railwayLine: RailwayLine): [OutlinedTimetabl
     timetableId: generateId(),
     inboundTrainIds: inboundTrains.map((diaTime) => diaTime.trainId),
     outboundTrainIds: outboundTrains.map((diaTime) => diaTime.trainId),
-    operations: createOperations(trains).operations,
+    operations: checkStationTrackOccupation(trains, stations.map((s) => s.platforms).flat()).operations,
     railwayLineId: railwayLine.railwayLineId,
     stations: stations,
     trainTypes: getInitialTrainTypes(),

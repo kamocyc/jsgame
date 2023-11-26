@@ -15,7 +15,8 @@ export class OperationCollectionKonva {
   }
 
   updateShape() {
-    const operations = this.diagramKonvaContext.diagramProps.operations;
+    console.log('updateShape (operation-konva.ts)');
+    const operations = this.diagramKonvaContext.diagramProps.timetable.operations;
     if (operations.length === 0) return;
 
     this.operationGroup.destroyChildren();
@@ -38,33 +39,19 @@ export class OperationCollectionKonva {
           lst(prevTrain.diaTimes).station.stationId
         );
         const prevTrainTimeData = isLastStationExpanded
-          ? prevTrainTimeDatas[prevTrainTimeDatas.length - 4]
+          ? prevTrainTimeDatas[prevTrainTimeDatas.length - 1]
           : prevTrainTimeDatas[prevTrainTimeDatas.length - 1];
         const currTrainTimeDatas = createPositionDiaTimeMap(
           currTrain.diaTimes,
           this.diagramKonvaContext.viewStateManager,
           direction
         );
-        const currTrainTimeData = currTrainTimeDatas[0];
-
-        const stationIndex = this.diagramKonvaContext.diagramProps.stations.findIndex(
-          (station) => station.stationId === currTrain.diaTimes[0].station.stationId
-        );
-        const isTop = stationIndex === 0;
+        const currTrainTimeData = isLastStationExpanded ? currTrainTimeDatas[0] : currTrainTimeDatas[0];
 
         const line = new Konva.Line({
-          points: [
-            prevTrainTimeData.x,
-            prevTrainTimeData.y,
-            prevTrainTimeData.x,
-            isTop ? prevTrainTimeData.y - 10 : prevTrainTimeData.y + 10,
-            currTrainTimeData.x,
-            isTop ? currTrainTimeData.y - 10 : currTrainTimeData.y + 10,
-            currTrainTimeData.x,
-            currTrainTimeData.y,
-          ],
+          points: [prevTrainTimeData.x, prevTrainTimeData.y, currTrainTimeData.x, currTrainTimeData.y],
           stroke: 'orange',
-          strokeWidth: 1,
+          strokeWidth: 5,
           hitStrokeWidth: hitStrokeWidth,
           id: generateKonvaId(),
         });

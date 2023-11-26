@@ -1,5 +1,5 @@
 import { RailwayLine } from '../../mapEditorModel';
-import { AppClipboard, CrudTrain, Operation, StationLike, Train } from '../../model';
+import { AppClipboard, CrudTrain, StationLike, Train } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 
 export interface DiagramProps {
@@ -7,7 +7,6 @@ export interface DiagramProps {
   crudTrain: CrudTrain;
   inboundTrains: readonly Train[];
   outboundTrains: readonly Train[];
-  operations: Operation[];
   timetable: OutlinedTimetable;
   clipboard: AppClipboard;
   railwayLine: RailwayLine;

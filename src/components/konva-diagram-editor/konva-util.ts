@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import { assert } from '../../common';
+import { nn } from '../../common';
 import { DiaTime, StationLike, TimetableDirection } from '../../model';
 import { DragRectKonva } from './drag-rect-konva';
 import { DiagramProps, StationPosition } from './drawer-util';
@@ -42,7 +42,7 @@ export function createPositionDiaTimeMap(
   const secondWidth = viewStateManager.getSecondWidth();
   const stationPositions = viewStateManager.getStationPositions();
 
-  const positionDiaTimeMap = diaTimes.flatMap((diaTime) => {
+  const positionDiaTimeMap = diaTimes.flatMap((diaTime, diaTimeIndex) => {
     const stationPosition = stationPositions.find((station) => station.station.stationId === diaTime.station.stationId);
     if (!stationPosition) {
       throw new Error(`station ${diaTime.station.stationId} not found`);
@@ -50,45 +50,81 @@ export function createPositionDiaTimeMap(
 
     const isStationExpanded = viewStateManager.isStationExpanded(diaTime.station.stationId);
 
-    let [departureTime, arrivalTime] = [diaTime.departureTime, diaTime.arrivalTime];
-    if (departureTime === null && arrivalTime === null) return [];
-
-    if (departureTime === null) departureTime = arrivalTime;
-    if (arrivalTime === null) arrivalTime = departureTime;
-    assert(departureTime !== null && arrivalTime !== null);
+    let [arrivalTime, departureTime] = [diaTime.arrivalTime, diaTime.departureTime];
+    if (arrivalTime === null && departureTime === null) return [];
 
     const stationY = stationPosition.diagramPosition;
 
+    const times = [];
     if (isStationExpanded) {
       const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
       if (platformIndex !== -1) {
         const [platformPositions, lastLinePosition] = getPlatformPositions(diaTime.station.platforms);
         const platformPosition = platformPositions[platformIndex];
-        assert(platformPosition !== undefined);
-        const lastPosition = platformPositions[platformPositions.length - 1];
-
         if (direction === 'Inbound') {
-          return [
-            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY),
-            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition),
-            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition),
-            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + lastLinePosition),
-          ];
+          if (diaTimeIndex > 0) {
+            times.push(create(diaTime, 'arrivalTime', nn(arrivalTime ?? departureTime) * secondWidth, stationY));
+          }
+
+          if (arrivalTime !== null) {
+            times.push(create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition));
+          }
+          if (departureTime !== null) {
+            times.push(create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition));
+          }
+
+          if (diaTimeIndex < diaTimes.length - 1) {
+            times.push(
+              create(
+                diaTime,
+                'departureTime',
+                nn(departureTime ?? arrivalTime) * secondWidth,
+                stationY + lastLinePosition
+              )
+            );
+          }
         } else {
-          return [
-            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + lastLinePosition),
-            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition),
-            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition),
-            create(diaTime, 'departureTime', departureTime * secondWidth, stationY),
-          ];
+          if (diaTimeIndex > 0) {
+            times.push(
+              create(
+                diaTime,
+                'arrivalTime',
+                nn(arrivalTime ?? departureTime) * secondWidth,
+                stationY + lastLinePosition
+              )
+            );
+          }
+
+          if (arrivalTime !== null) {
+            times.push(create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition));
+          }
+
+          if (departureTime !== null) {
+            times.push(create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition));
+          }
+
+          if (diaTimeIndex < diaTimes.length - 1) {
+            times.push(create(diaTime, 'departureTime', nn(departureTime ?? arrivalTime) * secondWidth, stationY));
+          }
         }
+      } else {
+        if (arrivalTime !== null) {
+          times.push(create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY));
+        }
+        if (departureTime !== null) {
+          times.push(create(diaTime, 'departureTime', departureTime * secondWidth, stationY));
+        }
+      }
+    } else {
+      if (arrivalTime !== null) {
+        times.push(create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY));
+      }
+      if (departureTime !== null) {
+        times.push(create(diaTime, 'departureTime', departureTime * secondWidth, stationY));
       }
     }
 
-    return [
-      create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY),
-      create(diaTime, 'departureTime', departureTime * secondWidth, stationY),
-    ];
+    return times;
   });
 
   return positionDiaTimeMap;

@@ -35,7 +35,7 @@ function getNewTime(
   const diaTimes = train.diaTimes;
   const index = diaTimes.findIndex((d) => d.diaTimeId === diaTime.diaTimeId);
   assert(index !== -1);
-  console.log({ index, newTime, orgTime: orgTime });
+  // console.log({ index, newTime, orgTime: orgTime });
 
   if (arrivalOrDeparture === 'ArrivalTime') {
     const departureTime = diaTimes[index].departureTime;
@@ -70,6 +70,51 @@ function getNewTime(
   }
 
   return newTime;
+}
+
+function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewStateManager: ViewStateManager) {
+  const stationPositions = viewStateManager.getStationPositions();
+  const stationLineWidth = 20;
+  const foundStations = stationPositions.map((station) => {
+    const isPlatformExpanded = viewStateManager.isStationExpanded(station.station.stationId);
+    const stationY = station.diagramPosition;
+
+    if (isPlatformExpanded) {
+      // プラットフォーム
+      if (stationY < y) {
+        const [platformPositions, _] = getPlatformPositions(station.station.platforms);
+
+        const platformPositionIndex = platformPositions.findIndex((platformPosition) => {
+          const platformY = station.diagramPosition + platformPosition;
+          const platformYStart = platformY - (stationLineWidth * stageKonva.scale) / 2;
+          const platformYEnd = platformY + (stationLineWidth * stageKonva.scale) / 2;
+          return platformYStart <= y && y <= platformYEnd;
+        });
+        if (platformPositionIndex !== -1) {
+          return { platform: station.station.platforms[platformPositionIndex], station: null };
+        } else {
+          return null;
+        }
+      } else {
+        return null;
+      }
+    } else {
+      // 駅
+      const stationYStart = stationY - (stationLineWidth * stageKonva.scale) / 2;
+      const stationYEnd = stationY + (stationLineWidth * stageKonva.scale) / 2;
+      if (stationYStart <= y && y <= stationYEnd) {
+        return { platform: null, station };
+      } else {
+        return null;
+      }
+    }
+  });
+  const foundStations_ = foundStations.filter((s) => s !== null);
+  if (foundStations_.length === 0) {
+    return null;
+  }
+
+  return foundStations_[0];
 }
 
 class TrainDragManager {
@@ -429,56 +474,11 @@ export class SelectionGroupManager {
   }
 
   onDragMove(e: KonvaEventObject<MouseEvent>, target: Shape<ShapeConfig> | Stage) {
-    const getPlatformUnderCursor = (y: number, diagramProps: DiagramProps, viewStateManager: ViewStateManager) => {
-      const stationPositions = viewStateManager.getStationPositions();
-      const stationLineWidth = 20;
-      const foundStations = stationPositions.map((station) => {
-        const isPlatformExpanded = viewStateManager.isStationExpanded(station.station.stationId);
-        const stationY = station.diagramPosition;
-
-        if (isPlatformExpanded) {
-          // プラットフォーム
-          if (stationY < y) {
-            const [platformPositions, _] = getPlatformPositions(station.station.platforms);
-
-            const platformPositionIndex = platformPositions.findIndex((platformPosition) => {
-              const platformY = station.diagramPosition + platformPosition;
-              const platformYStart = platformY - (stationLineWidth * this.stageKonva.scale) / 2;
-              const platformYEnd = platformY + (stationLineWidth * this.stageKonva.scale) / 2;
-              return platformYStart <= y && y <= platformYEnd;
-            });
-            if (platformPositionIndex !== -1) {
-              return { platform: station.station.platforms[platformPositionIndex], station: null };
-            } else {
-              return null;
-            }
-          } else {
-            return null;
-          }
-        } else {
-          // 駅
-          const stationYStart = stationY - (stationLineWidth * this.stageKonva.scale) / 2;
-          const stationYEnd = stationY + (stationLineWidth * this.stageKonva.scale) / 2;
-          if (stationYStart <= y && y <= stationYEnd) {
-            return { platform: null, station };
-          } else {
-            return null;
-          }
-        }
-      });
-      const foundStations_ = foundStations.filter((s) => s !== null);
-      if (foundStations_.length === 0) {
-        return null;
-      }
-
-      return foundStations_[0];
-    };
-
     const dragPoint = getPointerPosition(this.layer.getStage());
     if (this.dragStartPoint == null) return;
 
     const x = Math.round(dragPoint.x / this.viewStateManager.getSecondWidth()) * this.viewStateManager.getSecondWidth();
-    const platform = getPlatformUnderCursor(dragPoint.y, this.diagramProps, this.viewStateManager);
+    const platform = getPlatformUnderCursor(dragPoint.y, this.stageKonva, this.viewStateManager);
     this.currentPosition = {
       x,
       y: 0,

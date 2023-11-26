@@ -348,7 +348,6 @@ export function TimetableEditorComponent({
                     stations={timetable.stations}
                     inboundTrains={inboundTrains}
                     outboundTrains={outboundTrains}
-                    operations={timetable.operations}
                     crudTrain={crudTrain}
                     clipboard={clipboard}
                     setClipboard={setClipboard}

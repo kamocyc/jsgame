@@ -12,6 +12,9 @@ export const canvasWidth = 600; // dummy width (will be set by initializeKonva)
 export const virtualCanvasHeight = 2000;
 export const virtualCanvasWidth = 10000;
 
+// 青系統の薄めの色
+export const gridColor = '#53a7d0';
+
 export interface RectState {
   x: number;
   y: number;
@@ -59,7 +62,7 @@ export function createPositionDiaTimeMap(
     if (isStationExpanded) {
       const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
       if (platformIndex !== -1) {
-        const platformPositions = getPlatformPositions(diaTime.station.platforms);
+        const [platformPositions, lastLinePosition] = getPlatformPositions(diaTime.station.platforms);
         const platformPosition = platformPositions[platformIndex];
         assert(platformPosition !== undefined);
         const lastPosition = platformPositions[platformPositions.length - 1];
@@ -69,11 +72,11 @@ export function createPositionDiaTimeMap(
             create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY),
             create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition),
             create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition),
-            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + lastPosition),
+            create(diaTime, 'departureTime', departureTime * secondWidth, stationY + lastLinePosition),
           ];
         } else {
           return [
-            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + lastPosition),
+            create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + lastLinePosition),
             create(diaTime, 'arrivalTime', arrivalTime * secondWidth, stationY + platformPosition),
             create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition),
             create(diaTime, 'departureTime', departureTime * secondWidth, stationY),

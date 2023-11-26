@@ -2,19 +2,19 @@ import Konva from 'konva';
 import { Stage } from 'konva/lib/Stage';
 import { assert, nn } from '../../common';
 import { PlatformLike, StationLike } from '../../model';
-import { ViewStateManager, generateKonvaId } from './konva-util';
+import { ViewStateManager, generateKonvaId, gridColor } from './konva-util';
 
 const initialScale = 1;
 const platformFontSize = 18;
 
-export function getPlatformPositions(platforms: PlatformLike[]): number[] {
-  return platforms.map((_, index) => 20 * (index + 1));
+export function getPlatformPositions(platforms: PlatformLike[]): [number[], number] {
+  return [platforms.map((_, index) => 20 * (index + 1)), (platforms.length + 1) * 20];
 }
 
 export class StationKonva {
   private readonly stationText: Konva.Text;
   private readonly stationLine: Konva.Line;
-  private readonly expandIcon: Konva.Text;
+  readonly expandIcon: Konva.Text;
   private readonly platformGroup: Konva.Group;
   private readonly shape: Konva.Group;
   private readonly fontSize = 20;
@@ -34,36 +34,20 @@ export class StationKonva {
       id: generateKonvaId(),
     });
     this.stationLine = new Konva.Line({
-      stroke: 'black',
+      stroke: gridColor,
       strokeWidth: 1,
       id: generateKonvaId(),
     });
     this.expandIcon = new Konva.Text({
-      x: this.canvasWidth - this.fontSize,
+      x: this.canvasWidth - platformFontSize,
       y: 0,
       text: '▼',
-      fontSize: this.fontSize,
+      fontSize: platformFontSize,
       fontFamily: 'Calibri',
       fill: 'black',
       id: `${this.station.stationId}-expand-icon`,
     });
     this.platformGroup = this.createPlatformShapes(this.station);
-
-    this.expandIcon.on('click', () => {
-      const isExpanded = layer.find(`#${this.station.stationId}-expand-icon`)[0] as Konva.Text;
-      assert(isExpanded != null);
-      const isExpandedValue = isExpanded.text() !== '▼';
-      this.expandIcon.text(isExpandedValue ? '▼' : '▶');
-
-      viewStateManger.setStationIsExpanded(this.station.stationId, !isExpandedValue);
-      if (!isExpandedValue) {
-        this.shape.add(this.platformGroup);
-      } else {
-        this.platformGroup.remove();
-      }
-
-      this.stationViewKonva.updateStationPositions();
-    });
 
     this.shape = new Konva.Group({
       id: generateKonvaId(),
@@ -76,13 +60,29 @@ export class StationKonva {
     this.updateShape();
   }
 
+  onClick(target: Konva.Text) {
+    const isExpanded = target;
+    assert(isExpanded != null);
+    const isExpandedValue = isExpanded.text() !== '▼';
+    this.expandIcon.text(isExpandedValue ? '▼' : '▶');
+
+    this.viewStateManger.setStationIsExpanded(this.station.stationId, !isExpandedValue);
+    if (!isExpandedValue) {
+      this.shape.add(this.platformGroup);
+    } else {
+      this.platformGroup.remove();
+    }
+
+    this.stationViewKonva.updateStationPositions();
+  }
+
   private createPlatformShapes(station: StationLike): Konva.Group {
     const platforms = station.platforms;
     const platformShapes: Konva.Shape[] = [];
     for (let platformIndex = 0; platformIndex < platforms.length; platformIndex++) {
       const platform = platforms[platformIndex];
       const platformLine = new Konva.Line({
-        stroke: 'black',
+        stroke: gridColor,
         strokeWidth: 1,
         id: `platformLine-${platform.platformId}`,
       });
@@ -97,6 +97,13 @@ export class StationKonva {
       });
       platformShapes.push(platformText);
     }
+
+    const platformLine = new Konva.Line({
+      stroke: gridColor,
+      strokeWidth: 1,
+      id: `platformLine-lastLine-${station.stationId}`,
+    });
+    platformShapes.push(platformLine);
 
     const group = new Konva.Group({
       id: generateKonvaId(),
@@ -114,7 +121,7 @@ export class StationKonva {
     this.stationLine.points([0, stationPosition, this.canvasWidth, stationPosition]);
 
     this.platformGroup.y(stationPosition);
-    const platformPositions = getPlatformPositions(this.station.platforms);
+    const [platformPositions, lastLinePosition] = getPlatformPositions(this.station.platforms);
     for (let i = 0; i < this.station.platforms.length; i++) {
       const line = this.platformGroup.find(`#platformLine-${this.station.platforms[i].platformId}`)[0] as Konva.Line;
       assert(line != null);
@@ -124,11 +131,16 @@ export class StationKonva {
       assert(text != null);
       text.y(platformPositions[i] * scale - platformFontSize);
     }
+
+    const lastLine = this.platformGroup.find(`#platformLine-lastLine-${this.station.stationId}`)[0] as Konva.Line;
+    assert(lastLine != null);
+    lastLine.points([0, lastLinePosition * scale, this.canvasWidth, lastLinePosition * scale]);
   }
 }
 
 export class StationViewKonva {
   private stage: Stage;
+  private readonly scaleText: Konva.Text;
   scale: number;
   private stationPositionChangeHandler: (() => void) | undefined;
   private y = 0;
@@ -148,6 +160,31 @@ export class StationViewKonva {
 
     const layer = new Konva.Layer({ id: 'station-layer' });
     stage.add(layer);
+
+    stage.on('click', (e) => {
+      // なぜか標準では取得できないことがあったので、自前で取得する
+      const stageX = e.evt.offsetX;
+      const stageY = e.evt.offsetY - this.stage.y();
+      const target = this.stationKonvas.find((stationKonva) => {
+        const iconY = stationKonva.expandIcon.y();
+        return iconY <= stageY && stageY <= iconY + platformFontSize && stageX >= canvasWidth - platformFontSize;
+      });
+
+      if (target) {
+        target.onClick(target.expandIcon);
+      }
+    });
+
+    this.scaleText = new Konva.Text({
+      x: 0,
+      y: 0,
+      text: '',
+      fontSize: 14,
+      fontFamily: 'Calibri',
+      fill: 'black',
+      id: generateKonvaId(),
+    });
+    layer.add(this.scaleText);
 
     this.stationKonvas = [];
     for (const stationPosition of this.viewStateManger.getStationPositions()) {
@@ -174,15 +211,15 @@ export class StationViewKonva {
   }
 
   updateShape() {
-    this.stage.height(this.height);
-    this.stage.x(0);
-    this.stage.y(this.y);
+    this.scaleText.text((this.scale * 100).toFixed(0) + '%');
 
     for (const stationKonva of this.stationKonvas) {
       stationKonva.updateShape();
     }
 
-    this.stage.draw();
+    this.stage.height(this.height);
+    this.stage.x(0);
+    this.stage.y(this.y);
   }
 
   adjustStationPosition(diagramStageState: DiagramStageState) {

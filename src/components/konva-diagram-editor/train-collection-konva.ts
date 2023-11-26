@@ -8,7 +8,7 @@ export class TrainCollectionKonva {
   private trainKonvas: Map<string, TrainKonva> = new Map();
 
   constructor(private context: DiagramKonvaContext) {
-    this.updateShape();
+    // グリッドの後に描画するために、updateShapeは後で呼ぶ想定
   }
 
   updateShape() {
@@ -52,14 +52,14 @@ export class TrainCollectionKonva {
       const firstOrLast = getFirstOrLast(direction, this.context.diagramProps.timetable.inboundIsFirstHalf);
       const railwayLine = this.context.diagramProps.railwayLine;
 
-      const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime) => {
+      const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime, index) => {
         const platform = getRailwayPlatform(railwayLine, drawingLineTime.station.stationId, firstOrLast);
         const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platform.platformId);
         assert(stop != null);
         return {
           station: drawingLineTime.station,
-          departureTime: drawingLineTime.time,
-          arrivalTime: null,
+          departureTime: index < drawingLineTimes.length - 1 ? drawingLineTime.time : null,
+          arrivalTime: index > 0 ? drawingLineTime.time : null,
           diaTimeId: generateId(),
           isPassing: false,
           platform: platform,

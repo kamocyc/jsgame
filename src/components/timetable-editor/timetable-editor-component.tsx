@@ -142,6 +142,11 @@ export function TimetableEditorComponent({
   });
   const [settingData, setSettingData] = useState<SettingData | null>(null);
 
+  const [resetSeed, setResetSeed] = useState(1);
+  const reset = () => {
+    setResetSeed(Math.random());
+  };
+
   function mergeTimetable(diagram: [OutlinedTimetable, Train[]]) {
     const [outlinedTimetable, trains] = diagram;
 
@@ -235,6 +240,7 @@ export function TimetableEditorComponent({
         <button
           onClick={() => {
             timetableData.reverseTimetableDirection(timetable.timetableId);
+            reset();
           }}
         >
           上り下りを反転
@@ -264,6 +270,7 @@ export function TimetableEditorComponent({
       <div style={{ display: 'flex' }}>
         <div style={{ flex: '1 1 auto' }}>
           <TabComponent
+            key={resetSeed}
             onTabChange={(tabId) => {
               setTimetableDirection(tabId === 1 ? 'Inbound' : 'Outbound');
             }}

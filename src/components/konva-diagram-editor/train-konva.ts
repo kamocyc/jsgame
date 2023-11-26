@@ -30,7 +30,6 @@ export class TrainKonva {
   }
 
   onClick(e: Konva.KonvaEventObject<MouseEvent>) {
-    console.log(this.train.diaTimes);
     if (e.evt.ctrlKey) {
       this.context.selectionGroupManager.addTrainSelection(this);
     } else {

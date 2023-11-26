@@ -1,6 +1,6 @@
 import Konva from 'konva';
 import { assert } from '../../common';
-import { DiagramKonvaContext, generateKonvaId } from './konva-util';
+import { DiagramKonvaContext, generateKonvaId, gridColor, virtualCanvasHeight } from './konva-util';
 
 export class TimeGridKonva {
   private timeGrid: Konva.Group;
@@ -13,11 +13,7 @@ export class TimeGridKonva {
     });
     context.topLayer.add(this.timeGrid);
 
-    const stationPositions = context.viewStateManager.getStationPositions();
-    this.createTimeGrid(
-      stationPositions[stationPositions.length - 1].diagramPosition + 50,
-      context.viewStateManager.getSecondWidth()
-    );
+    this.createTimeGrid(virtualCanvasHeight, context.viewStateManager.getSecondWidth());
   }
 
   updateShape() {
@@ -31,13 +27,13 @@ export class TimeGridKonva {
     for (const text of this.timeGridTextGroup.children) {
       (text as Konva.Text).fontSize(20 / scale);
     }
+
+    // これは更新不要かも
     assert(this.timeGrid.children != null);
     for (const line of this.timeGrid.children) {
       if (line instanceof Konva.Line) {
-        const stationPositions = this.context.viewStateManager.getStationPositions();
-
         const [x1, y1, x2, _] = line.points();
-        line.points([x1, y1, x2, stationPositions[stationPositions.length - 1].diagramPosition + 50]);
+        line.points([x1, y1, x2, virtualCanvasHeight]);
       }
     }
   }
@@ -56,14 +52,14 @@ export class TimeGridKonva {
         text: hour.toString(),
         fontSize: 20,
         fontFamily: 'Calibri',
-        fill: 'black',
+        fill: gridColor,
         id: generateKonvaId(),
       });
       this.timeGridTextGroup.add(hourText);
 
       const hourLine = new Konva.Line({
         points: [offset * secondWidth, 0, offset * secondWidth, layerHeight],
-        stroke: 'black',
+        stroke: gridColor,
         strokeWidth: 1,
         id: generateKonvaId(),
       });
@@ -71,7 +67,7 @@ export class TimeGridKonva {
 
       const drawMinuteLine = (i: number) => {
         // 2分ごとの線を引く
-        for (let j = 1; j < 6; j++) {
+        for (let j = 1; j < 5; j++) {
           const line = new Konva.Line({
             points: [
               (offset + i * 60 * 10 + j * 2 * 60) * secondWidth,
@@ -79,7 +75,8 @@ export class TimeGridKonva {
               (offset + i * 60 * 10 + j * 2 * 60) * secondWidth,
               layerHeight,
             ],
-            stroke: 'lightgray',
+            // alpha: 0.5,
+            stroke: gridColor + '88',
             strokeWidth: 1,
             dash: [2, 2],
             id: generateKonvaId(),
@@ -95,7 +92,7 @@ export class TimeGridKonva {
         for (let i = 1; i < 6; i++) {
           const line = new Konva.Line({
             points: [(offset + i * 60 * 10) * secondWidth, 0, (offset + i * 60 * 10) * secondWidth, layerHeight],
-            stroke: 'lightgray',
+            stroke: gridColor + '88',
             strokeWidth: 1,
             id: generateKonvaId(),
           });

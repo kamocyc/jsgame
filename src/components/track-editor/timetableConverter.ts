@@ -620,7 +620,7 @@ export function createOperations(
     }
   }
 
-  console.log({ operations });
+  // console.log({ operations });
   if (errors.length > 0) {
     console.log({ errors });
   }

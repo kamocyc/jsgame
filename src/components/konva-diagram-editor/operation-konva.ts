@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import { assert } from '../../common';
+import { assert, lst } from '../../common';
 import { getDirection } from '../../outlinedTimetableData';
 import { hitStrokeWidth } from './drawer-util';
 import { DiagramKonvaContext, createPositionDiaTimeMap, generateKonvaId } from './konva-util';
@@ -34,14 +34,12 @@ export class OperationCollectionKonva {
           direction
         );
 
-        console.log({
-          n: prevTrainTimeDatas.length,
-          m: prevTrain.diaTimes.length,
-        });
-        const prevTrainTimeData =
-          prevTrain.diaTimes.length * 2 < prevTrainTimeDatas.length
-            ? prevTrainTimeDatas[prevTrainTimeDatas.length - 4]
-            : prevTrainTimeDatas[prevTrainTimeDatas.length - 1];
+        const isLastStationExpanded = this.diagramKonvaContext.viewStateManager.isStationExpanded(
+          lst(prevTrain.diaTimes).station.stationId
+        );
+        const prevTrainTimeData = isLastStationExpanded
+          ? prevTrainTimeDatas[prevTrainTimeDatas.length - 4]
+          : prevTrainTimeDatas[prevTrainTimeDatas.length - 1];
         const currTrainTimeDatas = createPositionDiaTimeMap(
           currTrain.diaTimes,
           this.diagramKonvaContext.viewStateManager,

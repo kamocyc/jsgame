@@ -3,7 +3,7 @@ import { KonvaEventObject } from 'konva/lib/Node';
 import { Shape, ShapeConfig } from 'konva/lib/Shape';
 import { Stage } from 'konva/lib/Stage';
 import { assert, nn, toStringFromSeconds } from '../../common';
-import { DiaTime, Point, Train } from '../../model';
+import { DiaTime, PlatformLike, Point, Train } from '../../model';
 import { HistoryItem, getDirection } from '../../outlinedTimetableData';
 import { copyTrains, deleteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
@@ -20,6 +20,56 @@ interface DiaTimePartial {
 interface TrainPartial {
   trainId: string;
   diaTimes: DiaTimePartial[];
+}
+
+function getNewTime(
+  train: Train,
+  diaTime: DiaTime,
+  orgTime: number,
+  timeDiff: number,
+  arrivalOrDeparture: 'ArrivalTime' | 'DepartureTime'
+): number {
+  let newTime = orgTime + timeDiff;
+
+  // 前の時間以降にする
+  const diaTimes = train.diaTimes;
+  const index = diaTimes.findIndex((d) => d.diaTimeId === diaTime.diaTimeId);
+  assert(index !== -1);
+  console.log({ index, newTime, orgTime: orgTime });
+
+  if (arrivalOrDeparture === 'ArrivalTime') {
+    const departureTime = diaTimes[index].departureTime;
+    if (departureTime !== null) {
+      if (newTime > departureTime) {
+        newTime = departureTime;
+      }
+    }
+  } else if (arrivalOrDeparture === 'DepartureTime') {
+    const arrivalTime = diaTimes[index].arrivalTime;
+    if (arrivalTime !== null) {
+      if (newTime < arrivalTime) {
+        newTime = arrivalTime;
+      }
+    }
+  }
+
+  if (index > 0) {
+    const prevDiaTime = diaTimes[index - 1];
+    const prevTime = Math.max(prevDiaTime.arrivalTime ?? 0, prevDiaTime.departureTime ?? 0);
+    if (newTime < prevTime) {
+      newTime = prevTime;
+    }
+  }
+
+  if (index < diaTimes.length - 1) {
+    const nextDiaTime = diaTimes[index + 1];
+    const nextTime = Math.min(nextDiaTime.arrivalTime ?? Infinity, nextDiaTime.departureTime ?? Infinity);
+    if (newTime > nextTime) {
+      newTime = nextTime;
+    }
+  }
+
+  return newTime;
 }
 
 class TrainDragManager {
@@ -50,6 +100,7 @@ class TrainDragManager {
     }
   }
 
+  // スジ全体をドラッグしたとき
   setDraggingPoint(timeDiff: number) {
     const dragStartTrainTimes = this.dragStartTrainTimes;
     const trains = this.selections.map((s) => s.getTrain());
@@ -78,7 +129,7 @@ class TrainDragManager {
         }
       },
       undo: () => {
-        // undoの先の状態が違う。本来はドラッグ終了時に1回のみ記録したい
+        // TODO: undoの先の状態が違う。本来はドラッグ終了時に1回のみ記録したい
         for (const train of trains) {
           const startTimes = dragStartTrainTimes.find((t) => t.trainId === train.trainId);
           assert(startTimes != null);
@@ -103,11 +154,14 @@ class TrainDragManager {
   }
 
   // 1つの点のみをドラッグしたとき
+  // ドラッグ開始時の時刻点を記録しておく
   setDraggingPointForTime(
     timeDiff: number,
     trainId: string,
     diaTimeId: string,
-    arrivalOrDeparture: 'Arrival' | 'Departure'
+    arrivalOrDeparture: 'arrivalTime' | 'departureTime',
+    movePlatform: boolean,
+    newPlatform: PlatformLike | null
   ): HistoryItem {
     const train = this.selections.find((s) => s.getTrain().trainId === trainId);
     assert(train !== undefined);
@@ -122,26 +176,34 @@ class TrainDragManager {
     let orgDepartureTime: number | null = null;
     let orgArrivalTime: number | null = null;
 
-    if (arrivalOrDeparture === 'Departure') {
+    if (arrivalOrDeparture === 'departureTime') {
       if (diaTime.departureTime != null) {
         orgDepartureTime = startTime.departureTime;
         assert(orgDepartureTime != null);
       }
-    } else if (arrivalOrDeparture === 'Arrival') {
+    } else if (arrivalOrDeparture === 'arrivalTime') {
       if (diaTime.arrivalTime != null) {
         orgArrivalTime = startTime.arrivalTime;
         assert(orgArrivalTime != null);
       }
     }
 
+    let orgPlatform: PlatformLike | null = null;
+    if (movePlatform) {
+      orgPlatform = diaTime.platform;
+    }
+
     return {
       this: undefined,
       redo: () => {
         if (orgDepartureTime !== null) {
-          diaTime.departureTime = orgDepartureTime + timeDiff;
+          diaTime.departureTime = getNewTime(train.getTrain(), diaTime, orgDepartureTime, timeDiff, 'DepartureTime');
         }
         if (orgArrivalTime !== null) {
-          diaTime.arrivalTime = orgArrivalTime + timeDiff;
+          diaTime.arrivalTime = getNewTime(train.getTrain(), diaTime, orgArrivalTime, timeDiff, 'ArrivalTime');
+        }
+        if (movePlatform && newPlatform !== null) {
+          diaTime.platform = newPlatform;
         }
       },
       undo: () => {
@@ -151,18 +213,28 @@ class TrainDragManager {
         if (orgArrivalTime !== null) {
           diaTime.arrivalTime = orgArrivalTime;
         }
+        if (orgPlatform !== null) {
+          diaTime.platform = orgPlatform;
+        }
       },
     };
   }
 }
 
+function getKey(train: Train, diaTime: DiaTime, timeType: 'arrivalTime' | 'departureTime', isPlatform: boolean) {
+  return `timeBox-${train.trainId}-${diaTime.diaTimeId}-${isPlatform ? 'platform' : 'station'}-${timeType}`;
+}
+
+/**
+ * オブジェクトの初期化順序が重なり順序になるため、createShapeを初期化時に実行する必要がある
+ */
 export class SelectionGroupManager {
-  private selectionGroup: Konva.Group;
-  private markerGroup: Konva.Group;
-  private markers: Map<string, [Konva.Rect, Konva.Text]> = new Map();
+  private selectionGroup!: Konva.Group;
+  private markerGroup!: Konva.Group;
+  private markers: Map<string, { square: Konva.Rect; squarePlatform: Konva.Rect | null; text: Konva.Text }> = new Map();
   private dragStartPoint: Point | null = null;
   private currentPosition: Point | null = null;
-  private trainDragManager: TrainDragManager;
+  private trainDragManager!: TrainDragManager;
 
   constructor(
     private layer: Konva.Layer,
@@ -170,11 +242,13 @@ export class SelectionGroupManager {
     private diagramProps: DiagramProps,
     private mouseEventManager: MouseEventManager,
     private stageKonva: { scale: number }
-  ) {
+  ) {}
+
+  createShapes() {
     this.selectionGroup = new Konva.Group({ id: generateKonvaId() });
-    mouseEventManager.registerDragStartHandler(this.selectionGroup.id(), this.onDragStart.bind(this));
-    mouseEventManager.registerDragMoveHandler(this.selectionGroup.id(), this.onDragMove.bind(this));
-    mouseEventManager.registerDragEndHandler(this.selectionGroup.id(), this.onDragEnd.bind(this));
+    this.mouseEventManager.registerDragStartHandler(this.selectionGroup.id(), this.onDragStart.bind(this));
+    this.mouseEventManager.registerDragMoveHandler(this.selectionGroup.id(), this.onDragMove.bind(this));
+    this.mouseEventManager.registerDragEndHandler(this.selectionGroup.id(), this.onDragEnd.bind(this));
 
     this.trainDragManager = new TrainDragManager();
 
@@ -200,7 +274,7 @@ export class SelectionGroupManager {
             fill: 'blue',
             stroke: 'black',
             strokeWidth: 0,
-            id: 'timeBox-' + train.trainId + '-' + diaTime.diaTimeId + '-' + timeType,
+            id: getKey(train, diaTime, timeType, false),
           });
           this.mouseEventManager.registerDragStartHandler(square.id(), this.onDragStart.bind(this));
           this.mouseEventManager.registerDragMoveHandler(square.id(), this.onDragMove.bind(this));
@@ -213,13 +287,60 @@ export class SelectionGroupManager {
           });
           this.markerGroup.add(square);
           this.markerGroup.add(text);
-          this.markers.set(diaTime.diaTimeId + '-' + timeType, [square, text]);
+
+          this.markers.set(diaTime.diaTimeId + '-' + timeType, { square, squarePlatform: null, text });
         }
       }
     }
 
+    this.updateIsExpanded();
+
     // TODO: 本来は定期的に呼び出すべき
     // this.mouseEventManager.deleteDestroyedShapes();
+  }
+
+  updateIsExpanded() {
+    for (const selection of this.trainDragManager.selections) {
+      const train = selection.getTrain();
+      for (const diaTime of train.diaTimes) {
+        for (const timeType of ['arrivalTime', 'departureTime'] as const) {
+          const isPlatformExpanded = this.viewStateManager.isStationExpanded(diaTime.station.stationId);
+          let squarePlatform: Konva.Rect | null = null;
+          if (isPlatformExpanded && this.markerGroup.find('#' + getKey(train, diaTime, timeType, true)).length === 0) {
+            squarePlatform = new Konva.Rect({
+              fill: 'blue',
+              stroke: 'black',
+              strokeWidth: 0,
+              id: getKey(train, diaTime, timeType, true),
+            });
+            this.mouseEventManager.registerDragStartHandler(squarePlatform.id(), this.onDragStart.bind(this));
+            this.mouseEventManager.registerDragMoveHandler(squarePlatform.id(), this.onDragMove.bind(this));
+            this.mouseEventManager.registerDragEndHandler(squarePlatform.id(), this.onDragEnd.bind(this));
+            this.markerGroup.add(squarePlatform);
+
+            const oldMarkers = nn(this.markers.get(diaTime.diaTimeId + '-' + timeType));
+            this.markers.set(diaTime.diaTimeId + '-' + timeType, {
+              square: oldMarkers.square,
+              squarePlatform,
+              text: oldMarkers.text,
+            });
+          } else if (
+            !isPlatformExpanded &&
+            this.markerGroup.find('#' + getKey(train, diaTime, timeType, true)).length > 0
+          ) {
+            squarePlatform = nn(this.markerGroup.find('#' + getKey(train, diaTime, timeType, true))[0]) as Konva.Rect;
+            squarePlatform.destroy();
+
+            const oldMarkers = nn(this.markers.get(diaTime.diaTimeId + '-' + timeType));
+            this.markers.set(diaTime.diaTimeId + '-' + timeType, {
+              square: oldMarkers.square,
+              squarePlatform: null,
+              text: oldMarkers.text,
+            });
+          }
+        }
+      }
+    }
   }
 
   updateShape() {
@@ -265,43 +386,99 @@ export class SelectionGroupManager {
     scale: number,
     timeType: 'departureTime' | 'arrivalTime'
   ) {
-    const timeLabel = nn(this.markers.get(diaTimeId + '-' + timeType))[1];
+    const timeLabel = nn(this.markers.get(diaTimeId + '-' + timeType)).text;
     timeLabel.text(toStringFromSeconds(nn(time)));
 
     const direction = getDirection(this.diagramProps.timetable, train.trainId);
 
-    const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
-    assert(platformIndex !== -1);
-    const platformPositions = getPlatformPositions(diaTime.station.platforms);
+    const [platformPositions, lastLinePosition] = getPlatformPositions(diaTime.station.platforms);
     const isStationExpanded = this.viewStateManager.isStationExpanded(diaTime.station.stationId);
 
     const positionX = this.viewStateManager.getPositionFromTime(nn(time));
-    let positionY = nn(this.viewStateManager.getStationPosition(nn(stationId)));
-    if (isStationExpanded) {
-      if (
-        (direction === 'Outbound' && timeType === 'arrivalTime') ||
-        (direction === 'Inbound' && timeType === 'departureTime')
-      ) {
-        positionY += platformPositions[platformPositions.length - 1];
-      }
-    }
+    const positionY = nn(this.viewStateManager.getStationPosition(nn(stationId)));
 
-    const marker = nn(this.markers.get(diaTimeId + '-' + timeType))[0];
+    const marker = nn(this.markers.get(diaTimeId + '-' + timeType)).square;
     marker.x(positionX - 5 / scale);
-    marker.y(positionY - 5 / scale);
     marker.width(10 / scale);
     marker.height(10 / scale);
+    if (
+      isStationExpanded &&
+      ((direction === 'Outbound' && timeType === 'arrivalTime') ||
+        (direction === 'Inbound' && timeType === 'departureTime'))
+    ) {
+      marker.y(positionY + lastLinePosition - 5 / scale);
+      timeLabel.y(positionY + lastLinePosition + 5 / scale);
+
+      // ホームの位置
+      const markerPlatform = nn(this.markers.get(diaTimeId + '-' + timeType)).squarePlatform;
+      if (markerPlatform !== null) {
+        const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
+        assert(platformIndex !== -1);
+        markerPlatform.x(positionX - 5 / scale);
+        markerPlatform.y(positionY + platformPositions[platformIndex] - 5 / scale);
+        markerPlatform.width(10 / scale);
+        markerPlatform.height(10 / scale);
+      }
+    } else {
+      marker.y(positionY - 5 / scale);
+      timeLabel.y(positionY + 5 / scale);
+    }
 
     timeLabel.x(positionX - 30 / scale);
-    timeLabel.y(positionY + 5 / scale);
     timeLabel.fontSize(20 / scale);
   }
 
   onDragMove(e: KonvaEventObject<MouseEvent>, target: Shape<ShapeConfig> | Stage) {
+    const getPlatformUnderCursor = (y: number, diagramProps: DiagramProps, viewStateManager: ViewStateManager) => {
+      const stationPositions = viewStateManager.getStationPositions();
+      const stationLineWidth = 20;
+      const foundStations = stationPositions.map((station) => {
+        const isPlatformExpanded = viewStateManager.isStationExpanded(station.station.stationId);
+        const stationY = station.diagramPosition;
+
+        if (isPlatformExpanded) {
+          // プラットフォーム
+          if (stationY < y) {
+            const [platformPositions, _] = getPlatformPositions(station.station.platforms);
+
+            const platformPositionIndex = platformPositions.findIndex((platformPosition) => {
+              const platformY = station.diagramPosition + platformPosition;
+              const platformYStart = platformY - (stationLineWidth * this.stageKonva.scale) / 2;
+              const platformYEnd = platformY + (stationLineWidth * this.stageKonva.scale) / 2;
+              return platformYStart <= y && y <= platformYEnd;
+            });
+            if (platformPositionIndex !== -1) {
+              return { platform: station.station.platforms[platformPositionIndex], station: null };
+            } else {
+              return null;
+            }
+          } else {
+            return null;
+          }
+        } else {
+          // 駅
+          const stationYStart = stationY - (stationLineWidth * this.stageKonva.scale) / 2;
+          const stationYEnd = stationY + (stationLineWidth * this.stageKonva.scale) / 2;
+          if (stationYStart <= y && y <= stationYEnd) {
+            return { platform: null, station };
+          } else {
+            return null;
+          }
+        }
+      });
+      const foundStations_ = foundStations.filter((s) => s !== null);
+      if (foundStations_.length === 0) {
+        return null;
+      }
+
+      return foundStations_[0];
+    };
+
     const dragPoint = getPointerPosition(this.layer.getStage());
     if (this.dragStartPoint == null) return;
 
     const x = Math.round(dragPoint.x / this.viewStateManager.getSecondWidth()) * this.viewStateManager.getSecondWidth();
+    const platform = getPlatformUnderCursor(dragPoint.y, this.diagramProps, this.viewStateManager);
     this.currentPosition = {
       x,
       y: 0,
@@ -312,11 +489,22 @@ export class SelectionGroupManager {
     );
     let historyItem: HistoryItem;
     if (target.id().substring(0, 8) === 'timeBox-') {
-      const [_, trainId, diaTimeId, timeType] = target.id().split('_');
-      assert(timeType === 'Arrival' || timeType === 'Departure');
-      assert(trainId !== undefined && diaTimeId !== undefined && timeType !== undefined);
-      historyItem = this.trainDragManager.setDraggingPointForTime(timeDiff, trainId, diaTimeId, timeType);
+      // 1つの時刻のみ
+      const [_, trainId, diaTimeId, platformOrStation, timeType] = target.id().split('-');
+      assert(timeType === 'arrivalTime' || timeType === 'departureTime');
+      assert(
+        trainId !== undefined && diaTimeId !== undefined && platformOrStation !== undefined && timeType !== undefined
+      );
+      historyItem = this.trainDragManager.setDraggingPointForTime(
+        timeDiff,
+        trainId,
+        diaTimeId,
+        timeType,
+        platformOrStation === 'platform',
+        platform?.platform ?? null
+      );
     } else {
+      // スジ全体
       historyItem = this.trainDragManager.setDraggingPoint(timeDiff);
     }
     this.diagramProps.crudTrain.updateTrain(historyItem);

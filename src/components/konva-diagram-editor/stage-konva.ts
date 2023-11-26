@@ -133,11 +133,14 @@ export class StageKonva {
       this.selectionGroupManager,
       this.mouseEventManager
     );
-    this.timeGridKonva = new TimeGridKonva(context);
     this.trainCollectionKonva = new TrainCollectionKonva(context);
-    this.drawingTrainLineKonva = new DrawingTrainLineKonva(context, this.trainCollectionKonva);
+    this.timeGridKonva = new TimeGridKonva(context);
+    this.drawingTrainLineKonva = new DrawingTrainLineKonva(context, this.trainCollectionKonva.commitDrawingLine);
     this.stationLineCollectionKonva = new StationLineCollectionKonva(context, this.drawingTrainLineKonva);
     this.operationCollectionKonva = new OperationCollectionKonva(context);
+    this.trainCollectionKonva.updateShape();
+    this.drawingTrainLineKonva.createShape();
+    this.selectionGroupManager.createShapes();
 
     // stageに対するイベント
     this.stage.on('wheel', this.onWheel.bind(this));
@@ -271,12 +274,13 @@ export class StageKonva {
   }
 
   updateStationPositions() {
+    this.selectionGroupManager.updateIsExpanded();
     this.selectionGroupManager.updateShape();
     this.timeGridKonva.updateShape();
     this.trainCollectionKonva.updateShape();
     this.drawingTrainLineKonva.updateShape();
-    this.stationLineCollectionKonva.updateShape();
     this.operationCollectionKonva.updateShape();
+    this.stationLineCollectionKonva.updateShape();
   }
 
   private adjustStagePosition(stage: StagePosition, container: HTMLDivElement) {

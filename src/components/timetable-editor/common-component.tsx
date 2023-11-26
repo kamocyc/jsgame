@@ -293,8 +293,16 @@ export interface Tab {
   component: () => any /* JSX.Element */;
 }
 
-export function TabComponent({ tabs, onTabChange }: { tabs: [Tab, ...Tab[]]; onTabChange: (tabId: number) => void }) {
-  const [selectedTabId, setSelectedTabId] = useState<number>(tabs[0].tabId);
+export function TabComponent({
+  tabs,
+  onTabChange,
+  defaultTabIndex = 0,
+}: {
+  tabs: [Tab, ...Tab[]];
+  onTabChange: (tabId: number) => void;
+  defaultTabIndex?: number;
+}) {
+  const [selectedTabId, setSelectedTabId] = useState<number>(tabs[defaultTabIndex].tabId);
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', flexDirection: 'row' }}>

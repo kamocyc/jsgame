@@ -3,7 +3,7 @@ import { assert } from '../../common';
 import { StationLike } from '../../model';
 import { hitStrokeWidth } from './drawer-util';
 import { DrawingTrainLineKonva } from './drawing-train-line-konva';
-import { DiagramKonvaContext, generateKonvaId, getPointerPosition, virtualCanvasWidth } from './konva-util';
+import { DiagramKonvaContext, generateKonvaId, getPointerPosition, gridColor, virtualCanvasWidth } from './konva-util';
 import { getPlatformPositions } from './station-view-konva';
 
 export class StationLineKonva {
@@ -16,7 +16,7 @@ export class StationLineKonva {
     private drawingTrainLineKonva: DrawingTrainLineKonva
   ) {
     this.stationLine = new Konva.Line({
-      stroke: 'black',
+      stroke: gridColor,
       strokeWidth: 1,
       hitStrokeWidth: hitStrokeWidth,
       id: generateKonvaId(),
@@ -33,18 +33,26 @@ export class StationLineKonva {
 
   private createPlatformShapes(station: StationLike, width: number): Konva.Group {
     const platforms = station.platforms;
-    const platformPositions = getPlatformPositions(platforms);
+    const [platformPositions, lastLinePosition] = getPlatformPositions(platforms);
     const platformShapes: Konva.Shape[] = [];
     for (let platformIndex = 0; platformIndex < platforms.length; platformIndex++) {
       const platformPosition = platformPositions[platformIndex];
       const platformLine = new Konva.Line({
         points: [0, platformPosition, width, platformPosition],
-        stroke: 'black',
+        stroke: gridColor,
         strokeWidth: 1,
         id: generateKonvaId(),
       });
       platformShapes.push(platformLine);
     }
+
+    const platformLine = new Konva.Line({
+      points: [0, lastLinePosition, width, lastLinePosition],
+      stroke: gridColor,
+      strokeWidth: 1,
+      id: generateKonvaId(),
+    });
+    platformShapes.push(platformLine);
 
     const group = new Konva.Group({
       id: generateKonvaId(),
@@ -97,10 +105,10 @@ export class StationLineCollectionKonva {
   private stationLine: Map<string, StationLineKonva> = new Map();
 
   constructor(private context: DiagramKonvaContext, private drawingTrainLineKonva: DrawingTrainLineKonva) {
-    this.updateShape();
+    this.createShape();
   }
 
-  updateShape() {
+  private createShape() {
     const notUsedStationIds = new Set<string>(this.stationLine.keys());
 
     for (const station of this.context.diagramProps.stations) {
@@ -113,6 +121,12 @@ export class StationLineCollectionKonva {
       stationLine.updateShape();
 
       notUsedStationIds.delete(station.stationId);
+    }
+  }
+
+  updateShape() {
+    for (const stationLine of this.stationLine.values()) {
+      stationLine.updateShape();
     }
   }
 }

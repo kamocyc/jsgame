@@ -371,7 +371,7 @@ export class OutlinedTimetableData {
       errors.push(...occupationErrors);
     }
 
-    console.log({ errors });
+    // console.log({ errors });
     return errors;
   }
 }

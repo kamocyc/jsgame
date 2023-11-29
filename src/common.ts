@@ -1,4 +1,4 @@
-import { DefaultStationDistance, Platform, Station, generateId } from './model';
+import { DeepReadonly } from 'ts-essentials';
 import namesJson from './names.json';
 
 export function max(arr: number[]): number {
@@ -46,34 +46,34 @@ export function moduloRoundDown(value: number, mod: number): number {
   }
 }
 
-export function createNewStationWithPlatform({
-  platformId,
-  platformName,
-}: {
-  platformId: string;
-  platformName: string;
-}): Platform {
-  const newStation: Station = {
-    stationType: 'Station',
-    stationId: generateId(),
-    stationName: platformName,
-    platforms: [],
-    defaultInboundPlatformId: platformId,
-    defaultOutboundPlatformId: platformId,
-    distance: DefaultStationDistance,
-  };
+// export function createNewStationWithPlatform({
+//   platformId,
+//   platformName,
+// }: {
+//   platformId: string;
+//   platformName: string;
+// }): Platform {
+//   const newStation: Station = {
+//     stationType: 'Station',
+//     stationId: generateId(),
+//     stationName: platformName,
+//     platforms: [],
+//     defaultInboundPlatformId: platformId,
+//     defaultOutboundPlatformId: platformId,
+//     distance: DefaultStationDistance,
+//   };
 
-  const newPlatform: Platform = {
-    platformType: 'Platform',
-    platformId: platformId,
-    platformName: platformName,
-    station: newStation,
-  };
+//   const newPlatform: Platform = {
+//     platformType: 'Platform',
+//     platformId: platformId,
+//     platformName: platformName,
+//     stationId: newStation.stationId,
+//   };
 
-  newStation.platforms.push(newPlatform);
+//   newStation.platforms.push(newPlatform);
 
-  return newPlatform;
-}
+//   return newPlatform;
+// }
 
 export function removeDuplicates<T>(array: T[], compare: (a: T, b: T) => boolean): T[] {
   const result: T[] = [];
@@ -146,6 +146,14 @@ export function fst<T>(arr: T[]): T {
 
 export function lst<T>(arr: T[]): T {
   return arr[arr.length - 1] as T;
+}
+
+export function fst_<T>(arr: DeepReadonly<T[]>): DeepReadonly<T> {
+  return arr[0];
+}
+
+export function lst_<T>(arr: DeepReadonly<T[]>): DeepReadonly<T> {
+  return arr[arr.length - 1];
 }
 
 export function generatePlaceName(): string {

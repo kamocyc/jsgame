@@ -75,7 +75,7 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
       platformType: 'Platform',
       platformId: id,
       platformName: '駅' + id,
-      station: newStation,
+      stationId: newStation.stationId,
     };
     track.track.platform = newPlatform;
     track.reverseTrack.track.platform = track.track.platform;
@@ -168,7 +168,7 @@ function createDepot(
       platformType: 'DepotLine',
       platformId: generateId(),
       platformName: (i + 1).toString(),
-      station: newDepot,
+      stationId: newDepot.stationId,
     };
     tracks[0].track.platform = newDepotLine;
     tracks[0].reverseTrack.track.platform = tracks[0].track.platform;
@@ -231,7 +231,7 @@ function placeStation(
       platformType: 'Platform',
       platformId: generateId(),
       platformName: (i + 1).toString(),
-      station: newStation,
+      stationId: newStation.stationId,
     };
     tracks[0].track.platform = newPlatform;
     tracks[0].reverseTrack.track.platform = tracks[0].track.platform;

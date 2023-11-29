@@ -110,22 +110,22 @@ export function TimetableEditorTableComponent({
   );
 }
 
-export type TimetableEditorDirectedProps = DeepReadonly<{
-  stations: StationLike[];
-  setStations: (diaStations: StationLike[]) => void;
-  trains: readonly Train[];
-  otherDirectionTrains: readonly Train[];
-  crudTrain: CrudTrain;
-  setTimetable: SetTimetable;
-  timetableDirection: TimetableDirection;
-  trainTypes: TrainType[];
-  setSettingData: (settingData: DeepReadonly<SettingData>) => void;
-  clipboard: AppClipboard;
-  setClipboard: (clipboard: AppClipboard) => void;
-  railwayLine: RailwayLine;
-  timetable: OutlinedTimetable;
-  errors: readonly OperationError[];
-}>;
+export type TimetableEditorDirectedProps = {
+  readonly stations: DeepReadonly<StationLike[]>;
+  readonly setStations: (diaStations: StationLike[]) => void;
+  readonly trains: DeepReadonly<Train[]>;
+  readonly otherDirectionTrains: DeepReadonly<readonly Train[]>;
+  readonly crudTrain: DeepReadonly<CrudTrain>;
+  readonly setTimetable: SetTimetable;
+  readonly timetableDirection: DeepReadonly<TimetableDirection>;
+  readonly trainTypes: DeepReadonly<TrainType[]>;
+  readonly setSettingData: (settingData: DeepReadonly<SettingData>) => void;
+  readonly clipboard: AppClipboard;
+  readonly setClipboard: (clipboard: AppClipboard) => void;
+  readonly railwayLine: DeepReadonly<RailwayLine>;
+  readonly timetable: DeepReadonly<OutlinedTimetable>;
+  readonly errors: DeepReadonly<OperationError[]>;
+};
 
 export type TimetableEditorComponentProps = DeepReadonly<{
   timetableData: OutlinedTimetableData;
@@ -134,7 +134,6 @@ export type TimetableEditorComponentProps = DeepReadonly<{
   railwayLine: RailwayLine;
   mapInfo: MapInfo;
   setToast: (message: string) => void;
-  update: () => void;
   errors: OperationError[];
 }>;
 

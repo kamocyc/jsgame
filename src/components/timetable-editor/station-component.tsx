@@ -81,14 +81,10 @@ function StationContextMenuComponent({
                 assert(stations.length === draftTimetable.stations.length - 1);
 
                 trainData.trains.forEach((train) => {
-                  train.diaTimes = train.diaTimes.filter(
-                    (diaTime) => diaTime.station.stationId !== selectedStation.stationId
-                  );
+                  train.diaTimes = train.diaTimes.filter((diaTime) => diaTime.stationId !== selectedStation.stationId);
                 });
                 trainData.otherDirectionTrains.forEach((train) => {
-                  train.diaTimes = train.diaTimes.filter(
-                    (diaTime) => diaTime.station.stationId !== selectedStation.stationId
-                  );
+                  train.diaTimes = train.diaTimes.filter((diaTime) => diaTime.stationId !== selectedStation.stationId);
                 });
               });
 
@@ -226,8 +222,8 @@ function createNewStationAndUpdate(
       arrivalTime: null,
       departureTime: null,
       isPassing: false,
-      station: newStation,
-      platform: getDefaultPlatform(newStation, timetableDirection),
+      stationId: newStation.stationId,
+      platformId: getDefaultPlatform(newStation, timetableDirection).platformId,
       isInService: true,
       trackId: null,
     });
@@ -239,8 +235,8 @@ function createNewStationAndUpdate(
       arrivalTime: null,
       departureTime: null,
       isPassing: false,
-      station: newStation,
-      platform: getDefaultPlatform(newStation, timetableDirection),
+      stationId: newStation.stationId,
+      platformId: getDefaultPlatform(newStation, timetableDirection).platformId,
       isInService: true,
       trackId: null,
     });
@@ -398,7 +394,7 @@ export function StationDetailComponent({
                             ) +
                             1 +
                             '',
-                      station: station,
+                      stationId: station.stationId,
                     });
                   });
                 }}

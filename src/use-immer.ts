@@ -13,7 +13,9 @@ export function useImmer<S>(initialValue: S | (() => S)) {
   return [
     val,
     useCallback((updater: S | ((draft: S) => void)) => {
+      // @ts-ignore
       if (typeof updater === 'function') updateValue(produce(updater));
+      // @ts-ignore
       else updateValue(freeze(updater, true));
     }, []),
   ] as const;
@@ -52,5 +54,6 @@ export function useImmerReducer<S, A, I>(
   initializer?: (arg: S & I) => S
 ) {
   const cachedReducer = useMemo(() => produce(reducer), [reducer]);
+  // @ts-ignore
   return useReducer(cachedReducer, initializerArg as any, initializer as any);
 }

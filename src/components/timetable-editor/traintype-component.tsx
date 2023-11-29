@@ -115,11 +115,9 @@ export function TrainTypeSettingComponent({
               trainType={trainTypes.find((t) => t.trainTypeId === settingData.trainTypeId)!}
               setTrainType={(trainType) => {
                 setTrainTypes(
-                  trainTypes.map((t) => {
+                  trainTypes.filter((t) => {
                     if (t.trainTypeId === trainType.trainTypeId) {
-                      t.trainTypeColor = trainType.trainTypeColor;
-                      t.trainTypeName = trainType.trainTypeName;
-                      return t;
+                      return { ...t, trainTypeColor: trainType.trainTypeColor, trainTypeName: trainType.trainTypeName };
                     } else {
                       return t;
                     }

@@ -1,5 +1,5 @@
 import { DeepReadonly } from 'ts-essentials';
-import { assert, merge } from './common';
+import { assert } from './common';
 import { AddingNewTrain } from './outlinedTimetableData';
 
 export interface Point {
@@ -32,7 +32,7 @@ export interface DepotLine {
   platformType: 'DepotLine';
   platformId: string;
   platformName: string;
-  station: Depot;
+  stationId: string;
 }
 
 export interface Station {
@@ -49,7 +49,7 @@ export interface Platform {
   platformType: 'Platform';
   platformId: string;
   platformName: string;
-  station: Station;
+  stationId: string;
 }
 
 export const DefaultStationDistance = 100;
@@ -88,8 +88,8 @@ export interface DiaTime {
   isPassing: boolean;
   isInService: boolean;
   trackId: string | null;
-  station: StationLike;
-  platform: PlatformLike | null;
+  stationId: string;
+  platformId: string | null;
 }
 
 export interface TrainType {
@@ -151,20 +151,20 @@ function cloneOperation(operation: StationOperation): StationOperation {
   }
 }
 
-export function cloneTrain(train: DeepReadonly<Train>): DeepReadonly<Train> {
+export function cloneTrain(train: DeepReadonly<Train>): Train {
   return {
     trainId: generateId(),
     trainCode: train.trainCode,
     trainName: train.trainName,
     trainType: train.trainType,
-    diaTimes: train.diaTimes.map((diaTime) => merge(diaTime, { diaTimeId: generateId() })),
+    diaTimes: train.diaTimes.map((diaTime) => ({ ...diaTime, diaTimeId: generateId() })),
     firstStationOperation: cloneOperation(train.firstStationOperation),
     lastStationOperation: cloneOperation(train.lastStationOperation),
   };
 }
 
 export interface AppClipboard {
-  trains: DeepReadonly<Train[]>;
+  trains: Train[];
   originalTrains: DeepReadonly<Train[]>;
 }
 

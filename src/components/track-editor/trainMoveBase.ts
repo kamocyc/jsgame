@@ -1,4 +1,5 @@
-import { fst, nn } from '../../common.js';
+import { DeepReadonly } from 'ts-essentials';
+import { fst_, nn } from '../../common.js';
 import { ArrivalAndDepartureStatus, DetailedTimetable, Operation, Point, Track, Train } from '../../model.js';
 import { getDistance, getMidPoint, getRadian } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
@@ -14,7 +15,7 @@ export interface StoredTrain {
 }
 
 export interface PlacedTrain extends StoredTrain {
-  train: Train | null; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
+  train: DeepReadonly<Train> | null; // train.trainIdは列車ID（物理的な車両ではなく、スジのID）
   trainId: string;
   diaTimeId: string;
   operationId: string;
@@ -82,18 +83,18 @@ export function shouldStopTrain(train: PlacedTrain): false | Point {
 const TimeActionMode: 'Just' | 'After' = 'After';
 const StartIfNoTimetable = true;
 
-export function getFirstTimeOfTrain(train: Train) {
+export function getFirstTimeOfTrain(train: DeepReadonly<Train>) {
   return nn(train.diaTimes[0].arrivalTime ?? train.diaTimes[0].departureTime);
 }
 
-export function getLastTimeOfTrain(train: Train) {
+export function getLastTimeOfTrain(train: DeepReadonly<Train>) {
   return nn(
     train.diaTimes[train.diaTimes.length - 1].departureTime ?? train.diaTimes[train.diaTimes.length - 1].arrivalTime
   );
 }
 
 export function getMinTimetableTime(timetable: DetailedTimetable): number {
-  const minTimetableTime = Math.min(...timetable.operations.map((o) => getFirstTimeOfTrain(fst(o.trains)) - 60));
+  const minTimetableTime = Math.min(...timetable.operations.map((o) => getFirstTimeOfTrain(fst_(o.trains)) - 60));
   return minTimetableTime;
 }
 

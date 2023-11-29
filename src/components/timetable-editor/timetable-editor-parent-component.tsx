@@ -69,7 +69,7 @@ export function TimetableEditorParentComponent({
 
     // TODO: UIに表示する
     setErrors(newTimetableData._errors);
-    update();
+    // update();
   };
 
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
@@ -77,11 +77,11 @@ export function TimetableEditorParentComponent({
   //   appStates.outlinedTimetableData = timetableData;
   //   update();
   // };
-  const update = () => {
-    const errors = appStates.outlinedTimetableData.updateOperations();
-    // TODO: UIに表示する
-    setErrors(errors);
-  };
+  // const update = () => {
+  //   const errors = appStates.outlinedTimetableData.updateOperations();
+  //   // TODO: UIに表示する
+  //   setErrors(errors);
+  // };
 
   return (
     <>

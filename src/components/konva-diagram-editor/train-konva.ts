@@ -4,6 +4,10 @@ import { getDirection } from '../../outlinedTimetableData';
 import { Polygon, sat } from '../../sat';
 import { DiagramKonvaContext, RectState, createPositionDiaTimeMap } from './konva-util';
 
+export type TrainKonvaProps = Readonly<{ context: DiagramKonvaContext; train: Train }>;
+
+export function TrainKonvaComponent({ context, train }: TrainKonvaProps) {}
+
 export class TrainKonva {
   private trainLine: Konva.Line;
   private isSelected: boolean = false;

@@ -111,17 +111,17 @@ function placeTrain(
   const position = getMidPoint(hitTrack.begin, hitTrack.end);
 
   // TODO: よくないが。
-  trainMove.getPlacedTrains().push({
-    ...selectedTrain,
-    train: null,
-    speed: 10 /* 加速す料にしたいところ*/,
-    stationWaitTime: 0,
-    stationStatus: 'Arrived',
-    stopId: null,
-    track: hitTrack,
-    position: position,
-    operation: null,
-  });
+  // trainMove.getPlacedTrains().push({
+  //   ...selectedTrain,
+  //   train: null,
+  //   speed: 10 /* 加速す料にしたいところ*/,
+  //   stationWaitTime: 0,
+  //   stationStatus: 'Arrived',
+  //   stopId: null,
+  //   track: hitTrack,
+  //   position: position,
+  //   operation: null,
+  // });
 
   return true;
 }
@@ -332,10 +332,15 @@ export function onmousedown(
   setToast: (message: string) => void
 ) {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = rrx(e.clientX - rect.left, appStates.mapContext);
-  const y = rry(e.clientY - rect.top, appStates.mapContext);
+  const x = rrx(e.clientX - rect.left, appStates.mapState.mapContext);
+  const y = rry(e.clientY - rect.top, appStates.mapState.mapContext);
 
-  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
+  const mapPosition = mouseToMapPosition(
+    { x, y },
+    appStates.mapState.mapWidth,
+    appStates.mapState.mapHeight,
+    appStates.mapState.mapContext
+  );
 
   // 右クリックでドラッグするときは、マップを移動させる
   if (e.button === 2) {
@@ -348,9 +353,9 @@ export function onmousedown(
   }
 
   if (mapPosition != null) {
-    if (appStates.editMode === 'Info') {
+    if (appStates.mapState.editMode === 'Info') {
       showInfoPanel(
-        appStates.mapContext.mapTotalHeight,
+        appStates.mapState.mapContext.mapTotalHeight,
         appStates.map[mapPosition.x][mapPosition.y],
         { x, y },
         setEditorDialogMode,
@@ -358,70 +363,68 @@ export function onmousedown(
         setSwitch
       );
       return;
-    } else if (appStates.editMode === 'PlaceTrain') {
+    } else if (appStates.mapState.editMode === 'PlaceTrain') {
       if (selectedTrain === null) {
         console.error('selectedTrainがnull');
         return;
       } else {
         placeTrain(
-          appStates.trainMove,
-          appStates.mapContext.mapTotalHeight,
+          appStates.mapState.trainMove,
+          appStates.mapState.mapContext.mapTotalHeight,
           appStates.map[mapPosition.x][mapPosition.y],
           { x, y },
           selectedTrain
         );
         return;
       }
-    } else if (appStates.editMode === 'SetPlatform') {
+    } else if (appStates.mapState.editMode === 'SetPlatform') {
       setMouseDragMode('SetPlatform');
       const newPlatform = createPlatform(appStates.map[mapPosition.x][mapPosition.y]);
-    } else if (appStates.editMode === 'Station') {
+    } else if (appStates.mapState.editMode === 'Station') {
       const result = placeStation(
         appStates.map,
-        appStates.extendedMap,
+        appStates.mapState.extendedMap,
         mapPosition,
-        appStates.mapWidth,
-        appStates.mapHeight,
+        appStates.mapState.mapWidth,
+        appStates.mapState.mapHeight,
         numberOfPlatforms,
         setToast
       );
       if (result) {
         const [newTracks, newSwitches, newStation] = result;
         appStates.tracks.push(...newTracks);
-        appStates.switches.push(...newSwitches);
-        appStates.stations.push(newStation);
+        appStates.mapState.stations.push(newStation);
       }
-    } else if (appStates.editMode === 'Create') {
+    } else if (appStates.mapState.editMode === 'Create') {
       setMouseDragMode('Create');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
-    } else if (appStates.editMode === 'Delete') {
+    } else if (appStates.mapState.editMode === 'Delete') {
       setMouseDragMode('Delete');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
-    } else if (appStates.editMode === 'ExtendedMap') {
-      createExtendedMapCell(appStates.extendedMap[mapPosition.x][mapPosition.y], constructType);
-    } else if (appStates.editMode === 'Road') {
+    } else if (appStates.mapState.editMode === 'ExtendedMap') {
+      createExtendedMapCell(appStates.mapState.extendedMap[mapPosition.x][mapPosition.y], constructType);
+    } else if (appStates.mapState.editMode === 'Road') {
       setMouseDragMode('Road');
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
-    } else if (appStates.editMode === 'DepotCreate') {
+    } else if (appStates.mapState.editMode === 'DepotCreate') {
       const result = createDepot(
         appStates.map,
-        appStates.extendedMap,
+        appStates.mapState.extendedMap,
         mapPosition,
-        appStates.mapWidth,
-        appStates.mapHeight,
+        appStates.mapState.mapWidth,
+        appStates.mapState.mapHeight,
         numberOfLines,
         setToast
       );
       if (result) {
         const [newTracks, newSwitches, _] = result;
         appStates.tracks.push(...newTracks);
-        appStates.switches.push(...newSwitches);
       }
-    } else if (appStates.editMode === 'LineCreate') {
+    } else if (appStates.mapState.editMode === 'LineCreate') {
       /* LineCreateは右クリックも使うため、mouseupで処理する */
       setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
-    } else if (appStates.editMode === 'SetTerrain') {
-      setTerrain(appStates.extendedMap[mapPosition.x][mapPosition.y], terrainType);
+    } else if (appStates.mapState.editMode === 'SetTerrain') {
+      setTerrain(appStates.mapState.extendedMap[mapPosition.x][mapPosition.y], terrainType);
     } else {
       console.error('editModeが不正');
     }
@@ -438,25 +441,25 @@ export function onmousemove(
   update: () => void
 ) {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = rrx(e.clientX - rect.left, appStates.mapContext);
-  const y = rry(e.clientY - rect.top, appStates.mapContext);
+  const x = rrx(e.clientX - rect.left, appStates.mapState.mapContext);
+  const y = rry(e.clientY - rect.top, appStates.mapState.mapContext);
 
   if (mouseDragMode === 'MoveMap' && mouseStartPoint != null) {
-    appStates.mapContext.offsetX += x - mouseStartPoint.x;
-    appStates.mapContext.offsetY += y - mouseStartPoint.y;
+    appStates.mapState.mapContext.offsetX += x - mouseStartPoint.x;
+    appStates.mapState.mapContext.offsetY += y - mouseStartPoint.y;
     const canvasWidth = (e.target as HTMLCanvasElement).clientWidth;
     const canvasHeight = (e.target as HTMLCanvasElement).clientHeight;
-    if (appStates.mapContext.mapTotalWidth + appStates.mapContext.offsetX < canvasWidth) {
-      appStates.mapContext.offsetX = canvasWidth - appStates.mapContext.mapTotalWidth;
+    if (appStates.mapState.mapContext.mapTotalWidth + appStates.mapState.mapContext.offsetX < canvasWidth) {
+      appStates.mapState.mapContext.offsetX = canvasWidth - appStates.mapState.mapContext.mapTotalWidth;
     }
-    if (appStates.mapContext.mapTotalHeight + appStates.mapContext.offsetY < canvasHeight) {
-      appStates.mapContext.offsetY = canvasHeight - appStates.mapContext.mapTotalHeight;
+    if (appStates.mapState.mapContext.mapTotalHeight + appStates.mapState.mapContext.offsetY < canvasHeight) {
+      appStates.mapState.mapContext.offsetY = canvasHeight - appStates.mapState.mapContext.mapTotalHeight;
     }
-    if (appStates.mapContext.offsetX > 0) {
-      appStates.mapContext.offsetX = 0;
+    if (appStates.mapState.mapContext.offsetX > 0) {
+      appStates.mapState.mapContext.offsetX = 0;
     }
-    if (appStates.mapContext.offsetY > 0) {
-      appStates.mapContext.offsetY = 0;
+    if (appStates.mapState.mapContext.offsetY > 0) {
+      appStates.mapState.mapContext.offsetY = 0;
     }
     setMouseStartPoint({ x, y });
     update();
@@ -464,7 +467,12 @@ export function onmousemove(
   }
   // TODO: まとめて削除とか、線路を引いている間にプレビューとかしたい。
 
-  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
+  const mapPosition = mouseToMapPosition(
+    { x, y },
+    appStates.mapState.mapWidth,
+    appStates.mapState.mapHeight,
+    appStates.mapState.mapContext
+  );
   if (mapPosition != null) {
     const mouseMoveCell = appStates.map[mapPosition.x][mapPosition.y];
     drawEditor(appStates, mouseStartCell, mouseMoveCell);
@@ -492,12 +500,12 @@ function deleteVariousThings(
   const platformId = getPlatformId(mouseStartCell, mouseEndCell);
   if (platformId !== null) {
     // 駅の削除
-    const station = appStates.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
+    const station = appStates.mapState.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
     const result = deleteStation(appStates.map, station);
     if (result !== true && 'error' in result) {
       setToast(result.error);
     } else {
-      appStates.stations.splice(appStates.stations.indexOf(station), 1);
+      appStates.mapState.stations.splice(appStates.mapState.stations.indexOf(station), 1);
       appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
       validateAppState(appStates);
     }
@@ -517,9 +525,9 @@ function deleteVariousThings(
   }
 
   // 建物の削除
-  const extendedCell = appStates.extendedMap[mouseStartCell.position.x][mouseStartCell.position.y];
+  const extendedCell = appStates.mapState.extendedMap[mouseStartCell.position.x][mouseStartCell.position.y];
   if (extendedCell.type === 'Construct') {
-    appStates.extendedMap[mouseStartCell.position.x][mouseStartCell.position.y] = {
+    appStates.mapState.extendedMap[mouseStartCell.position.x][mouseStartCell.position.y] = {
       position: { ...extendedCell.position },
       type: 'None',
       terrain: extendedCell.terrain,
@@ -553,46 +561,50 @@ export function onmouseup(
   if (!mouseStartCell) return;
 
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-  const x = rrx(e.clientX - rect.left, appStates.mapContext);
-  const y = rry(e.clientY - rect.top, appStates.mapContext);
+  const x = rrx(e.clientX - rect.left, appStates.mapState.mapContext);
+  const y = rry(e.clientY - rect.top, appStates.mapState.mapContext);
 
-  const mapPosition = mouseToMapPosition({ x, y }, appStates.mapWidth, appStates.mapHeight, appStates.mapContext);
+  const mapPosition = mouseToMapPosition(
+    { x, y },
+    appStates.mapState.mapWidth,
+    appStates.mapState.mapHeight,
+    appStates.mapState.mapContext
+  );
   if (mapPosition != null) {
     const mouseEndCell = appStates.map[mapPosition.x][mapPosition.y];
 
     if (mouseDragMode === 'Create') {
-      const result = createLine(appStates.map, mouseStartCell, mouseEndCell, appStates.extendedMap);
+      const result = createLine(appStates.map, mouseStartCell, mouseEndCell, appStates.mapState.extendedMap);
       // console.warn(result?.error);
       if ('error' in result) {
         setToast(result.error);
       } else {
-        const [tracks, switches] = result;
-        appStates.moneyManager.addMoney(-tracks.length * 10000);
+        const [tracks, _] = result;
+        appStates.mapState.moneyManager.addMoney(-tracks.length * 10000);
         appStates.tracks = getAllTracks(appStates.map);
-        appStates.switches.push(...switches);
         validateAppState(appStates);
       }
     } else if (mouseDragMode === 'Delete') {
       deleteVariousThings(mouseStartCell, mouseEndCell, appStates, setToast);
     } else if (mouseDragMode === 'Road') {
-      const result = createRoad(appStates.extendedMap, mouseStartCell, mouseEndCell);
+      const result = createRoad(appStates.mapState.extendedMap, mouseStartCell, mouseEndCell);
       if (result !== null && 'error' in result) {
         setToast(result.error);
       } else {
         validateAppState(appStates);
       }
-    } else if (appStates.editMode === 'LineCreate') {
+    } else if (appStates.mapState.editMode === 'LineCreate') {
       if (e.button === 2) {
         // 選択終了
-        if (appStates.currentRailwayLine !== null) {
-          appStates.railwayLines.push(appStates.currentRailwayLine);
-          const [timetable, newTrains] = getInitialTimetable(appStates.currentRailwayLine);
+        if (appStates.mapState.currentRailwayLine !== null) {
+          appStates.railwayLines.push(appStates.mapState.currentRailwayLine);
+          const [timetable, newTrains] = getInitialTimetable(appStates.mapState.currentRailwayLine);
           appStates.outlinedTimetableData.addTimetable(timetable, newTrains);
-          appStates.currentRailwayLine = null;
+          appStates.mapState.currentRailwayLine = null;
         }
       } else {
         const trackAndPlatform = getPlatformOfCell(
-          appStates.mapContext.mapTotalHeight,
+          appStates.mapState.mapContext.mapTotalHeight,
           appStates.map[mapPosition.x][mapPosition.y],
           { x, y }
         );
@@ -629,9 +641,9 @@ export function onwheel(e: WheelEvent, appStates: AppStates, update: () => void)
   const scaleBy = 1.05;
   const delta = e.deltaY;
 
-  const oldScale = appStates.mapContext.scale;
+  const oldScale = appStates.mapState.mapContext.scale;
   const newScale = delta > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-  appStates.mapContext.scale = newScale;
+  appStates.mapState.mapContext.scale = newScale;
 
   update();
 }
@@ -693,10 +705,10 @@ function createRoad(
 }
 
 export function commitRailwayLine(appStates: AppStates) {
-  const railwayLine = appStates.currentRailwayLine;
+  const railwayLine = appStates.mapState.currentRailwayLine;
   if (railwayLine !== null) {
     appStates.railwayLines.push(railwayLine);
-    appStates.currentRailwayLine = null;
+    appStates.mapState.currentRailwayLine = null;
   }
 }
 
@@ -716,14 +728,14 @@ function searchTrackPath2(track1: Track, track2: Track): Track[] | undefined {
 // まずはTFベースの仕組み。そのうち改良
 // 環状線はとりあえずは無いとする。（片側だけは無い）。駅単位で追加する。駅と駅の間の経路はどうするか。 => いずれか経路があればいいとする。いや、プラットフォーム指定。
 // 「路線」
-// appStates.currentRailwayLine を破壊的に変更する
+// appStates.mapState.currentRailwayLine を破壊的に変更する
 export function addPlatformToLine(
   platformTrack: Track,
   platform: PlatformLike,
   cell: Cell,
   appStates: AppStates
 ): { error: string } | null {
-  if (appStates.currentRailwayLine === null) {
+  if (appStates.mapState.currentRailwayLine === null) {
     const id = generateId();
 
     const newName = getNewName(
@@ -736,7 +748,7 @@ export function addPlatformToLine(
       platformPaths: null,
       platformTrack: platformTrack,
     };
-    appStates.currentRailwayLine = {
+    appStates.mapState.currentRailwayLine = {
       railwayLineId: id,
       railwayLineName: newName,
       railwayLineColor: getRandomColor(),
@@ -744,7 +756,7 @@ export function addPlatformToLine(
       returnStopId: newStop.stopId,
     };
   } else {
-    const stops = appStates.currentRailwayLine.stops;
+    const stops = appStates.mapState.currentRailwayLine.stops;
 
     assert(platformTrack.track.platform !== null);
     if (platformTrack.track.platform.platformId === stops[stops.length - 1].platform.platformId) {
@@ -774,7 +786,7 @@ export function addPlatformToLine(
 
     if (pathToLoop !== undefined) {
       if (pathToNewStop[pathToNewStop.length - 1].trackId === pathToLoop[0].reverseTrack.trackId) {
-        appStates.currentRailwayLine.returnStopId = stops[stops.length - 1].stopId;
+        appStates.mapState.currentRailwayLine.returnStopId = stops[stops.length - 1].stopId;
       }
     }
   }

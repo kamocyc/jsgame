@@ -10,7 +10,7 @@ export interface DiagramProps {
   timetable: OutlinedTimetable;
   clipboard: AppClipboard;
   railwayLine: RailwayLine;
-  errors: OperationError[];
+  errors: readonly OperationError[];
   setClipboard: (clipboard: AppClipboard) => void;
   getTrainsWithDirections: () => [readonly Train[], readonly Train[]];
 }

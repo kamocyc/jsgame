@@ -1,5 +1,5 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
-import { assert, nn, removeDuplicates } from '../../common';
+import { assert, merge, nn, removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import {
@@ -8,6 +8,7 @@ import {
   CellHeight,
   EditMode,
   ExtendedGameMap,
+  MapState,
   createMapContext,
   timesVector,
 } from '../../mapEditorModel';
@@ -76,8 +77,8 @@ function toStringEditorData(appStates: AppStates) {
     storedTrains: appStates.storedTrains,
     timetable: appStates.detailedTimetable,
     timetableData: appStates.outlinedTimetableData.toDataToSave(),
-    extendedMap: appStates.extendedMap,
-    placedTrains: appStates.trainMove.getPlacedTrains(),
+    extendedMap: appStates.mapState.extendedMap,
+    placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
   };
 
@@ -149,24 +150,26 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
 
   // generateTerrain(extendedMap);
 
-  setAppStates((appStates) => ({
-    ...appStates,
-    map: mapData,
-    extendedMap: extendedMap,
-    switches: switches,
-    tracks: tracks,
-    trainMove: trainMove,
-    storedTrains: storedTrains,
-    detailedTimetable: timetable,
-    stations: stations,
-    agentManager: createAgentManager(),
-    mapWidth: mapWidth,
-    mapHeight: mapHeight,
-    outlinedTimetableData: timetableData,
-    railwayLines: railwayLines,
-    mapContext: createMapContext(mapWidth, mapHeight),
-    moneyManager: new MoneyManager(),
-  }));
+  setAppStates((appStates) =>
+    merge(appStates, {
+      map: mapData,
+      tracks: tracks,
+      storedTrains: storedTrains,
+      detailedTimetable: timetable,
+      outlinedTimetableData: timetableData,
+      railwayLines: railwayLines,
+      mapState: merge(appStates.mapState, {
+        extendedMap: extendedMap,
+        trainMove: trainMove,
+        stations: stations,
+        agentManager: createAgentManager(),
+        mapWidth: mapWidth,
+        mapHeight: mapHeight,
+        mapContext: createMapContext(mapWidth, mapHeight),
+        moneyManager: new MoneyManager(),
+      }),
+    })
+  );
 }
 
 function loadEditorDataLocalStorage(setAppStates: StateUpdater<AppStates>) {
@@ -179,24 +182,33 @@ function loadEditorDataLocalStorage(setAppStates: StateUpdater<AppStates>) {
 
 function addAgents(appStates: AppStates) {
   // 目的地に到着したら消す
-  const agents = [...appStates.agentManager.getAgents()];
+  const agents = [...appStates.mapState.agentManager.getAgents()];
   for (const agent of agents) {
     if (agent.inDestination) {
-      appStates.agentManager.remove(agent.id);
+      appStates.mapState.agentManager.remove(agent.id);
     }
   }
 
   // 追加
-  const constructs = appStates.extendedMap
+  const constructs = appStates.mapState.extendedMap
     .map((row) => row.filter((cell) => cell.type === 'Construct'))
     .flat() as ExtendedCellConstruct[];
-  const agentManager = appStates.agentManager;
+  const agentManager = appStates.mapState.agentManager;
 
   for (const construct of constructs) {
     agentManager.addAgentsRandomly(
       timesVector({ x: construct.position.cx, y: construct.position.cy }, CellHeight),
       construct,
-      { ...appStates, gameMap: appStates.map, placedTrains: appStates.trainMove.getPlacedTrains() }
+      {
+        extendedMap: appStates.mapState.extendedMap,
+        stations: appStates.mapState.stations,
+        gameMap: appStates.map,
+        placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
+        railwayLines: appStates.railwayLines,
+        outlinedTimetableData: appStates.outlinedTimetableData,
+        moneyManager: appStates.mapState.moneyManager,
+        globalTimeManager: appStates.globalTimeManager,
+      }
     );
     // if (Math.random() < 0.1) {
     //   agentManager.add(timesVector({ x: house.position.cx, y: house.position.cy }, CellHeight));
@@ -204,7 +216,7 @@ function addAgents(appStates: AppStates) {
   }
 }
 
-const SearchMode: 'TimetableBased' | 'RailwayLineBased' = 'RailwayLineBased';
+// const SearchMode: 'TimetableBased' | 'RailwayLineBased' = 'RailwayLineBased';
 
 export function TrackEditorComponent({
   appStates,
@@ -219,25 +231,30 @@ export function TrackEditorComponent({
   const [positionPercentage, setPositionPercentage] = useState<number>(0);
   const [numberOfPlatforms, setNumberOfPlatforms] = useState<number>(2);
   const [numberOfLines, setNumberOfLines] = useState<number>(5);
-  const [_, setUpdate_] = useState<never[]>([]);
+  // const [_, setUpdate_] = useState<never[]>([]);
   const [constructType, setConstructType] = useState<ConstructType>('House');
   const [terrainType, setTerrainType] = useState<TerrainType>('Grass');
   const [showLineInfoPanel, setShowLineInfoPanel] = useState<boolean>(false);
 
   const update = () => {
     setAppStates((s) => ({ ...s }));
-    setUpdate_([]);
-    drawEditor(appStates);
+    // setUpdate_([]);
+    // drawEditor(appStates);
+  };
+  const setMapState = (mapState: MapState) => {
+    setAppStates((appStates) => merge(appStates, { mapState: mapState }));
   };
 
   const setEditMode = (mode: EditMode) => {
     if (mode === 'LineCreate') {
       setShowLineInfoPanel(true);
+      setAppStates((appStates) => merge(appStates, { mapState: merge(appStates.mapState, { editMode: mode }) }));
     } else {
       setShowLineInfoPanel(false);
-      appStates.selectedRailwayLineId = null;
+      setAppStates((appStates) =>
+        merge(appStates, { selectedRailwayLineId: null, mapState: merge(appStates.mapState, { editMode: mode }) })
+      );
     }
-    setAppStates((appStates) => ({ ...appStates, editMode: mode }));
   };
 
   useEffect(() => {
@@ -258,28 +275,28 @@ export function TrackEditorComponent({
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
       appStates.globalTimeManager.tick();
-      const updated = appStates.mapManager.tick(
-        appStates.extendedMap,
+      const updated = appStates.mapState.mapManager.tick(
+        appStates.mapState.extendedMap,
         appStates.railwayLines,
-        appStates.trainMove.getPlacedTrains(),
-        appStates.shouldAutoGrow
+        appStates.mapState.trainMove.getPlacedTrains(),
+        appStates.mapState.shouldAutoGrow
       );
-      appStates.trainMove.tick({
+      appStates.mapState.trainMove.tick({
         globalTimeManager: appStates.globalTimeManager,
         railwayLines: appStates.railwayLines,
         storedTrains: appStates.storedTrains,
-        moneyManager: appStates.moneyManager,
+        moneyManager: appStates.mapState.moneyManager,
         tracks: appStates.tracks,
       });
       addAgents(appStates);
-      appStates.agentManager.tick({
-        extendedMap: appStates.extendedMap,
-        stations: appStates.stations,
+      appStates.mapState.agentManager.tick({
+        extendedMap: appStates.mapState.extendedMap,
+        stations: appStates.mapState.stations,
         gameMap: appStates.map,
-        placedTrains: appStates.trainMove.getPlacedTrains(),
+        placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
         outlinedTimetableData: appStates.outlinedTimetableData,
-        moneyManager: appStates.moneyManager,
+        moneyManager: appStates.mapState.moneyManager,
         globalTimeManager: appStates.globalTimeManager,
       });
       setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
@@ -309,12 +326,10 @@ export function TrackEditorComponent({
             railwayLines={appStates.railwayLines}
             selectedRailwayLineId={appStates.selectedRailwayLineId}
             setSelectedRailwayLineId={(id) => {
-              appStates.selectedRailwayLineId = id;
-              update();
+              setAppStates((appStates) => merge(appStates, { selectedRailwayLineId: id }));
             }}
             setRailwayLines={(railwayLines) => {
-              appStates.railwayLines = railwayLines;
-              update();
+              setAppStates((appStates) => merge(appStates, { railwayLines: railwayLines }));
             }}
           />
         </div>
@@ -326,19 +341,19 @@ export function TrackEditorComponent({
           <ModeOptionRadioComponent
             mode='Create'
             text='線路を作成'
-            checked={appStates.editMode === 'Create'}
+            checked={appStates.mapState.editMode === 'Create'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='Delete'
             text='削除'
-            checked={appStates.editMode === 'Delete'}
+            checked={appStates.mapState.editMode === 'Delete'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='Station'
             text='駅を作成'
-            checked={appStates.editMode === 'Station'}
+            checked={appStates.mapState.editMode === 'Station'}
             setEditorMode={setEditMode}
           />
           <input
@@ -356,25 +371,25 @@ export function TrackEditorComponent({
           <ModeOptionRadioComponent
             mode='PlaceTrain'
             text='車両情報'
-            checked={appStates.editMode === 'PlaceTrain'}
+            checked={appStates.mapState.editMode === 'PlaceTrain'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='Info'
             text='クリックしたものの情報を表示'
-            checked={appStates.editMode === 'Info'}
+            checked={appStates.mapState.editMode === 'Info'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='LineCreate'
             text='路線を作成'
-            checked={appStates.editMode === 'LineCreate'}
+            checked={appStates.mapState.editMode === 'LineCreate'}
             setEditorMode={setEditMode}
           />
           <ModeOptionRadioComponent
             mode='DepotCreate'
             text='車庫を作成'
-            checked={appStates.editMode === 'DepotCreate'}
+            checked={appStates.mapState.editMode === 'DepotCreate'}
             setEditorMode={setEditMode}
           />
           <input
@@ -399,7 +414,7 @@ export function TrackEditorComponent({
             <ModeOptionRadioComponent
               mode='ExtendedMap'
               text='建物を作成'
-              checked={appStates.editMode === 'ExtendedMap'}
+              checked={appStates.mapState.editMode === 'ExtendedMap'}
               setEditorMode={setEditMode}
             />
             <select
@@ -417,14 +432,14 @@ export function TrackEditorComponent({
           <ModeOptionRadioComponent
             mode='Road'
             text='道路'
-            checked={appStates.editMode === 'Road'}
+            checked={appStates.mapState.editMode === 'Road'}
             setEditorMode={setEditMode}
           />
           <div>
             <ModeOptionRadioComponent
               mode='SetTerrain'
               text='地形を設定'
-              checked={appStates.editMode === 'SetTerrain'}
+              checked={appStates.mapState.editMode === 'SetTerrain'}
               setEditorMode={setEditMode}
             />
             <select
@@ -441,7 +456,7 @@ export function TrackEditorComponent({
           </div>
           <button
             onClick={() => {
-              generateTerrain(appStates.extendedMap);
+              generateTerrain(appStates.mapState.extendedMap);
               update();
             }}
           >
@@ -451,9 +466,9 @@ export function TrackEditorComponent({
             情報を表示
             <input
               type='checkbox'
-              checked={appStates.showInfo}
+              checked={appStates.mapState.showInfo}
               onChange={() => {
-                appStates.showInfo = !appStates.showInfo;
+                setMapState({ ...appStates.mapState, showInfo: !appStates.mapState.showInfo });
               }}
             />
           </label>
@@ -461,9 +476,9 @@ export function TrackEditorComponent({
             自動発展
             <input
               type='checkbox'
-              checked={appStates.shouldAutoGrow}
+              checked={appStates.mapState.shouldAutoGrow}
               onChange={() => {
-                appStates.shouldAutoGrow = !appStates.shouldAutoGrow;
+                setMapState({ ...appStates.mapState, shouldAutoGrow: !appStates.mapState.shouldAutoGrow });
               }}
             />
           </label>
@@ -541,7 +556,7 @@ export function TrackEditorComponent({
       <button
         onClick={() => {
           stopInterval();
-          appStates.trainMove.resetTrainMove(appStates.globalTimeManager);
+          appStates.mapState.trainMove.resetTrainMove(appStates.globalTimeManager);
           startTop(100);
         }}
       >
@@ -557,7 +572,7 @@ export function TrackEditorComponent({
         ▸▸▸
       </button>
       <div style={{ display: 'inline-block', margin: '3px' }}>{appStates.globalTimeManager.toStringGlobalTime()}</div>
-      <div>¥{appStates.moneyManager.toStringMoney()}</div>
+      <div>¥{appStates.mapState.moneyManager.toStringMoney()}</div>
       <br />
 
       <SeekBarComponent

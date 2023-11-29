@@ -1,12 +1,13 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
-import { AppStates } from '../../mapEditorModel';
+import { AppStates, OperationError } from '../../mapEditorModel';
 import { PlatformLike } from '../../model';
 import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { createAgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable } from '../track-editor/timetableConverter';
 import { createTrainMove } from '../track-editor/trainMoveBase';
+import { MapInfo } from './common-component';
 import { TimetableEditorComponent } from './timetable-editor-component';
 
 function saveTimetableDataFile(timetableData: OutlinedTimetableData) {
@@ -41,6 +42,7 @@ export function TimetableEditorParentComponent({
   setToast: (toast: string) => void;
 }) {
   const [selectedRailwayLineId, setSelectedRailwayLineId] = useState<string | null>(defaultSelectedRailwayLineId);
+  const [errors, setErrors] = useState<OperationError[]>([]);
 
   useEffect(() => {
     if (selectedRailwayLineId == null && appStates.railwayLines[0] !== undefined) {
@@ -55,10 +57,7 @@ export function TimetableEditorParentComponent({
   const update = () => {
     const errors = appStates.outlinedTimetableData.updateOperations();
     // TODO: UIに表示する
-    setAppStates((appStates) => ({
-      ...appStates,
-      errors,
-    }));
+    setErrors(errors);
   };
 
   return (
@@ -173,10 +172,10 @@ export function TimetableEditorParentComponent({
             railwayLine={railwayLine}
             timetableData={appStates.outlinedTimetableData}
             timetable={selectedTimetable}
-            tracks={appStates.tracks}
+            mapInfo={new MapInfo(appStates.tracks)}
             update={update}
             setToast={setToast}
-            errors={appStates.errors}
+            errors={errors}
           />
         ) : (
           <></>

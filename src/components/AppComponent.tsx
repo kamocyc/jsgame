@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { AppStates, Cell, GameMap, createMapContext } from '../mapEditorModel';
+import { AppStates, Cell, GameMap, MapState, createMapContext } from '../mapEditorModel';
 import { DetailedTimetable } from '../model';
 import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData';
 import { ExtendedCell } from './extendedMapModel';
@@ -70,15 +70,9 @@ export function getInitialAppStates(): AppStates {
   ];
   const trainMove = createTrainMove(timetable);
   const errors = timetableData.updateOperations();
-  return {
+  const mapEditorState: MapState = {
     editMode: 'Create',
-    globalTimeManager: new GlobalTimeManager(),
-    detailedTimetable: timetable,
-    outlinedTimetableData: timetableData,
-    storedTrains: storedTrains,
     showInfo: true,
-    trainPlaceDirection: 'Up',
-    map: gameMap,
     mapWidth: defaultMapWidth,
     mapHeight: defaultMapHeight,
     mapContext: createMapContext(defaultMapWidth, defaultMapHeight),
@@ -86,42 +80,33 @@ export function getInitialAppStates(): AppStates {
     shouldAutoGrow: true,
     trainMove: trainMove,
     agentManager: createAgentManager(),
-    switches: [],
     stations: [],
-    tracks: [],
-    message: null,
     currentRailwayLine: null,
-    railwayLines: [],
-    selectedRailwayLineId: null,
     moneyManager: new MoneyManager(),
     mapManager: new MapManager(),
-    errors: errors,
+  };
+
+  return {
+    globalTimeManager: new GlobalTimeManager(),
+    detailedTimetable: timetable,
+    outlinedTimetableData: timetableData,
+    storedTrains: storedTrains,
+    map: gameMap,
+    tracks: [],
+    railwayLines: [],
+    selectedRailwayLineId: null,
+    mapState: mapEditorState,
   };
 }
 
 export function App() {
   const [appStates, setAppStates] = useState<AppStates>(() => getInitialAppStates());
-  const setToast = (message: string) => {
-    console.warn({ setToast: message });
-    appStates.message = message;
-    setAppStates((prev) => {
-      return {
-        ...prev,
-        message,
-      };
-    });
-
-    // なぜか効いていないのでコメントアウト
-    // setTimeout(() => {
-    //   appStates.message = '';
-    //   update();
-    // }, 3000);
-  };
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   return (
     <>
       <ToastComponent
-        message={appStates.message}
+        message={toastMessage}
         setMessage={(message) => {
           setAppStates((prev) => {
             return {
@@ -136,7 +121,7 @@ export function App() {
           {
             splitViewId: 1,
             component: () => (
-              <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} setToast={setToast} />
+              <TrackEditorComponent appStates={appStates} setAppStates={setAppStates} setToast={setToastMessage} />
             ),
           },
           {
@@ -146,7 +131,7 @@ export function App() {
                 appStates={appStates}
                 defaultSelectedRailwayLineId={appStates.selectedRailwayLineId}
                 setAppStates={setAppStates}
-                setToast={setToast}
+                setToast={setToastMessage}
               />
             ),
           },

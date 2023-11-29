@@ -1,7 +1,7 @@
 import { ComponentChild } from 'preact';
 import { Ref, StateUpdater, useEffect, useRef, useState } from 'preact/hooks';
 import { parseTime, toStringFromSeconds } from '../../common';
-import { ContextData, getDefaultTime } from '../../model';
+import { ContextData, DeepReadonly, Track, getDefaultTime } from '../../model';
 import './timetable-editor.css';
 
 // function parseInputTextAsTime(text: string): string | undefined {
@@ -28,6 +28,14 @@ import './timetable-editor.css';
 //     return undefined;
 //   }
 // }
+
+export class MapInfo {
+  constructor(private readonly tracks: Track[]) {}
+
+  getTrackOfPlatform(platformId: string): DeepReadonly<Track> | undefined {
+    return this.tracks.find((track) => track.track.platform?.platformId === platformId);
+  }
+}
 
 // このコールバックでsetXXXを実行すると当然ながらコンポーネントが再描画される。パフォーマンスやよきせぬ動作になるので注意。
 export function useOnClickOutside(ref: Ref<HTMLElement>, handler: () => void) {

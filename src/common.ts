@@ -136,12 +136,7 @@ function hueToRgb(p: number, q: number, t: number) {
   return p;
 }
 
-// assert that the given array is not empty
-export function assertNonEmpty<T>(arr: T[]): asserts arr is [T, ...T[]] {
-  assert(arr.length > 0);
-}
-
-export function getRandomElement<T>(arr: [T, ...T[]]): T {
+export function getRandomElement<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
 }
 
@@ -155,15 +150,14 @@ export function lst<T>(arr: T[]): T {
 
 export function generatePlaceName(): string {
   const names = namesJson.names as string[];
-  assertNonEmpty(names);
   const name = getRandomElement(names);
   return name;
 }
 
 type NumberPair = [number, number];
-export type FuncDefinition = [NumberPair, ...NumberPair[]];
+export type FunctionDefinition = NumberPair[];
 
-export function getInterpolatedFunctionValue(funcDefinition: FuncDefinition, x: number): number {
+export function getInterpolatedFunctionValue(funcDefinition: FunctionDefinition, x: number): number {
   if (funcDefinition.length === 0) return 0;
   if (funcDefinition.length === 1) return funcDefinition[0][1];
 
@@ -207,6 +201,10 @@ export class CountBag {
   }
 }
 
+export function merge<T>(obj: T, partial: Partial<T>): T {
+  return { ...obj, ...partial };
+}
+
 export function sum(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0);
 }
@@ -244,7 +242,7 @@ export function upto(n: number): number[] {
   return [...Array(n).keys()].map((i) => i);
 }
 
-export function toMap<T>(arr: T[], key: (v: T) => string | undefined): Map<string, T> {
+export function toMap<T>(arr: readonly T[], key: (v: T) => string | undefined): Map<string, T> {
   const map = new Map<string, T>();
   for (const v of arr) {
     const k = key(v);

@@ -1,5 +1,13 @@
-import { assert } from './common';
+import { assert, merge } from './common';
 import { AddingNewTrain, HistoryItem } from './outlinedTimetableData';
+
+export type DeepReadonly<T> = {
+  readonly [P in keyof T]: T[P] extends Record<string, unknown>
+    ? DeepReadonly<T[P]>
+    : T[P] extends unknown[]
+    ? ReadonlyArray<DeepReadonly<T[P][number]>>
+    : T[P];
+};
 
 export interface Point {
   x: number;
@@ -132,6 +140,10 @@ export interface Train {
   lastStationOperation: StationOperation;
 }
 
+function m(obj1: Record<string, unknown>): Record<string, unknown> {
+  return { obj1 };
+}
+
 function cloneOperation(operation: StationOperation): StationOperation {
   if (operation.stationOperationType === 'InOut') {
     return {
@@ -152,7 +164,7 @@ export function cloneTrain(train: Train): Train {
     trainCode: train.trainCode,
     trainName: train.trainName,
     trainType: train.trainType,
-    diaTimes: train.diaTimes.map((diaTime) => ({ ...diaTime, diaTimeId: generateId() })),
+    diaTimes: train.diaTimes.map((diaTime) => merge(diaTime, { diaTimeId: generateId() })),
     firstStationOperation: cloneOperation(train.firstStationOperation),
     lastStationOperation: cloneOperation(train.lastStationOperation),
   };

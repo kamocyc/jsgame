@@ -154,35 +154,33 @@ export type OperationError = {
   platformId: string | null;
 };
 
-export interface AppStates {
-  globalTimeManager: GlobalTimeManager;
-  editMode: EditMode;
-  detailedTimetable: DetailedTimetable;
-  outlinedTimetableData: OutlinedTimetableData;
-  storedTrains: StoredTrain[];
-  showInfo: boolean;
-  /**
-   * 配置するときのほうこうの決定に使う予定
-   */
-  trainPlaceDirection: 'Up' | 'Down';
-  switches: Switch[]; // 今は使っていない
-  stations: StationLike[];
-  tracks: Track[];
-  map: GameMap;
-  extendedMap: ExtendedGameMap;
-  shouldAutoGrow: boolean;
-  mapWidth: number;
-  mapHeight: number;
-  mapContext: MapContext;
-  trainMove: ITrainMove;
-  agentManager: AgentManagerBase;
-  message: string | null;
+export interface MapState {
+  readonly editMode: EditMode;
+  readonly showInfo: boolean;
+  readonly shouldAutoGrow: boolean;
+  readonly mapWidth: number;
+  readonly mapHeight: number;
+  readonly mapContext: MapContext;
+  readonly stations: StationLike[];
+  readonly extendedMap: ExtendedGameMap;
+  readonly agentManager: AgentManagerBase;
   currentRailwayLine: RailwayLine | null;
-  railwayLines: RailwayLine[];
-  selectedRailwayLineId: string | null;
-  moneyManager: MoneyManager;
-  mapManager: MapManager;
-  errors: OperationError[];
+  readonly trainMove: ITrainMove;
+  readonly moneyManager: MoneyManager;
+  readonly mapManager: MapManager;
+}
+
+export interface AppStates {
+  readonly globalTimeManager: GlobalTimeManager;
+  readonly detailedTimetable: DetailedTimetable;
+  outlinedTimetableData: OutlinedTimetableData;
+  readonly railwayLines: RailwayLine[];
+  readonly selectedRailwayLineId: string | null;
+  storedTrains: StoredTrain[];
+
+  readonly map: GameMap;
+  tracks: Track[];
+  readonly mapState: MapState;
 }
 
 export function splitStops(

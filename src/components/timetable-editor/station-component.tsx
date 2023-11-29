@@ -28,8 +28,8 @@ function StationComponent({
 function StationContextMenuComponent({
   contextData,
   setContextData,
-  diaStations,
-  setDiaStations,
+  stations,
+  setStations,
   trains,
   otherDirectionTrains,
   selectedStation,
@@ -38,8 +38,8 @@ function StationContextMenuComponent({
 }: {
   contextData: ContextData;
   setContextData: StateUpdater<ContextData>;
-  diaStations: StationLike[];
-  setDiaStations: (diaStations: StationLike[]) => void;
+  stations: StationLike[];
+  setStations: (stations: StationLike[]) => void;
   trains: readonly Train[];
   otherDirectionTrains: readonly Train[];
   selectedStation: StationLike | null;
@@ -55,7 +55,7 @@ function StationContextMenuComponent({
           label: '駅を削除',
           onClick: () => {
             if (selectedStation) {
-              diaStations = diaStations.filter((diaStation) => diaStation.stationId !== selectedStation.stationId);
+              stations = stations.filter((diaStation) => diaStation.stationId !== selectedStation.stationId);
               trains.forEach((train) => {
                 train.diaTimes = train.diaTimes.filter(
                   (diaTime) => diaTime.station.stationId !== selectedStation.stationId
@@ -67,7 +67,7 @@ function StationContextMenuComponent({
                 );
               });
 
-              setDiaStations([...diaStations]);
+              setStations([...stations]);
               setContextData({ ...contextData, visible: false });
             }
           },
@@ -83,16 +83,16 @@ function StationContextMenuComponent({
           label: '駅を追加',
           onClick: () => {
             // selectedStationの直前に挿入する
-            const index = diaStations.findIndex((diaStation) => diaStation.stationId === selectedStation?.stationId);
+            const index = stations.findIndex((diaStation) => diaStation.stationId === selectedStation?.stationId);
             if (index === -1) {
               return;
             }
             const newStation = createNewStation('-');
-            diaStations.splice(index, 0, newStation);
+            stations.splice(index, 0, newStation);
 
             createNewStationAndUpdate(trains, otherDirectionTrains, newStation, timetableDirection);
 
-            setDiaStations([...diaStations]);
+            setStations([...stations]);
             setContextData({ ...contextData, visible: false });
           },
         },
@@ -102,15 +102,15 @@ function StationContextMenuComponent({
 }
 
 export function StationListComponent({
-  diaStations,
-  setDiaStations,
+  stations,
+  setStations: setStations,
   trains,
   otherDirectionTrains,
   timetableDirection,
   setSettingData,
 }: {
-  diaStations: StationLike[];
-  setDiaStations: (diaStations: StationLike[]) => void;
+  stations: StationLike[];
+  setStations: (stations: StationLike[]) => void;
   trains: readonly Train[];
   otherDirectionTrains: readonly Train[];
   timetableDirection: 'Inbound' | 'Outbound';
@@ -133,22 +133,20 @@ export function StationListComponent({
   return (
     <div>
       <StationContextMenuComponent
-        {...{
-          contextData,
-          setContextData,
-          diaStations,
-          trains,
-          otherDirectionTrains,
-          setDiaStations,
-          selectedStation,
-          showStationDetail: showStationDetail,
-          timetableDirection,
-        }}
+        contextData={contextData}
+        setContextData={setContextData}
+        stations={stations}
+        setStations={setStations}
+        trains={trains}
+        otherDirectionTrains={otherDirectionTrains}
+        selectedStation={selectedStation}
+        showStationDetail={showStationDetail}
+        timetableDirection={timetableDirection}
       />
       <div
         onContextMenu={(e) => {
           const targetStation = (() => {
-            for (const diaStation of diaStations) {
+            for (const diaStation of stations) {
               const id = 'dia-station-block-' + diaStation.stationId;
               const elem = document.getElementById(id);
               if (elem && elem.contains(e.target as Node)) {
@@ -165,7 +163,7 @@ export function StationListComponent({
           }
         }}
       >
-        {diaStations.map((diaStation) => (
+        {stations.map((diaStation) => (
           <div
             style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', paddingRight: '3px' }}
             id={'dia-station-block-' + diaStation.stationId}
@@ -174,11 +172,11 @@ export function StationListComponent({
               diaStation={diaStation}
               setDiaStation={(diaStation) => {
                 const newStation = createNewStation('-');
-                diaStations.push(newStation);
+                stations.push(newStation);
 
                 createNewStationAndUpdate(trains, otherDirectionTrains, newStation, timetableDirection);
 
-                setDiaStations([...diaStations]);
+                setStations([...stations]);
               }}
             />
           </div>

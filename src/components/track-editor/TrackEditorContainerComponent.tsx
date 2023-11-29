@@ -84,7 +84,7 @@ export function CanvasComponent({
       ></canvas>
 
       <div>
-        {appStates.editMode === 'PlaceTrain' ? (
+        {appStates.mapState.editMode === 'PlaceTrain' ? (
           <StoreTrainInfoPanel
             storedTrains={appStates.storedTrains}
             railwayLines={appStates.railwayLines}

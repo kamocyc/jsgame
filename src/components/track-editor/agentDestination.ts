@@ -1,11 +1,11 @@
-import { FuncDefinition, assertNonEmpty, fst, getInterpolatedFunctionValue, getRandomElement, lst } from '../../common';
+import { FunctionDefinition, fst, getInterpolatedFunctionValue, getRandomElement, lst } from '../../common';
 import { CellHeight, GameMap } from '../../mapEditorModel';
 import { Point, StationLike } from '../../model';
 import { getDistance, getMidPoint } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, toPixelPosition } from '../extendedMapModel';
 import { GlobalTimeManager } from './globalTimeManager';
 
-type MoveProbFunc = { [key in ConstructType]: { [key in ConstructType]: FuncDefinition } };
+type MoveProbFunc = { [key in ConstructType]: { [key in ConstructType]: FunctionDefinition } };
 
 const moveProbFuncs: MoveProbFunc = {
   House: {
@@ -170,7 +170,6 @@ function getRandomDestination(
     return null;
   }
 
-  assertNonEmpty(candidates2);
   return getRandomElement(candidates2);
 }
 
@@ -224,7 +223,6 @@ export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
     // ホームは横向きになっている。その一番上と下のセルを取得する
     const stationPlatforms = platforms.filter((p) => p.track.platform!.station.stationId === station.stationId);
     stationPlatforms.sort((a, b) => a.begin.y - b.begin.y);
-    assertNonEmpty(stationPlatforms);
     const topPlatform = fst(stationPlatforms);
     const bottomPlatform = lst(stationPlatforms);
     return {

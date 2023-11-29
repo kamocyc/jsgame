@@ -4,15 +4,15 @@ import { OperationError, RailwayLine } from '../../mapEditorModel';
 import {
   AppClipboard,
   CrudTrain,
+  DeepReadonly,
   SettingData,
   StationLike,
   TimetableDirection,
-  Track,
   Train,
   TrainType,
 } from '../../model';
 import { AddingNewTrain, HistoryItem, OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
-import { SettingColumnComponent, TabComponent, reverseArray } from './common-component';
+import { MapInfo, SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
 import { StationDetailComponent, StationListComponent } from './station-component';
@@ -62,14 +62,12 @@ export function TimetableEditorTableComponent({
         {/* <div style={{ height: '24px' }}>始発駅作業</div>
         <div style={{ height: '24px' }}>終着駅作業</div> */}
         <StationListComponent
-          {...{
-            diaStations: stations,
-            trains,
-            otherDirectionTrains,
-            setDiaStations: setStations,
-            timetableDirection,
-            setSettingData,
-          }}
+          stations={stations}
+          trains={trains}
+          otherDirectionTrains={otherDirectionTrains}
+          setStations={setStations}
+          timetableDirection={timetableDirection}
+          setSettingData={setSettingData}
         />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -82,21 +80,19 @@ export function TimetableEditorTableComponent({
         <TrainListRowHeaderComponent diaStations={stations} />
       </div>
       <TrainListComponent
-        {...{
-          errors,
-          stations,
-          setStations,
-          trains,
-          otherDirectionTrains,
-          crudTrain,
-          timetableDirection,
-          trainTypes,
-          setSettingData,
-          clipboard,
-          setClipboard,
-          railwayLine,
-          timetable,
-        }}
+        errors={errors}
+        stations={stations}
+        setStations={setStations}
+        trains={trains}
+        otherDirectionTrains={otherDirectionTrains}
+        crudTrain={crudTrain}
+        timetableDirection={timetableDirection}
+        trainTypes={trainTypes}
+        setSettingData={setSettingData}
+        clipboard={clipboard}
+        setClipboard={setClipboard}
+        railwayLine={railwayLine}
+        timetable={timetable}
       />
     </div>
   );
@@ -115,26 +111,28 @@ export interface TimetableEditorDirectedProps {
   setClipboard: (clipboard: AppClipboard) => void;
   railwayLine: RailwayLine;
   timetable: OutlinedTimetable;
-  errors: OperationError[];
+  errors: readonly OperationError[];
 }
+
+export type TimetableEditorComponentProps = DeepReadonly<{
+  timetableData: OutlinedTimetableData;
+  timetable: OutlinedTimetable;
+  railwayLine: RailwayLine;
+  mapInfo: MapInfo;
+  setToast: (message: string) => void;
+  update: () => void;
+  errors: OperationError[];
+}>;
 
 export function TimetableEditorComponent({
   timetableData,
   timetable,
   railwayLine,
-  tracks,
+  mapInfo,
   setToast,
   update,
   errors,
-}: {
-  timetableData: OutlinedTimetableData;
-  timetable: OutlinedTimetable;
-  railwayLine: RailwayLine;
-  tracks: Track[];
-  setToast: (message: string) => void;
-  update: () => void;
-  errors: OperationError[];
-}) {
+}: TimetableEditorComponentProps) {
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
   const [clipboard, setClipboard] = useState<AppClipboard>({
     trains: [],
@@ -178,7 +176,7 @@ export function TimetableEditorComponent({
   };
   const [inboundTrains, outboundTrains] = getTrainsWithDirections();
 
-  const setDiaStations = (stations: StationLike[]) => {
+  const setStations = (stations: StationLike[]) => {
     timetable.stations = stations;
     update();
   };
@@ -280,21 +278,19 @@ export function TimetableEditorComponent({
                 tabText: '上り',
                 component: () => (
                   <TimetableEditorTableComponent
-                    {...{
-                      stations: timetable.stations,
-                      setStations: setDiaStations,
-                      trains: inboundTrains,
-                      otherDirectionTrains: outboundTrains,
-                      crudTrain: crudTrain,
-                      timetableDirection,
-                      trainTypes: timetable.trainTypes,
-                      setSettingData,
-                      clipboard,
-                      setClipboard,
-                      railwayLine,
-                      timetable,
-                      errors,
-                    }}
+                    stations={timetable.stations}
+                    setStations={setStations}
+                    trains={inboundTrains}
+                    otherDirectionTrains={outboundTrains}
+                    crudTrain={crudTrain}
+                    timetableDirection={timetableDirection}
+                    trainTypes={timetable.trainTypes}
+                    setSettingData={setSettingData}
+                    clipboard={clipboard}
+                    setClipboard={setClipboard}
+                    railwayLine={railwayLine}
+                    timetable={timetable}
+                    errors={errors}
                   />
                 ),
               },
@@ -303,21 +299,19 @@ export function TimetableEditorComponent({
                 tabText: '下り',
                 component: () => (
                   <TimetableEditorTableComponent
-                    {...{
-                      stations: reverseArray(timetable.stations),
-                      setStations: (diaStations) => setDiaStations(reverseArray(diaStations)),
-                      trains: outboundTrains,
-                      otherDirectionTrains: inboundTrains,
-                      crudTrain: crudTrain,
-                      timetableDirection,
-                      trainTypes: timetable.trainTypes,
-                      setSettingData,
-                      clipboard,
-                      setClipboard,
-                      railwayLine,
-                      timetable,
-                      errors,
-                    }}
+                    stations={reverseArray(timetable.stations)}
+                    setStations={(diaStations) => setStations(reverseArray(diaStations))}
+                    trains={outboundTrains}
+                    otherDirectionTrains={inboundTrains}
+                    crudTrain={crudTrain}
+                    timetableDirection={timetableDirection}
+                    trainTypes={timetable.trainTypes}
+                    setSettingData={setSettingData}
+                    clipboard={clipboard}
+                    setClipboard={setClipboard}
+                    railwayLine={railwayLine}
+                    timetable={timetable}
+                    errors={errors}
                   />
                 ),
               },
@@ -385,7 +379,7 @@ export function TimetableEditorComponent({
               <StationDetailComponent
                 diaStation={settingData.station}
                 setDiaStation={(diaStation) => {
-                  setDiaStations(
+                  setStations(
                     timetable.stations.map((diaStation_) =>
                       diaStation_.stationId === diaStation.stationId ? diaStation : diaStation_
                     )
@@ -410,7 +404,7 @@ export function TimetableEditorComponent({
                     : settingData.train.lastStationOperation
                 }
                 stations={timetable.stations}
-                tracks={tracks}
+                mapInfo={mapInfo}
                 train={settingData.train}
               />
             ) : (

@@ -815,7 +815,8 @@ function drawAgent(ctx: CanvasRenderingContext2D, mapContext: MapContext, agent:
 }
 
 export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
-  const { stations, tracks, trainMove, map, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates;
+  const { tracks, map } = appStates;
+  const { stations, trainMove, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates.mapState;
 
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -839,7 +840,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   // extended Mapを描画
   drawExtendedMap(mapContext, ctx, mapWidth, mapHeight, extendedMap);
 
-  if (appStates.showInfo) {
+  if (appStates.mapState.showInfo) {
     // 罫線を描画
     ctx.strokeStyle = 'rgb(0, 0, 0, 0.2)';
     for (let x = 0; x <= mapWidth; x++) {
@@ -880,7 +881,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 
   // 駅
-  drawStations(ctx, mapContext, stations, tracks, appStates.agentManager, appStates.showInfo);
+  drawStations(ctx, mapContext, stations, tracks, appStates.mapState.agentManager, appStates.mapState.showInfo);
 
   // マウスがある場所
   if (mouseStartCell !== null) {
@@ -907,8 +908,8 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 
   // 選択中の路線
-  if (appStates.currentRailwayLine != null) {
-    drawTrainLine(ctx, mapContext, appStates.currentRailwayLine);
+  if (appStates.mapState.currentRailwayLine != null) {
+    drawTrainLine(ctx, mapContext, appStates.mapState.currentRailwayLine);
   }
 
   // 作成した路線
@@ -923,7 +924,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
 
   // 列車を描画
   for (const train of trainMove.getPlacedTrains()) {
-    drawTrain(ctx, mapContext, train, appStates.agentManager, appStates.showInfo);
+    drawTrain(ctx, mapContext, train, appStates.mapState.agentManager, appStates.mapState.showInfo);
   }
 
   // エージェントを描画

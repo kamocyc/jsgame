@@ -1,8 +1,8 @@
 import { useEffect } from 'preact/hooks';
 import { assert } from '../../common';
-import { StationLike, StationOperation, Track, Train } from '../../model';
+import { StationLike, StationOperation, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
-import { TimeInputComponent } from './common-component';
+import { MapInfo, TimeInputComponent } from './common-component';
 import { getDefaultPlatform } from './timetable-util';
 
 // 入出区等の作業設定
@@ -14,7 +14,7 @@ export function StationOperationSettingComponent({
   firstOrLast,
   stations,
   train,
-  tracks,
+  mapInfo,
   stationOperation,
   setStationOperation,
 }: {
@@ -22,7 +22,7 @@ export function StationOperationSettingComponent({
   firstOrLast: 'First' | 'Last';
   stations: StationLike[];
   train: Train;
-  tracks: Track[];
+  mapInfo: MapInfo;
   stationOperation: StationOperation | undefined;
   setStationOperation: (stationOperation: StationOperation) => void;
 }) {
@@ -33,7 +33,7 @@ export function StationOperationSettingComponent({
   }, [stationOperation !== undefined]);
 
   function getPlatformData(platformId: string) {
-    const platform = tracks.find((track) => track.track.platform?.platformId === platformId);
+    const platform = mapInfo.getTrackOfPlatform(platformId);
     assert(platform !== undefined);
     return {
       platformId: platformId,

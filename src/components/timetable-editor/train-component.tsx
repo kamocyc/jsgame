@@ -133,7 +133,7 @@ function TrainListItemComponent({
   updateTrain,
 }: {
   diaTime: DiaTime;
-  errors: OperationError[];
+  errors: readonly OperationError[];
   updateTrain: (historyItem: HistoryItem) => void;
 }) {
   const errorMap = toMap(errors, (error) => error.diaTimeId ?? undefined);
@@ -334,16 +334,14 @@ export function TrainListComponent({
       }}
     >
       <TrainContextMenuComponent
-        {...{
-          contextData,
-          trains,
-          crudTrain,
-          setContextData,
-          clipboard,
-          setClipboard,
-          selectedTrain,
-          timetableDirection,
-        }}
+        contextData={contextData}
+        trains={trains}
+        crudTrain={crudTrain}
+        setContextData={setContextData}
+        clipboard={clipboard}
+        setClipboard={setClipboard}
+        selectedTrain={selectedTrain}
+        timetableDirection={timetableDirection}
       />
       {trains.map((train) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>

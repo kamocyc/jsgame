@@ -1,4 +1,5 @@
 import { StateUpdater, useState } from 'preact/hooks';
+import { DeepReadonly } from 'ts-essentials';
 import { assert, toMap } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import {
@@ -30,8 +31,8 @@ function TrainContextMenuComponent({
   setClipboard,
   selectedTrain,
   timetableDirection,
-}: {
-  trains: readonly Train[];
+}: DeepReadonly<{
+  trains: Train[];
   crudTrain: CrudTrain;
   contextData: ContextData;
 
@@ -40,7 +41,7 @@ function TrainContextMenuComponent({
   setClipboard: (clipboard: AppClipboard) => void;
   selectedTrain: Train | null;
   timetableDirection: TimetableDirection;
-}) {
+}>) {
   return (
     <ContextMenuComponent
       contextData={contextData}
@@ -61,8 +62,10 @@ function TrainContextMenuComponent({
           onClick: () => {
             const index = trains.findIndex((train) => train.trainId === selectedTrain?.trainId);
             if (selectedTrain != null && index >= 0) {
-              const newTrain: Train = cloneTrain(selectedTrain);
-              newTrain.trainId = generateId();
+              const newTrain: DeepReadonly<Train> = {
+                ...cloneTrain(selectedTrain),
+                trainId: generateId(),
+              };
               setClipboard({ trains: [newTrain], originalTrains: [selectedTrain] });
             }
             setContextData({ ...contextData, visible: false });
@@ -96,11 +99,11 @@ export function PlatformComponent({
   diaPlatform,
   allDiaPlatforms,
   setDiaPlatform,
-}: {
+}: DeepReadonly<{
   diaPlatform: PlatformLike | null;
   allDiaPlatforms: PlatformLike[];
   setDiaPlatform: (diaPlatform: PlatformLike | null) => void;
-}) {
+}>) {
   return (
     <select
       value={diaPlatform?.platformId ?? -1}
@@ -131,11 +134,11 @@ function TrainListItemComponent({
   diaTime,
   errors,
   updateTrain,
-}: {
+}: DeepReadonly<{
   diaTime: DiaTime;
   errors: readonly OperationError[];
   updateTrain: (historyItem: HistoryItem) => void;
-}) {
+}>) {
   const errorMap = toMap(errors, (error) => error.diaTimeId ?? undefined);
 
   return (
@@ -267,7 +270,7 @@ function showStationOperation(stationOperation: StationOperation | undefined, fi
 }
 
 // 新しい列車番号を生成する（ロジックは適当）
-function getNewTrainCode(trains: readonly Train[]) {
+function getNewTrainCode(trains: DeepReadonly<Train[]>) {
   const codes = trains.map((train) => train.trainCode);
   const symbolInTrainCode = codes.length === 0 ? 'M' : codes[codes.length - 1].replace(/[^A-Z]/g, '');
   const maxCode =
@@ -298,9 +301,12 @@ export function TrainListComponent({
     posX: 0,
     posY: 0,
   });
-  const [selectedTrain, setSelectedTrain] = useState<Train | null>(null);
+  const [selectedTrain, setSelectedTrain] = useState<DeepReadonly<Train> | null>(null);
 
-  function getDiaTimesOfStations(train: Train, diaStations: StationLike[]): DiaTime[] {
+  function getDiaTimesOfStations(
+    train: DeepReadonly<Train>,
+    diaStations: DeepReadonly<StationLike[]>
+  ): DeepReadonly<DiaTime[]> {
     return diaStations.map((diaStation) => {
       const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === diaStation.stationId);
       if (diaTime) {
@@ -362,19 +368,19 @@ export function TrainListComponent({
               value={train.trainCode}
               onChange={(value) => {
                 const oldTrainCode = train.trainCode; // undo用
-                crudTrain.updateTrain({
-                  this: undefined,
-                  redo: () => {
+                crudTrain.updateTrain(
+                  train.trainId,
+                  (train) => {
                     if (value == '') {
                       train.trainCode = '';
                     } else {
                       train.trainCode = value;
                     }
                   },
-                  undo: () => {
+                  (train) => {
                     train.trainCode = oldTrainCode;
-                  },
-                });
+                  }
+                );
 
                 return true;
               }}
@@ -388,19 +394,19 @@ export function TrainListComponent({
               value={train.trainName ?? ''}
               onChange={(value) => {
                 const oldTrainName = train.trainName; // undo用
-                crudTrain.updateTrain({
-                  this: undefined,
-                  redo: () => {
+                crudTrain.updateTrain(
+                  train.trainId,
+                  (train) => {
                     if (value == '') {
                       train.trainName = '';
                     } else {
                       train.trainName = value;
                     }
                   },
-                  undo: () => {
+                  (train) => {
                     train.trainName = oldTrainName;
-                  },
-                });
+                  }
+                );
 
                 return true;
               }}
@@ -416,9 +422,9 @@ export function TrainListComponent({
               onChange={(e) => {
                 if ((e.target as HTMLSelectElement)?.value != null) {
                   const oldTrainType = train.trainType; // undo用
-                  crudTrain.updateTrain({
-                    this: undefined,
-                    redo: () => {
+                  crudTrain.updateTrain(
+                    train.trainId,
+                    (train) => {
                       const newTrainType = trainTypes.find(
                         (trainType) => trainType.trainTypeId === (e.target as HTMLSelectElement).value
                       );
@@ -428,10 +434,10 @@ export function TrainListComponent({
                         train.trainType = undefined;
                       }
                     },
-                    undo: () => {
+                    (train) => {
                       train.trainType = oldTrainType;
-                    },
-                  });
+                    }
+                  );
                 }
               }}
             >
@@ -491,7 +497,7 @@ export function TrainListComponent({
         <button
           onClick={() => {
             const newTrainCode = getNewTrainCode(trains);
-            const newTrain: Train = {
+            const newTrain: DeepReadonly<Train> = {
               trainId: generateId(),
               trainName: '',
               trainType: undefined,

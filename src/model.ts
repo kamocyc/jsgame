@@ -1,13 +1,6 @@
+import { DeepReadonly } from 'ts-essentials';
 import { assert, merge } from './common';
-import { AddingNewTrain, HistoryItem } from './outlinedTimetableData';
-
-export type DeepReadonly<T> = {
-  readonly [P in keyof T]: T[P] extends Record<string, unknown>
-    ? DeepReadonly<T[P]>
-    : T[P] extends unknown[]
-    ? ReadonlyArray<DeepReadonly<T[P][number]>>
-    : T[P];
-};
+import { AddingNewTrain } from './outlinedTimetableData';
 
 export interface Point {
   x: number;
@@ -158,7 +151,7 @@ function cloneOperation(operation: StationOperation): StationOperation {
   }
 }
 
-export function cloneTrain(train: Train): Train {
+export function cloneTrain(train: DeepReadonly<Train>): DeepReadonly<Train> {
   return {
     trainId: generateId(),
     trainCode: train.trainCode,
@@ -171,8 +164,8 @@ export function cloneTrain(train: Train): Train {
 }
 
 export interface AppClipboard {
-  trains: Train[];
-  originalTrains: Train[];
+  trains: DeepReadonly<Train[]>;
+  originalTrains: DeepReadonly<Train[]>;
 }
 
 export interface ContextData {
@@ -216,7 +209,7 @@ export type BranchDirection = 'Straight' | 'Branch';
 export interface Operation {
   operationId: string;
   operationCode: string;
-  trains: Train[];
+  trains: DeepReadonly<Train[]>;
 }
 
 export interface PlatformTTItem {
@@ -287,5 +280,5 @@ export interface CrudTrain {
   addTrains: (addingNewTrains: AddingNewTrain[]) => void;
   addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => void;
   deleteTrains: (trainIds: string[]) => void;
-  updateTrain: (historyItem: HistoryItem) => void;
+  updateTrain: (trainId: string, redo: (train: Train) => void, undo: (train: Train) => void) => void;
 }

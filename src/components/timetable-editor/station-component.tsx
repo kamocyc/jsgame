@@ -1,5 +1,16 @@
 import { StateUpdater, useState } from 'preact/hooks';
-import { ContextData, SettingData, StationLike, TimetableDirection, Train, generateId } from '../../model';
+import { DeepReadonly, assert } from 'ts-essentials';
+import {
+  ContextData,
+  Depot,
+  SettingData,
+  Station,
+  StationLike,
+  TimetableDirection,
+  Train,
+  generateId,
+} from '../../model';
+import { OutlinedTimetable } from '../../outlinedTimetableData';
 import { ContextMenuComponent, EditableTextComponent } from './common-component';
 import './timetable-editor.css';
 import { createNewStation, getDefaultPlatform } from './timetable-util';
@@ -7,17 +18,19 @@ import { createNewStation, getDefaultPlatform } from './timetable-util';
 function StationComponent({
   diaStation,
   setDiaStation,
-}: {
+}: DeepReadonly<{
   diaStation: StationLike;
   setDiaStation: (diaStation: StationLike) => void;
-}) {
+}>) {
   return (
     <EditableTextComponent
       value={diaStation.stationName}
       onChange={(value) => {
-        diaStation.stationName = value;
-        setDiaStation({ ...diaStation });
-        return true;
+        // TODO
+        // setDiaStation((station) => {
+        //   station.stationName = value;
+        // });
+        return false;
       }}
       height={24 * 3}
       width={100}
@@ -25,27 +38,33 @@ function StationComponent({
   );
 }
 
+export type SetTimetable = (
+  f: (draftTimetable: OutlinedTimetable, trainData: { trains: Train[]; otherDirectionTrains: Train[] }) => void
+) => void;
+
 function StationContextMenuComponent({
   contextData,
   setContextData,
   stations,
   setStations,
+  setTimetable,
   trains,
   otherDirectionTrains,
   selectedStation,
   showStationDetail,
   timetableDirection,
-}: {
+}: DeepReadonly<{
   contextData: ContextData;
   setContextData: StateUpdater<ContextData>;
   stations: StationLike[];
   setStations: (stations: StationLike[]) => void;
+  setTimetable: SetTimetable;
   trains: readonly Train[];
   otherDirectionTrains: readonly Train[];
   selectedStation: StationLike | null;
-  showStationDetail: (diaStation: StationLike) => void;
+  showStationDetail: (diaStation: DeepReadonly<StationLike>) => void;
   timetableDirection: 'Inbound' | 'Outbound';
-}) {
+}>) {
   return (
     <ContextMenuComponent
       contextData={contextData}
@@ -55,19 +74,24 @@ function StationContextMenuComponent({
           label: '駅を削除',
           onClick: () => {
             if (selectedStation) {
-              stations = stations.filter((diaStation) => diaStation.stationId !== selectedStation.stationId);
-              trains.forEach((train) => {
-                train.diaTimes = train.diaTimes.filter(
-                  (diaTime) => diaTime.station.stationId !== selectedStation.stationId
+              setTimetable((draftTimetable, trainData) => {
+                draftTimetable.stations = draftTimetable.stations.filter(
+                  (diaStation) => diaStation.stationId !== selectedStation.stationId
                 );
-              });
-              otherDirectionTrains.forEach((train) => {
-                train.diaTimes = train.diaTimes.filter(
-                  (diaTime) => diaTime.station.stationId !== selectedStation.stationId
-                );
+                assert(stations.length === draftTimetable.stations.length - 1);
+
+                trainData.trains.forEach((train) => {
+                  train.diaTimes = train.diaTimes.filter(
+                    (diaTime) => diaTime.station.stationId !== selectedStation.stationId
+                  );
+                });
+                trainData.otherDirectionTrains.forEach((train) => {
+                  train.diaTimes = train.diaTimes.filter(
+                    (diaTime) => diaTime.station.stationId !== selectedStation.stationId
+                  );
+                });
               });
 
-              setStations([...stations]);
               setContextData({ ...contextData, visible: false });
             }
           },
@@ -87,12 +111,13 @@ function StationContextMenuComponent({
             if (index === -1) {
               return;
             }
-            const newStation = createNewStation('-');
-            stations.splice(index, 0, newStation);
 
-            createNewStationAndUpdate(trains, otherDirectionTrains, newStation, timetableDirection);
+            setTimetable((draftTimetable, trainData) => {
+              const newStation = createNewStation('-');
+              draftTimetable.stations.splice(index, 0, newStation);
 
-            setStations([...stations]);
+              createNewStationAndUpdate(trainData, newStation, timetableDirection);
+            });
             setContextData({ ...contextData, visible: false });
           },
         },
@@ -104,26 +129,28 @@ function StationContextMenuComponent({
 export function StationListComponent({
   stations,
   setStations: setStations,
+  setTimetable,
   trains,
   otherDirectionTrains,
   timetableDirection,
   setSettingData,
-}: {
+}: DeepReadonly<{
   stations: StationLike[];
   setStations: (stations: StationLike[]) => void;
+  setTimetable: SetTimetable;
   trains: readonly Train[];
   otherDirectionTrains: readonly Train[];
   timetableDirection: 'Inbound' | 'Outbound';
-  setSettingData: (settingData: SettingData) => void;
-}) {
+  setSettingData: (settingData: DeepReadonly<SettingData>) => void;
+}>) {
   const [contextData, setContextData] = useState<ContextData>({
     visible: false,
     posX: 0,
     posY: 0,
   });
-  const [selectedStation, setSelectedStation] = useState<StationLike | null>(null);
+  const [selectedStation, setSelectedStation] = useState<DeepReadonly<StationLike> | null>(null);
 
-  const showStationDetail = (diaStation: StationLike) => {
+  const showStationDetail = (diaStation: DeepReadonly<StationLike>) => {
     setSettingData({
       settingType: 'StationSetting',
       station: diaStation,
@@ -138,6 +165,7 @@ export function StationListComponent({
         stations={stations}
         setStations={setStations}
         trains={trains}
+        setTimetable={setTimetable}
         otherDirectionTrains={otherDirectionTrains}
         selectedStation={selectedStation}
         showStationDetail={showStationDetail}
@@ -171,12 +199,10 @@ export function StationListComponent({
             <StationComponent
               diaStation={diaStation}
               setDiaStation={(diaStation) => {
-                const newStation = createNewStation('-');
-                stations.push(newStation);
-
-                createNewStationAndUpdate(trains, otherDirectionTrains, newStation, timetableDirection);
-
-                setStations([...stations]);
+                // const newStation = createNewStation('-');
+                // stations.push(newStation);
+                // createNewStationAndUpdate(trains, otherDirectionTrains, newStation, timetableDirection);
+                // setStations([...stations]);
               }}
             />
           </div>
@@ -190,12 +216,11 @@ export function StationListComponent({
 }
 
 function createNewStationAndUpdate(
-  trains: readonly Train[],
-  otherDirectionTrains: readonly Train[],
+  trainData: { trains: Train[]; otherDirectionTrains: Train[] },
   newStation: StationLike,
   timetableDirection: TimetableDirection
 ) {
-  trains.forEach((train) => {
+  trainData.trains.forEach((train) => {
     train.diaTimes.push({
       diaTimeId: generateId(),
       arrivalTime: null,
@@ -208,7 +233,7 @@ function createNewStationAndUpdate(
     });
   });
 
-  otherDirectionTrains.forEach((train) => {
+  trainData.otherDirectionTrains.forEach((train) => {
     train.diaTimes.unshift({
       diaTimeId: generateId(),
       arrivalTime: null,
@@ -222,13 +247,40 @@ function createNewStationAndUpdate(
   });
 }
 
+export function DepotDetailComponent({
+  depot,
+  setDepot,
+}: DeepReadonly<{
+  depot: Depot;
+  setDepot: (f: (depot: Depot) => void) => void;
+}>) {
+  return (
+    <div>
+      <div>
+        車庫名:{' '}
+        <EditableTextComponent
+          value={depot.stationName}
+          onChange={(value) => {
+            setDepot((depot) => {
+              depot.stationName = value;
+            });
+            return true;
+          }}
+          height={24}
+          width={100}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function StationDetailComponent({
   diaStation,
-  setDiaStation,
-}: {
-  diaStation: StationLike;
-  setDiaStation: (diaStation: StationLike) => void;
-}) {
+  setStation,
+}: DeepReadonly<{
+  diaStation: Station;
+  setStation: (f: (station: Station) => void) => void;
+}>) {
   return (
     <div>
       <div>
@@ -236,8 +288,9 @@ export function StationDetailComponent({
         <EditableTextComponent
           value={diaStation.stationName}
           onChange={(value) => {
-            diaStation.stationName = value;
-            setDiaStation({ ...diaStation });
+            setStation((station) => {
+              station.stationName = value;
+            });
             return true;
           }}
           height={24}
@@ -265,8 +318,13 @@ export function StationDetailComponent({
                   <EditableTextComponent
                     value={diaPlatform.platformName}
                     onChange={(value) => {
-                      diaPlatform.platformName = value;
-                      setDiaStation({ ...diaStation });
+                      setStation((station) => {
+                        station.platforms.forEach((diaPlatform_) => {
+                          if (diaPlatform_.platformId === diaPlatform.platformId) {
+                            diaPlatform_.platformName = value;
+                          }
+                        });
+                      });
                       return true;
                     }}
                     height={24}
@@ -280,8 +338,11 @@ export function StationDetailComponent({
                     onChange={(e) => {
                       if ((e.target as HTMLInputElement)?.value) {
                         const targetPlatformId = (e.target as HTMLInputElement).value;
-                        diaStation.defaultInboundPlatformId = targetPlatformId;
-                        setDiaStation({ ...diaStation });
+                        setStation((station) => {
+                          if ('defaultInboundPlatformId' in station) {
+                            station.defaultInboundPlatformId = targetPlatformId;
+                          }
+                        });
                       }
                     }}
                   />
@@ -293,17 +354,21 @@ export function StationDetailComponent({
                     onChange={(e) => {
                       if ((e.target as HTMLInputElement)?.value) {
                         const targetPlatformId = (e.target as HTMLInputElement).value;
-                        diaStation.defaultOutboundPlatformId = targetPlatformId;
-                        setDiaStation({ ...diaStation });
+                        setStation((station) => {
+                          if ('defaultOutboundPlatformId' in station) {
+                            station.defaultOutboundPlatformId = targetPlatformId;
+                          }
+                        });
                       }
                     }}
                   />
                   <button
                     onClick={() => {
-                      diaStation.platforms = diaStation.platforms.filter(
-                        (diaPlatform_) => diaPlatform_.platformId !== diaPlatform.platformId
-                      );
-                      setDiaStation({ ...diaStation });
+                      setStation((station) => {
+                        station.platforms = station.platforms.filter(
+                          (diaPlatform_) => diaPlatform_.platformId !== diaPlatform.platformId
+                        );
+                      });
                     }}
                   >
                     削除
@@ -314,27 +379,28 @@ export function StationDetailComponent({
             <div>
               <button
                 onClick={() => {
-                  diaStation.platforms.push({
-                    platformType: 'Platform',
-                    platformId: generateId(),
-                    platformName:
-                      diaStation.platforms.length === 0
-                        ? '1'
-                        : Math.max(
-                            ...diaStation.platforms.map((p) => {
-                              const n = Number(p.platformName);
-                              if (isNaN(n)) {
-                                return 0;
-                              } else {
-                                return n;
-                              }
-                            })
-                          ) +
-                          1 +
-                          '',
-                    station: diaStation,
+                  setStation((station) => {
+                    station.platforms.push({
+                      platformType: 'Platform',
+                      platformId: generateId(),
+                      platformName:
+                        station.platforms.length === 0
+                          ? '1'
+                          : Math.max(
+                              ...station.platforms.map((p) => {
+                                const n = Number(p.platformName);
+                                if (isNaN(n)) {
+                                  return 0;
+                                } else {
+                                  return n;
+                                }
+                              })
+                            ) +
+                            1 +
+                            '',
+                      station: station,
+                    });
                   });
-                  setDiaStation({ ...diaStation });
                 }}
               >
                 番線を追加

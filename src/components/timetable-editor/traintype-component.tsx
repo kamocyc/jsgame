@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { DeepReadonly } from 'ts-essentials';
 import { TrainType, generateId } from '../../model';
 import { SettingColumnComponent } from './common-component';
 
@@ -51,10 +52,10 @@ function TrainTypeDetailComponent({
 export function TrainTypeSettingComponent({
   trainTypes,
   setTrainTypes,
-}: {
+}: DeepReadonly<{
   trainTypes: TrainType[];
   setTrainTypes: (trainTypes: TrainType[]) => void;
-}) {
+}>) {
   const [settingData, setSettingData] = useState<TrainTypeSettingData | null>(null);
 
   return (

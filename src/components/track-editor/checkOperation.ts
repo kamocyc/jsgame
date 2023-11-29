@@ -1,3 +1,4 @@
+import { DeepReadonly } from 'ts-essentials';
 import { assert, nn, toStringFromSeconds } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import { Operation, PlatformLike, Train, generateId } from '../../model';
@@ -9,11 +10,11 @@ type StationTimeItem = {
   train: Train;
   time: number;
 };
-type StationTimes = StationTimeItem[];
+type StationTimes = DeepReadonly<StationTimeItem>[];
 
 export function checkStationTrackOccupation(
-  trains: Train[],
-  platforms: PlatformLike[]
+  trains: DeepReadonly<Train[]>,
+  platforms: DeepReadonly<PlatformLike[]>
 ): { errors: OperationError[]; operations: Operation[] } {
   const errors: OperationError[] = [];
 
@@ -113,12 +114,12 @@ export function checkStationTrackOccupation(
   return { errors, operations };
 }
 
-type OperationSimple = {
+type OperationSimple = DeepReadonly<{
   operationId: string;
   trains: Train[];
-};
+}>;
 
-function createOperations(trains: Train[], platformTimesMap: Map<string, StationTimes>): Operation[] {
+function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<string, StationTimes>): Operation[] {
   const platformIds = platformTimesMap.keys();
   const trainIdToOperationId = new Map<string, string>();
   const operations = new Map<string, OperationSimple>();
@@ -128,10 +129,10 @@ function createOperations(trains: Train[], platformTimesMap: Map<string, Station
     operations.set(operationId, { operationId, trains: [train] });
   }
 
-  const isFirstDiaTime = (train: Train, diaTimeId: string) => {
+  const isFirstDiaTime = (train: DeepReadonly<Train>, diaTimeId: string) => {
     return train.diaTimes[0].diaTimeId === diaTimeId;
   };
-  const isLastDiaTime = (train: Train, diaTimeId: string) => {
+  const isLastDiaTime = (train: DeepReadonly<Train>, diaTimeId: string) => {
     return train.diaTimes[train.diaTimes.length - 1].diaTimeId === diaTimeId;
   };
 

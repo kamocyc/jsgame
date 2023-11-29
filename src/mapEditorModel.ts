@@ -1,3 +1,4 @@
+import { DeepReadonly } from 'ts-essentials';
 import { ExtendedCell } from './components/extendedMapModel';
 import { AgentManagerBase } from './components/track-editor/agentManager';
 import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
@@ -5,7 +6,7 @@ import { MapManager } from './components/track-editor/mapManager';
 import { MoneyManager } from './components/track-editor/moneyManager';
 import { ITrainMove, StoredTrain } from './components/track-editor/trainMoveBase';
 import { DetailedTimetable, PlatformLike, Point, StationLike, Switch, Track } from './model';
-import { OutlinedTimetableData } from './outlinedTimetableData';
+import { HistoryManager, OutlinedTimetableData } from './outlinedTimetableData';
 
 export const CellWidth = 32;
 export const CellHeight = 32;
@@ -174,6 +175,7 @@ export interface AppStates {
   readonly globalTimeManager: GlobalTimeManager;
   readonly detailedTimetable: DetailedTimetable;
   outlinedTimetableData: OutlinedTimetableData;
+  readonly historyManager: HistoryManager;
   readonly railwayLines: RailwayLine[];
   readonly selectedRailwayLineId: string | null;
   storedTrains: StoredTrain[];
@@ -184,11 +186,11 @@ export interface AppStates {
 }
 
 export function splitStops(
-  stops: RailwayLineStop[],
+  stops: DeepReadonly<RailwayLineStop[]>,
   returnStopId: string
-): { preStops: RailwayLineStop[]; postStops: RailwayLineStop[] } {
-  const preStops: RailwayLineStop[] = [];
-  const postStops: RailwayLineStop[] = [];
+): { preStops: DeepReadonly<RailwayLineStop>[]; postStops: DeepReadonly<RailwayLineStop>[] } {
+  const preStops: DeepReadonly<RailwayLineStop>[] = [];
+  const postStops: DeepReadonly<RailwayLineStop>[] = [];
 
   let isPre = true;
   for (const stop of stops) {

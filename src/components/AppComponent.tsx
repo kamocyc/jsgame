@@ -55,7 +55,11 @@ const defaultMapHeight = 20;
 export function getInitialAppStates(): AppStates {
   const gameMap = initializeMap(defaultMapWidth, defaultMapHeight);
   const extendedMap = initializeExtendedMap(defaultMapWidth, defaultMapHeight);
-  const timetableData = new OutlinedTimetableData(new HistoryManager());
+  const timetableData: OutlinedTimetableData = {
+    _errors: [],
+    _timetables: [],
+    _trains: [],
+  };
   const storedTrains = [
     {
       placedTrainId: '1',
@@ -69,7 +73,7 @@ export function getInitialAppStates(): AppStates {
     },
   ];
   const trainMove = createTrainMove(timetable);
-  const errors = timetableData.updateOperations();
+  // const errors = timetableData.updateOperations();
   const mapEditorState: MapState = {
     editMode: 'Create',
     showInfo: true,
@@ -96,6 +100,7 @@ export function getInitialAppStates(): AppStates {
     railwayLines: [],
     selectedRailwayLineId: null,
     mapState: mapEditorState,
+    historyManager: new HistoryManager(),
   };
 }
 

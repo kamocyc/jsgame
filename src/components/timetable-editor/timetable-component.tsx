@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
+import { DeepReadonly } from 'ts-essentials';
 import { DiaTime, StationLike, TimetableDirection, Train } from '../../model';
 
-function getStationTimetable(trains: readonly Train[], diaStation: StationLike) {
+function getStationTimetable(trains: DeepReadonly<Train[]>, diaStation: DeepReadonly<StationLike>) {
   const stationTimetable = trains
     .map((train) => {
       const stationTimes = train.diaTimes.filter(
@@ -28,7 +29,10 @@ function getStationTimetable(trains: readonly Train[], diaStation: StationLike) 
   }, [] as { [key: number]: [DiaTime, StationLike][] });
 }
 
-function StationTimetableComponent({ trains, diaStation }: { trains: readonly Train[]; diaStation: StationLike }) {
+function StationTimetableComponent({
+  trains,
+  diaStation,
+}: DeepReadonly<{ trains: readonly Train[]; diaStation: StationLike }>) {
   const stationTimetable = getStationTimetable(trains, diaStation);
 
   function showMinutes(seconds: number) {
@@ -62,11 +66,11 @@ export function StationTimetablePageComponent({
   inboundTrains,
   outboundTrains,
   diaStations,
-}: {
+}: DeepReadonly<{
   inboundTrains: readonly Train[];
   outboundTrains: readonly Train[];
   diaStations: StationLike[];
-}) {
+}>) {
   const [selectedDiaStation, setSelectedDiaStation] = useState(diaStations[0]);
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
 

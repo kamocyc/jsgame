@@ -1,9 +1,10 @@
+import { produce } from 'immer';
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates, OperationError } from '../../mapEditorModel';
 import { PlatformLike } from '../../model';
-import { OutlinedTimetableData } from '../../outlinedTimetableData';
+import { HistoryItem, OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { createAgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable } from '../track-editor/timetableConverter';
 import { createTrainMove } from '../track-editor/trainMoveBase';
@@ -50,10 +51,32 @@ export function TimetableEditorParentComponent({
     }
   });
 
-  const selectedTimetable = appStates.outlinedTimetableData
-    .getTimetables()
-    .find((timetable) => timetable.railwayLineId === selectedRailwayLineId);
+  const selectedTimetable = appStates.outlinedTimetableData._timetables.find(
+    (timetable) => timetable.railwayLineId === selectedRailwayLineId
+  );
+
+  const setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => HistoryItem | undefined) => void = (
+    timetableDataFunction: (oldTimetableData: OutlinedTimetableData) => HistoryItem | undefined
+  ) => {
+    const newTimetableData = produce(appStates.outlinedTimetableData, (d) => {
+      const newHistory = timetableDataFunction(d);
+      if (newHistory !== undefined) {
+        appStates.historyManager.push(newHistory);
+      }
+      OutlinedTimetableFunc.updateOperations(d);
+    });
+    appStates.outlinedTimetableData = newTimetableData;
+
+    // TODO: UIに表示する
+    setErrors(newTimetableData._errors);
+    update();
+  };
+
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
+  // const setTimetableData = (timetableData: OutlinedTimetableData) => {
+  //   appStates.outlinedTimetableData = timetableData;
+  //   update();
+  // };
   const update = () => {
     const errors = appStates.outlinedTimetableData.updateOperations();
     // TODO: UIに表示する
@@ -87,7 +110,7 @@ export function TimetableEditorParentComponent({
               const diagram = await loadCustomFile(event);
               if (diagram != null) {
                 appStates.outlinedTimetableData = diagram;
-                appStates.outlinedTimetableData.clearHistory();
+                appStates.historyManager.clearHistory();
                 update();
               }
             }}
@@ -151,19 +174,19 @@ export function TimetableEditorParentComponent({
         </span>
         <button
           onClick={() => {
-            appStates.outlinedTimetableData.undo();
+            appStates.historyManager.undo();
             update();
           }}
-          disabled={!appStates.outlinedTimetableData.canUndo()}
+          disabled={!appStates.historyManager.canUndo()}
         >
           undo
         </button>
         <button
           onClick={() => {
-            appStates.outlinedTimetableData.redo();
+            appStates.historyManager.redo();
             update();
           }}
-          disabled={!appStates.outlinedTimetableData.canRedo()}
+          disabled={!appStates.historyManager.canRedo()}
         >
           redo
         </button>
@@ -171,9 +194,9 @@ export function TimetableEditorParentComponent({
           <TimetableEditorComponent
             railwayLine={railwayLine}
             timetableData={appStates.outlinedTimetableData}
+            setTimetableData={setTimetableData}
             timetable={selectedTimetable}
             mapInfo={new MapInfo(appStates.tracks)}
-            update={update}
             setToast={setToast}
             errors={errors}
           />

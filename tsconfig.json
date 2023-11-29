@@ -21,7 +21,8 @@
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": true
+    "noPropertyAccessFromIndexSignature": true,
+    "noErrorTruncation": true
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

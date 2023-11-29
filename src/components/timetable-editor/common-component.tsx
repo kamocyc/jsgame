@@ -1,7 +1,8 @@
 import { ComponentChild } from 'preact';
 import { Ref, StateUpdater, useEffect, useRef, useState } from 'preact/hooks';
+import { DeepReadonly } from 'ts-essentials';
 import { parseTime, toStringFromSeconds } from '../../common';
-import { ContextData, DeepReadonly, Track, getDefaultTime } from '../../model';
+import { ContextData, Track, getDefaultTime } from '../../model';
 import './timetable-editor.css';
 
 // function parseInputTextAsTime(text: string): string | undefined {
@@ -291,7 +292,7 @@ export function SettingColumnComponent({
   );
 }
 
-export function reverseArray<T>(array: T[]) {
+export function reverseArray<T>(array: ReadonlyArray<T>) {
   return [...array].reverse();
 }
 

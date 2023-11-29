@@ -1,32 +1,41 @@
+import { produce } from 'immer';
 import { useState } from 'preact/hooks';
+import { DeepReadonly, assert } from 'ts-essentials';
+import { nn } from '../../common';
 import { importOutdiaFile } from '../../file';
 import { OperationError, RailwayLine } from '../../mapEditorModel';
 import {
   AppClipboard,
   CrudTrain,
-  DeepReadonly,
+  Depot,
   SettingData,
+  Station,
   StationLike,
   TimetableDirection,
   Train,
   TrainType,
 } from '../../model';
-import { AddingNewTrain, HistoryItem, OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
+import {
+  AddingNewTrain,
+  HistoryItem,
+  OutlinedTimetable,
+  OutlinedTimetableData,
+  OutlinedTimetableFunc,
+} from '../../outlinedTimetableData';
 import { MapInfo, SettingColumnComponent, TabComponent, reverseArray } from './common-component';
 import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
-import { StationDetailComponent, StationListComponent } from './station-component';
-import { StationOperationSettingComponent } from './station-operation-setting-component';
+import { DepotDetailComponent, SetTimetable, StationDetailComponent, StationListComponent } from './station-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
 import { getInitialTimetable } from './timetable-util';
 import { TrainListComponent } from './train-component';
 import { TrainTypeSettingComponent } from './traintype-component';
 
-export function TrainListRowHeaderComponent({ diaStations }: { diaStations: StationLike[] }) {
+export function TrainListRowHeaderComponent({ stations }: { stations: DeepReadonly<StationLike[]> }) {
   return (
     <div>
-      {diaStations.map((diaStation) => (
+      {stations.map((_) => (
         <div style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', width: '32px' }}>
           <div style={{ height: 24 + 'px' }}>着</div>
           <div style={{ height: 24 + 'px' }}>番線</div>
@@ -42,6 +51,7 @@ export function TimetableEditorTableComponent({
   setStations,
   trains,
   otherDirectionTrains,
+  setTimetable,
   crudTrain,
   timetableDirection,
   trainTypes,
@@ -64,6 +74,7 @@ export function TimetableEditorTableComponent({
         <StationListComponent
           stations={stations}
           trains={trains}
+          setTimetable={setTimetable}
           otherDirectionTrains={otherDirectionTrains}
           setStations={setStations}
           timetableDirection={timetableDirection}
@@ -77,9 +88,10 @@ export function TimetableEditorTableComponent({
         <div style={{ height: '24px' }}></div>
         {/* <div style={{ height: '24px' }}></div>
         <div style={{ height: '24px' }}></div> */}
-        <TrainListRowHeaderComponent diaStations={stations} />
+        <TrainListRowHeaderComponent stations={stations} />
       </div>
       <TrainListComponent
+        setTimetable={setTimetable}
         errors={errors}
         stations={stations}
         setStations={setStations}
@@ -98,24 +110,26 @@ export function TimetableEditorTableComponent({
   );
 }
 
-export interface TimetableEditorDirectedProps {
+export type TimetableEditorDirectedProps = DeepReadonly<{
   stations: StationLike[];
   setStations: (diaStations: StationLike[]) => void;
   trains: readonly Train[];
   otherDirectionTrains: readonly Train[];
   crudTrain: CrudTrain;
+  setTimetable: SetTimetable;
   timetableDirection: TimetableDirection;
   trainTypes: TrainType[];
-  setSettingData: (settingData: SettingData) => void;
+  setSettingData: (settingData: DeepReadonly<SettingData>) => void;
   clipboard: AppClipboard;
   setClipboard: (clipboard: AppClipboard) => void;
   railwayLine: RailwayLine;
   timetable: OutlinedTimetable;
   errors: readonly OperationError[];
-}
+}>;
 
 export type TimetableEditorComponentProps = DeepReadonly<{
   timetableData: OutlinedTimetableData;
+  setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => undefined | HistoryItem) => void;
   timetable: OutlinedTimetable;
   railwayLine: RailwayLine;
   mapInfo: MapInfo;
@@ -124,13 +138,22 @@ export type TimetableEditorComponentProps = DeepReadonly<{
   errors: OperationError[];
 }>;
 
+// const getTrainsWithDirections: (
+//   timetable: OutlinedTimetable,
+//   timetableData: OutlinedTimetableData
+// ) => [readonly Train[], readonly Train[]] = (timetable: OutlinedTimetable, timetableData: OutlinedTimetableData) => {
+//   return [
+//     timetable.inboundTrainIds.map((trainId) => OutlinedTimetableFunc.getTrain(timetableData, trainId)),
+//     timetable.outboundTrainIds.map((trainId) => OutlinedTimetableFunc.getTrain(timetableData, trainId)),
+//   ];
+// };
+
 export function TimetableEditorComponent({
   timetableData,
   timetable,
   railwayLine,
   mapInfo,
-  setToast,
-  update,
+  setTimetableData,
   errors,
 }: TimetableEditorComponentProps) {
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
@@ -138,73 +161,123 @@ export function TimetableEditorComponent({
     trains: [],
     originalTrains: [],
   });
-  const [settingData, setSettingData] = useState<SettingData | null>(null);
+  const [settingData, setSettingData] = useState<DeepReadonly<SettingData> | null>(null);
 
   const [resetSeed, setResetSeed] = useState(1);
   const reset = () => {
     setResetSeed(Math.random());
   };
 
-  function mergeTimetable(diagram: [OutlinedTimetable, Train[]]) {
-    const [outlinedTimetable, trains] = diagram;
+  // function mergeTimetable(diagram: [OutlinedTimetable, Train[]]) {
+  //   const [outlinedTimetable, trains] = diagram;
 
-    // 存在しないstationがある
-    if (
-      outlinedTimetable.stations.some(
-        (station) => !timetable.stations.some((station2) => station.stationId === station2.stationId)
-      )
-    ) {
-      return {
-        error: '存在しない駅があります',
-      };
-    }
+  //   // 存在しないstationがある
+  //   if (
+  //     outlinedTimetable.stations.some(
+  //       (station) => !timetable.stations.some((station2) => station.stationId === station2.stationId)
+  //     )
+  //   ) {
+  //     return {
+  //       error: '存在しない駅があります',
+  //     };
+  //   }
 
-    timetable.inboundTrainIds = outlinedTimetable.inboundTrainIds;
-    timetable.outboundTrainIds = outlinedTimetable.outboundTrainIds;
-    timetable.operations = outlinedTimetable.operations;
-    timetable.trainTypes = outlinedTimetable.trainTypes;
-    timetableData.getTrains().push(...trains); // なんか重複するのもできそうな気がするが... とりあえず問題になったら考え
+  //   timetable.inboundTrainIds = outlinedTimetable.inboundTrainIds;
+  //   timetable.outboundTrainIds = outlinedTimetable.outboundTrainIds;
+  //   timetable.operations = outlinedTimetable.operations;
+  //   timetable.trainTypes = outlinedTimetable.trainTypes;
+  //   timetableData.getTrains().push(...trains); // なんか重複するのもできそうな気がするが... とりあえず問題になったら考え
 
-    return true;
-  }
+  //   return true;
+  // }
 
-  const getTrainsWithDirections: () => [readonly Train[], readonly Train[]] = () => {
-    return [
-      timetable.inboundTrainIds.map((trainId) => timetableData.getTrain(trainId)),
-      timetable.outboundTrainIds.map((trainId) => timetableData.getTrain(trainId)),
-    ];
+  const [inboundTrains, outboundTrains] = [
+    timetable.inboundTrainIds.map((trainId) => nn(timetableData._trains.find((t) => t.trainId === trainId))),
+    timetable.outboundTrainIds.map((trainId) => nn(timetableData._trains.find((t) => t.trainId === trainId))),
+  ];
+
+  const setTimetable: (f: (draftTimetable: OutlinedTimetable) => void) => void = (
+    timetableFunction: (oldTimetable: OutlinedTimetable) => void
+  ) => {
+    setTimetableData((draftTimetableData) => {
+      return OutlinedTimetableFunc.updateTimetable(draftTimetableData, timetable.timetableId, timetableFunction);
+    });
+    const newTimetable = produce(timetable, timetableFunction);
+    // timetableData.updateTimetable(newTimetable);
+    // update();
   };
-  const [inboundTrains, outboundTrains] = getTrainsWithDirections();
 
   const setStations = (stations: StationLike[]) => {
-    timetable.stations = stations;
-    update();
+    setTimetable((draftTimetable) => {
+      draftTimetable.stations = stations;
+    });
+  };
+
+  const setStation = (stationId: string) => (f: (station: Station) => void) => {
+    setTimetable((draftTimetable) => {
+      const station = draftTimetable.stations.find((station_) => station_.stationId === stationId);
+      assert(station !== undefined, 'stationIdが見つかりません');
+      assert(station.stationType === 'Station', 'stationTypeがStationではありません');
+      f(station);
+    });
+  };
+
+  const setDepot = (stationId: string) => (f: (station: Depot) => void) => {
+    setTimetable((draftTimetable) => {
+      const station = draftTimetable.stations.find((station_) => station_.stationId === stationId);
+      assert(station !== undefined, 'stationIdが見つかりません');
+      assert(station.stationType === 'Depot', 'stationTypeがDepotではありません');
+      f(station);
+    });
   };
 
   const setTrainTypes = (trainTypes: TrainType[]) => {
-    timetable.trainTypes = trainTypes;
-    update();
+    setTimetable((draftTimetable) => {
+      draftTimetable.trainTypes = trainTypes;
+    });
   };
 
-  const updateTrain = (historyItem: HistoryItem) => {
-    timetableData.commitTrain(historyItem);
-    update();
-  };
+  // const updateTrain = (historyItem: HistoryItem) => {
+  //   timetableData.commitTrain(historyItem);
+  //   update();
+  // };
 
   const crudTrain: CrudTrain = {
     addTrains: (addingNewTrains: AddingNewTrain[]) => {
-      timetableData.addTrains(timetable.timetableId, addingNewTrains);
-      update();
+      setTimetableData((draftTimetableData) => {
+        return OutlinedTimetableFunc.addTrains(draftTimetableData, timetable.timetableId, addingNewTrains);
+      });
     },
     addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => {
-      timetableData.addTrain(timetable.timetableId, train, direction);
-      update();
+      setTimetableData((draftTimetableData) => {
+        return OutlinedTimetableFunc.addTrain(draftTimetableData, timetable.timetableId, train, direction);
+      });
     },
     deleteTrains: (trainIds: string[]) => {
-      timetableData.deleteTrains(timetable.timetableId, trainIds);
-      update();
+      setTimetableData((draftTimetableData) => {
+        return OutlinedTimetableFunc.deleteTrains(draftTimetableData, timetable.timetableId, trainIds);
+      });
     },
-    updateTrain: updateTrain,
+    updateTrain: (trainId, redo, undo) => {
+      setTimetableData((draftTimetableData) => {
+        return OutlinedTimetableFunc.updateTrain(draftTimetableData, timetable.timetableId, trainId, redo, undo);
+      });
+    },
+  };
+
+  const getInboundAndOutboundTrains = (draftTimetableData: OutlinedTimetableData) => {
+    const draftTimetable = nn(
+      draftTimetableData._timetables.find((timetable_) => timetable_.timetableId === timetable.timetableId)
+    );
+    const [inboundTrains, outboundTrains] = [
+      draftTimetable.inboundTrainIds.map((trainId) =>
+        nn(draftTimetableData._trains.find((t) => t.trainId === trainId))
+      ),
+      draftTimetable.outboundTrainIds.map((trainId) =>
+        nn(draftTimetableData._trains.find((t) => t.trainId === trainId))
+      ),
+    ];
+    return [draftTimetable, inboundTrains, outboundTrains] as const;
   };
 
   return (
@@ -226,19 +299,22 @@ export function TimetableEditorComponent({
             onChange={async (event) => {
               const diagram = await importOutdiaFile(event);
               if (diagram != null) {
-                timetableData.clearTimetable(timetable.timetableId);
-                const result = mergeTimetable(diagram);
-                if (result !== true) {
-                  setToast(result.error);
-                }
+                // TODO
+                // timetableData.clearTimetable(timetable.timetableId);
+                // const result = mergeTimetable(diagram);
+                // if (result !== true) {
+                //   setToast(result.error);
+                // }
               }
             }}
           />
         </div>
         <button
           onClick={() => {
-            timetableData.reverseTimetableDirection(timetable.timetableId);
-            reset();
+            setTimetableData((draftTimetableData) => {
+              return OutlinedTimetableFunc.reverseTimetableDirection(draftTimetableData, timetable.timetableId);
+            });
+            // reset();
           }}
         >
           上り下りを反転
@@ -249,17 +325,22 @@ export function TimetableEditorComponent({
               return;
             }
 
-            timetableData.clearTimetable(timetable.timetableId);
-            const [newTimetable, newTrains] = getInitialTimetable(railwayLine);
-            timetableData.addTimetable(newTimetable, newTrains);
+            setTimetableData((draftTimetableData) => {
+              OutlinedTimetableFunc.clearTimetable(draftTimetableData, timetable.timetableId);
+              const [newTimetable, newTrains] = getInitialTimetable(railwayLine);
+              OutlinedTimetableFunc.addTimetable(draftTimetableData, newTimetable, newTrains);
+              return undefined;
+            });
           }}
         >
           初期化
         </button>
         <button
           onClick={() => {
-            timetableData.repeatTimetable(timetable.timetableId);
-            update();
+            setTimetableData((draftTimetableData) => {
+              OutlinedTimetableFunc.repeatTrainsInTimetable(draftTimetableData, timetable.timetableId);
+              return undefined;
+            });
           }}
         >
           繰り返し
@@ -282,6 +363,14 @@ export function TimetableEditorComponent({
                     setStations={setStations}
                     trains={inboundTrains}
                     otherDirectionTrains={outboundTrains}
+                    setTimetable={(f) => {
+                      setTimetableData((draftTimetableData) => {
+                        const [draftTimetable, inboundTrains, outboundTrains] =
+                          getInboundAndOutboundTrains(draftTimetableData);
+                        f(draftTimetable, { trains: inboundTrains, otherDirectionTrains: outboundTrains });
+                        return undefined;
+                      });
+                    }}
                     crudTrain={crudTrain}
                     timetableDirection={timetableDirection}
                     trainTypes={timetable.trainTypes}
@@ -300,9 +389,17 @@ export function TimetableEditorComponent({
                 component: () => (
                   <TimetableEditorTableComponent
                     stations={reverseArray(timetable.stations)}
-                    setStations={(diaStations) => setStations(reverseArray(diaStations))}
+                    setStations={(stations) => setStations(reverseArray(stations))}
                     trains={outboundTrains}
                     otherDirectionTrains={inboundTrains}
+                    setTimetable={(f) => {
+                      setTimetableData((draftTimetableData) => {
+                        const [draftTimetable, inboundTrains, outboundTrains] =
+                          getInboundAndOutboundTrains(draftTimetableData);
+                        f(draftTimetable, { trains: outboundTrains, otherDirectionTrains: inboundTrains });
+                        return undefined;
+                      });
+                    }}
                     crudTrain={crudTrain}
                     timetableDirection={timetableDirection}
                     trainTypes={timetable.trainTypes}
@@ -348,7 +445,14 @@ export function TimetableEditorComponent({
                     railwayLine={railwayLine}
                     errors={errors}
                     getTrainsWithDirections={() => {
-                      return getTrainsWithDirections();
+                      return [
+                        timetable.inboundTrainIds.map((trainId) =>
+                          nn(timetableData._trains.find((t) => t.trainId === trainId))
+                        ),
+                        timetable.outboundTrainIds.map((trainId) =>
+                          nn(timetableData._trains.find((t) => t.trainId === trainId))
+                        ),
+                      ];
                     }}
                   />
                 ),
@@ -362,9 +466,6 @@ export function TimetableEditorComponent({
                     outboundTrains={outboundTrains}
                     operations={timetable.operations}
                     timetable={timetable}
-                    setUpdate={() => {
-                      update();
-                    }}
                   />
                 ),
               },
@@ -376,37 +477,36 @@ export function TimetableEditorComponent({
         ) : (
           <SettingColumnComponent setSettingData={setSettingData} width='250px'>
             {settingData.settingType === 'StationSetting' ? (
-              <StationDetailComponent
-                diaStation={settingData.station}
-                setDiaStation={(diaStation) => {
-                  setStations(
-                    timetable.stations.map((diaStation_) =>
-                      diaStation_.stationId === diaStation.stationId ? diaStation : diaStation_
-                    )
-                  );
-                }}
-              />
+              settingData.station.stationType === 'Station' ? (
+                <StationDetailComponent
+                  diaStation={settingData.station}
+                  setStation={setStation(settingData.station.stationId)}
+                />
+              ) : (
+                <DepotDetailComponent depot={settingData.station} setDepot={setDepot(settingData.station.stationId)} />
+              )
             ) : settingData.settingType === 'StationOperationSetting' ? (
-              <StationOperationSettingComponent
-                timetable={timetable}
-                firstOrLast={settingData.firstOrLast}
-                setStationOperation={(stationOperation) => {
-                  if (settingData.firstOrLast === 'First') {
-                    settingData.train.firstStationOperation = stationOperation;
-                  } else {
-                    settingData.train.lastStationOperation = stationOperation;
-                  }
-                  update();
-                }}
-                stationOperation={
-                  settingData.firstOrLast === 'First'
-                    ? settingData.train.firstStationOperation
-                    : settingData.train.lastStationOperation
-                }
-                stations={timetable.stations}
-                mapInfo={mapInfo}
-                train={settingData.train}
-              />
+              // <StationOperationSettingComponent
+              //   timetable={timetable}
+              //   firstOrLast={settingData.firstOrLast}
+              //   setStationOperation={(stationOperation) => {
+              //     if (settingData.firstOrLast === 'First') {
+              //       settingData.train.firstStationOperation = stationOperation;
+              //     } else {
+              //       settingData.train.lastStationOperation = stationOperation;
+              //     }
+              //     update();
+              //   }}
+              //   stationOperation={
+              //     settingData.firstOrLast === 'First'
+              //       ? settingData.train.firstStationOperation
+              //       : settingData.train.lastStationOperation
+              //   }
+              //   stations={timetable.stations}
+              //   mapInfo={mapInfo}
+              //   train={settingData.train}
+              // />
+              <></>
             ) : (
               <></>
             )}

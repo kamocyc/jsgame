@@ -1,3 +1,4 @@
+import { DeepReadonly } from 'ts-essentials';
 import { toStringFromSeconds, upto } from '../../common';
 import { Operation, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
@@ -5,7 +6,6 @@ import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonCom
 import './operation-table.css';
 
 export interface DiagramOperationProps {
-  setUpdate: () => void;
   inboundTrains: readonly Train[];
   outboundTrains: readonly Train[];
   operations: Operation[];
@@ -18,7 +18,7 @@ interface DiagramOperationSubProps extends DiagramOperationProps {
 
 type OperationTypeAll = { type: 'all'; operationCode: 'all' };
 
-export function DiagramOperationComponent(props: DiagramOperationProps) {
+export function DiagramOperationComponent(props: DeepReadonly<DiagramOperationProps>) {
   const operations = [{ type: 'all', operationCode: '一覧' } as Operation | OperationTypeAll].concat(props.operations);
 
   return (
@@ -44,7 +44,7 @@ export function DiagramOperationComponent(props: DiagramOperationProps) {
   );
 }
 
-export function DiagramOperationSubAllComponent({ operations }: { operations: Operation[] }) {
+export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ operations: Operation[] }>) {
   const maxTrainCount = Math.max(...operations.map((operation) => operation.trains.length));
   return (
     <>
@@ -140,7 +140,7 @@ export function DiagramOperationSubAllComponent({ operations }: { operations: Op
   );
 }
 
-export function DiagramOperationSubComponent(props: DiagramOperationSubProps) {
+export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperationSubProps>) {
   const operation = props.operation;
   return (
     <>

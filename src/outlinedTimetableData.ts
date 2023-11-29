@@ -1,3 +1,4 @@
+import { DeepReadonly } from 'ts-essentials';
 import { assert } from './common';
 import { checkStationTrackOccupation } from './components/track-editor/checkOperation';
 import { OperationError } from './mapEditorModel';
@@ -14,7 +15,7 @@ export interface OutlinedTimetable {
   operations: Operation[];
 }
 
-export function getDirection(timetable: OutlinedTimetable, trainId: string): 'Inbound' | 'Outbound' {
+export function getDirection(timetable: DeepReadonly<OutlinedTimetable>, trainId: string): 'Inbound' | 'Outbound' {
   if (timetable.inboundTrainIds.some((id) => id === trainId)) {
     return 'Inbound';
   } else if (timetable.outboundTrainIds.some((id) => id === trainId)) {
@@ -25,7 +26,6 @@ export function getDirection(timetable: OutlinedTimetable, trainId: string): 'In
 }
 
 export interface HistoryItem {
-  this: unknown;
   undo: () => void;
   redo: () => void;
 }
@@ -49,7 +49,7 @@ export class HistoryManager {
   undo() {
     if (this.currentIndex > 0) {
       this.currentIndex--;
-      this.histories[this.currentIndex].undo.bind(this.histories[this.currentIndex].this)();
+      this.histories[this.currentIndex].undo();
     }
   }
 
@@ -68,7 +68,7 @@ export class HistoryManager {
 
   redo() {
     if (this.currentIndex < this.histories.length) {
-      this.histories[this.currentIndex].redo.bind(this.histories[this.currentIndex].this)();
+      this.histories[this.currentIndex].redo();
       this.currentIndex++;
     }
   }
@@ -98,7 +98,7 @@ function updateOperationTime(operation: StationOperation, timeDiff: number) {
   }
 }
 
-function repeatTrains(trains: Train[]): Train[] {
+function repeatTrains(trains: DeepReadonly<Train[]>): DeepReadonly<Train>[] {
   const minTime = trains.map((train) => train.diaTimes[0].departureTime ?? 0).reduce((a, b) => Math.min(a, b));
   const maxTime = trains
     .map((train) => train.diaTimes[train.diaTimes.length - 1].arrivalTime ?? 0)
@@ -108,8 +108,7 @@ function repeatTrains(trains: Train[]): Train[] {
     return [];
   }
 
-  const newTrains: Train[] = [];
-  for (const train of trains) {
+  const newTrains = trains.map((train) => {
     const clonedTrain = cloneTrain(train);
     const newTrain = {
       ...clonedTrain,
@@ -123,95 +122,90 @@ function repeatTrains(trains: Train[]): Train[] {
         };
       }),
     };
-    newTrains.push(newTrain);
-  }
+    return newTrain;
+  });
 
   return newTrains;
 }
 
+export function repeatTrains_(trains: Train[]): Train[] {
+  return repeatTrains(trains) as Train[];
+}
+
 // Timetableを含む全てのデータ
-export class OutlinedTimetableData {
-  constructor(
-    private historyManager: HistoryManager,
-    private trains: Train[] = [],
-    private timetables: OutlinedTimetable[] = []
-  ) {}
+export interface OutlinedTimetableData {
+  _trains: Train[];
+  _timetables: OutlinedTimetable[];
+  _errors: OperationError[];
+}
 
-  public getTrains(): Train[] {
-    return this.trains;
-  }
-  public getTimetables(): OutlinedTimetable[] {
-    return this.timetables;
-  }
-  public toDataToSave() {
+export const OutlinedTimetableFunc = {
+  getTrains(that: DeepReadonly<OutlinedTimetableData>): DeepReadonly<Train[]> {
+    return (that as OutlinedTimetableData)._trains;
+  },
+  getTimetables(that: DeepReadonly<OutlinedTimetableData>): DeepReadonly<OutlinedTimetable[]> {
+    return (that as OutlinedTimetableData)._timetables;
+  },
+  toDataToSave(that: DeepReadonly<OutlinedTimetableData>) {
     return {
-      trains: this.trains,
-      timetables: this.timetables,
+      trains: OutlinedTimetableFunc.getTrains(that),
+      timetables: OutlinedTimetableFunc.getTimetables(that),
     };
-  }
+  },
 
-  repeatTimetable(timetableId: string) {
-    const timetable = this.timetables.find((t) => t.timetableId === timetableId);
+  // update
+  getTrain(that_: { _trains: Train[] }, trainId: string): Train {
+    const that = that_ as OutlinedTimetableData;
+    const train = that._trains.find((train) => train.trainId === trainId);
+    assert(train !== undefined);
+    return train;
+  },
+  repeatTrainsInTimetable(that_: OutlinedTimetableData, timetableId: string) {
+    const that = that_ as OutlinedTimetableData;
+    const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
-    {
-      const newTrains = repeatTrains(timetable.inboundTrainIds.map((trainId) => this.getTrain(trainId)));
-      this.trains.push(...newTrains);
-      timetable.inboundTrainIds.push(...newTrains.map((t) => t.trainId));
+    const newInboundTrains = repeatTrains_(timetable.inboundTrainIds.map((trainId) => this.getTrain(that, trainId)));
+    that._trains.push(...newInboundTrains);
+    timetable.inboundTrainIds.push(...newInboundTrains.map((t) => t.trainId));
+
+    const newOutboundTrains = repeatTrains_(timetable.outboundTrainIds.map((trainId) => this.getTrain(that, trainId)));
+    that._trains.push(...newOutboundTrains);
+    timetable.outboundTrainIds.push(...newOutboundTrains.map((t) => t.trainId));
+  },
+  updateOperations(that_: OutlinedTimetableData) {
+    const that = that_ as OutlinedTimetableData;
+    const errors: OperationError[] = [];
+    for (const timetable of that._timetables) {
+      const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(that, id));
+      const platforms = timetable.stations.map((station) => station.platforms).flat();
+      const { errors: occupationErrors, operations } = checkStationTrackOccupation(trains, platforms);
+      errors.push(...occupationErrors);
+      timetable.operations = operations;
     }
 
-    {
-      const newTrains = repeatTrains(timetable.outboundTrainIds.map((trainId) => this.getTrain(trainId)));
-      this.trains.push(...newTrains);
-      timetable.outboundTrainIds.push(...newTrains.map((t) => t.trainId));
-    }
-  }
-
-  public addTimetable(timetable: OutlinedTimetable, trains: Train[]) {
-    this.timetables.push(timetable);
-    for (const train of trains) {
-      if (!this.trains.find((t) => t.trainId === train.trainId)) {
-        this.trains.push(train);
-      }
-    }
-  }
-
-  undo() {
-    this.historyManager.undo();
-  }
-  redo() {
-    this.historyManager.redo();
-  }
-  canUndo() {
-    return this.historyManager.canUndo();
-  }
-  canRedo() {
-    return this.historyManager.canRedo();
-  }
-  clearHistory() {
-    this.historyManager.clearHistory();
-  }
-
-  deleteTrains(timetableId: string, trainIds: string[]) {
-    const timetable = this.timetables.find((t) => t.timetableId === timetableId);
+    return errors;
+  },
+  deleteTrains(that_: OutlinedTimetableData, timetableId: string, trainIds: ReadonlyArray<string>) {
+    const that = that_ as OutlinedTimetableData;
+    const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
     // undo用に、削除される前の状態を保存
-    const allTrains = this.trains;
+    const allTrains = that._trains;
 
     const historyItem: HistoryItem = {
-      this: this,
       redo: () => {
         timetable.inboundTrainIds = timetable.inboundTrainIds.filter((id) => !trainIds.some((tid) => tid === id));
         timetable.outboundTrainIds = timetable.outboundTrainIds.filter((id) => !trainIds.some((tid) => tid === id));
 
-        this.deleteNotUsedTrains();
+        this.deleteNotUsedTrains(that);
       },
       undo: () => {
         timetable.inboundTrainIds.push(...trainIds);
         timetable.outboundTrainIds.push(...trainIds);
 
-        this.trains.push(
+        that._trains.push(
           ...trainIds.map((id) => {
             const train = allTrains.find((train) => train.trainId === id);
             assert(train !== undefined);
@@ -221,13 +215,13 @@ export class OutlinedTimetableData {
       },
     };
 
-    historyItem.redo.bind(historyItem.this)();
+    historyItem.redo();
 
-    this.historyManager.push(historyItem);
-  }
+    return historyItem;
+  },
 
-  clearTimetable(timetableId: string) {
-    const timetable = this.timetables.find((t) => t.timetableId === timetableId);
+  clearTimetable(that: OutlinedTimetableData, timetableId: string) {
+    const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
     timetable.inboundTrainIds = [];
@@ -236,21 +230,20 @@ export class OutlinedTimetableData {
     timetable.trainTypes = [];
     timetable.inboundIsFirstHalf = true;
 
-    this.deleteNotUsedTrains();
-  }
+    this.deleteNotUsedTrains(that);
+  },
 
-  addTrain(timetableId: string, train: Train, direction: 'Inbound' | 'Outbound') {
-    this.addTrains(timetableId, [{ train: train, beforeTrainId: null, direction: direction }]);
-  }
+  addTrain(that: OutlinedTimetableData, timetableId: string, train: Train, direction: 'Inbound' | 'Outbound') {
+    return this.addTrains(that, timetableId, [{ train: train, beforeTrainId: null, direction: direction }]);
+  },
 
-  addTrains(timetableId: string, newTrains: AddingNewTrain[]) {
-    const timetable = this.timetables.find((t) => t.timetableId === timetableId);
+  addTrains(that: OutlinedTimetableData, timetableId: string, newTrains: AddingNewTrain[]) {
+    const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
-    const historyItem = {
-      this: this,
+    const historyItem: HistoryItem = {
       redo: () => {
-        this.trains.push(...newTrains.map((train) => train.train));
+        that._trains.push(...newTrains.map((train) => train.train));
 
         for (const { train, beforeTrainId, direction } of newTrains) {
           if (direction === 'Inbound') {
@@ -273,37 +266,56 @@ export class OutlinedTimetableData {
         }
       },
       undo: () => {
-        const trainsAfterDeleted = this.trains.filter(
+        const trainsAfterDeleted = that._trains.filter(
           (train) => !newTrains.some((t) => t.train.trainId === train.trainId)
         );
-        this.trains.splice(0, this.trains.length);
-        this.trains.push(...trainsAfterDeleted);
+        that._trains.splice(0, that._trains.length);
+        that._trains.push(...trainsAfterDeleted);
       },
     };
 
-    historyItem.redo.bind(historyItem.this)();
+    historyItem.redo();
 
-    this.historyManager.push(historyItem);
-  }
+    return historyItem;
+  },
 
-  commitTrain(historyItem: HistoryItem) {
-    historyItem.redo.bind(historyItem.this)();
-
-    this.historyManager.push(historyItem);
-  }
-
-  getTrain(trainId: string): Train {
-    const train = this.getTrains().find((train) => train.trainId === trainId);
-    assert(train !== undefined);
-    return train;
-  }
-
-  reverseTimetableDirection(timetableId: string): void {
-    const timetable = this.timetables.find((t) => t.timetableId === timetableId);
+  updateTrain(
+    that: OutlinedTimetableData,
+    timetableId: string,
+    trainId: string,
+    redo: (train: Train) => void,
+    undo: (train: Train) => void
+  ) {
+    const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
-    const oldInboundTrains = timetable.inboundTrainIds.map((trainId) => this.getTrain(trainId));
-    const oldOutboundTrains = timetable.outboundTrainIds.map((trainId) => this.getTrain(trainId));
+    const train = this.getTrain(that, trainId);
+
+    const historyItem: HistoryItem = {
+      redo: () => {
+        redo(train);
+      },
+      undo: () => {
+        undo(train);
+      },
+    };
+
+    historyItem.redo();
+
+    return historyItem;
+  },
+  // commitTrain(that: OutlinedTimetableData, historyItem: HistoryItem) {
+  //   historyItem.redo.bind(historyItem.this)();
+
+  //   this.historyManager.push(historyItem);
+  // }
+
+  reverseTimetableDirection(that: OutlinedTimetableData, timetableId: string) {
+    const timetable = that._timetables.find((t) => t.timetableId === timetableId);
+    assert(timetable !== undefined);
+
+    const oldInboundTrains = timetable.inboundTrainIds.map((trainId) => this.getTrain(that, trainId));
+    const oldOutboundTrains = timetable.outboundTrainIds.map((trainId) => this.getTrain(that, trainId));
 
     const inboundTrains: Train[] = [];
     const outboundTrains: Train[] = [];
@@ -331,45 +343,55 @@ export class OutlinedTimetableData {
       timetable.stations.map((s) => s.platforms).flat()
     ).operations;
 
-    this.trains.push(...trains);
-    this.deleteNotUsedTrains();
-  }
+    that._trains.push(...trains);
+    this.deleteNotUsedTrains(that);
 
-  // 重複を削除し、使用されていないtrainを削除する
-  private deleteNotUsedTrains() {
+    return undefined;
+  },
+  updateTimetable(
+    that: OutlinedTimetableData,
+    timetableId: string,
+    updateTimetable: (draftTimetable: OutlinedTimetable) => void
+  ) {
+    const oldTimetable = that._timetables.find((t) => t.timetableId === timetableId);
+    assert(oldTimetable !== undefined);
+
+    const historyItem: HistoryItem = {
+      redo: () => {
+        updateTimetable(oldTimetable);
+      },
+      undo: () => {
+        const timetableIndex = that._timetables.findIndex((t) => t.timetableId === timetableId);
+        assert(timetableIndex !== -1);
+        that._timetables[timetableIndex] = oldTimetable;
+      },
+    };
+
+    historyItem.redo();
+    return historyItem;
+  },
+
+  addTimetable(that: OutlinedTimetableData, timetable: OutlinedTimetable, trains: Train[]) {
+    that._timetables.push(timetable);
+    for (const train of trains) {
+      if (!that._trains.find((t) => t.trainId === train.trainId)) {
+        that._trains.push(train);
+      }
+    }
+  },
+  deleteNotUsedTrains(that_: OutlinedTimetableData) {
+    const that = that_ as OutlinedTimetableData;
     const trainMap = new Map<string, Train>();
-    for (const train of this.trains) {
+    for (const train of that._trains) {
       trainMap.set(train.trainId, train);
     }
 
-    this.trains.splice(0, this.trains.length);
-    const usedTrainIds = this.timetables.flatMap((t) => [...t.inboundTrainIds, ...t.outboundTrainIds]);
+    that._trains.splice(0, that._trains.length);
+    const usedTrainIds = that._timetables.flatMap((t) => [...t.inboundTrainIds, ...t.outboundTrainIds]);
     for (const usedTrainId of usedTrainIds) {
       const train = trainMap.get(usedTrainId);
       assert(train !== undefined);
-      this.trains.push(train);
+      that._trains.push(train);
     }
-  }
-
-  public deleteTimetable(timetableId: string) {
-    const index = this.timetables.findIndex((t) => t.timetableId === timetableId);
-    if (index !== -1) {
-      this.timetables.splice(index, 1);
-
-      this.deleteNotUsedTrains();
-    }
-  }
-
-  updateOperations() {
-    const errors: OperationError[] = [];
-    for (const timetable of this.timetables) {
-      const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(id));
-      const platforms = timetable.stations.map((station) => station.platforms).flat();
-      const { errors: occupationErrors, operations } = checkStationTrackOccupation(trains, platforms);
-      errors.push(...occupationErrors);
-      timetable.operations = operations;
-    }
-
-    return errors;
-  }
-}
+  },
+};

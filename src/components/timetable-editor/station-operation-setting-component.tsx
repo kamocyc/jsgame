@@ -1,4 +1,5 @@
 import { useEffect } from 'preact/hooks';
+import { DeepReadonly } from 'ts-essentials';
 import { assert } from '../../common';
 import { StationLike, StationOperation, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
@@ -17,7 +18,7 @@ export function StationOperationSettingComponent({
   mapInfo,
   stationOperation,
   setStationOperation,
-}: {
+}: DeepReadonly<{
   timetable: OutlinedTimetable;
   firstOrLast: 'First' | 'Last';
   stations: StationLike[];
@@ -25,7 +26,7 @@ export function StationOperationSettingComponent({
   mapInfo: MapInfo;
   stationOperation: StationOperation | undefined;
   setStationOperation: (stationOperation: StationOperation) => void;
-}) {
+}>) {
   useEffect(() => {
     if (stationOperation === undefined) {
       setStationOperation({ stationOperationType: 'Connection' });

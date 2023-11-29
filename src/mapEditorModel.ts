@@ -150,6 +150,7 @@ export type OperationError = {
   trainId: string;
   diaTimeId: string | null;
   stationId: string | null;
+  arrivalOrDeparture: 'arrivalTime' | 'departureTime' | null;
   platformId: string | null;
 };
 

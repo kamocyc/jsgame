@@ -7,6 +7,7 @@ import { DiaTime, PlatformLike, Point, Train } from '../../model';
 import { HistoryItem, getDirection } from '../../outlinedTimetableData';
 import { copyTrains, deleteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
+import { WarningKonva } from './hover-konva';
 import { ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
 import { MouseEventManager } from './mouse-event-manager';
 import { getPlatformPositions } from './station-view-konva';
@@ -288,7 +289,7 @@ export class SelectionGroupManager {
   private dragStartPoint: Point | null = null;
   private currentPosition: Point | null = null;
   private trainDragManager: TrainDragManager;
-  private warningLabelGroup: Konva.Group;
+  private warningKonvas: WarningKonva[] = [];
   private trainCollectionKonva: TrainCollectionKonva | undefined;
 
   constructor(
@@ -309,20 +310,16 @@ export class SelectionGroupManager {
       id: generateKonvaId(),
     });
 
-    this.warningLabelGroup = new Konva.Group({
-      id: generateKonvaId(),
-    });
     this.layer.add(this.selectionGroup);
     this.layer.add(this.markerGroup);
-    this.layer.add(this.warningLabelGroup);
-
-    this.updateShape();
   }
 
   setTrainCollectionKonva(trainCollectionKonva: TrainCollectionKonva) {
     this.trainCollectionKonva = trainCollectionKonva;
+
+    this.updateShape();
   }
-  
+
   moveShapesToTop() {
     this.selectionGroup.moveToTop();
     this.markerGroup.moveToTop();
@@ -429,24 +426,40 @@ export class SelectionGroupManager {
     }
   }
 
-  private updateWarnings(scale: number) {
-    this.warningLabelGroup.destroyChildren();
+  private updateWarnings(stageKonva: { scale: number }) {
+    for (const warningKonva of this.warningKonvas) {
+      warningKonva.destroy();
+    }
+    this.warningKonvas = [];
 
     for (const error of this.diagramProps.errors) {
       const trainKonva = this.trainCollectionKonva!.getTrainKonva(error.trainId);
       if (trainKonva !== undefined) {
         const diaTime = trainKonva.getTrain().diaTimes.find((d) => d.diaTimeId === error.diaTimeId);
-        error.
-        const position = this.getTextLabelPosition(train, diaTime, , error.stationId, scale, );
-        const warningLabel = new Konva.Text({
-          text: error.type,
-          x: position.x,
-          y: position.y - 20 / scale,
-          fill: '#ff9000',
-          hitFunc: () => {},
-          id: generateKonvaId(),
-        });
-        this.warningLabelGroup.add(warningLabel);
+        const time =
+          error.arrivalOrDeparture === 'arrivalTime' || error.arrivalOrDeparture === null
+            ? diaTime?.arrivalTime
+            : diaTime?.departureTime;
+        if (diaTime !== undefined && time != null && error.stationId !== null && error.arrivalOrDeparture !== null) {
+          const position = this.getTextLabelPosition(
+            trainKonva.getTrain(),
+            diaTime,
+            time,
+            error.stationId,
+            stageKonva.scale,
+            error.arrivalOrDeparture
+          );
+
+          this.warningKonvas.push(
+            new WarningKonva(
+              { topLayer: this.layer },
+              stageKonva,
+              error.type,
+              position.x + 40 / stageKonva.scale,
+              position.y
+            )
+          );
+        }
       }
     }
   }
@@ -454,7 +467,7 @@ export class SelectionGroupManager {
   updateShape() {
     const scale = this.stageKonva.scale;
 
-    this.updateWarnings(scale);
+    this.updateWarnings(this.stageKonva);
 
     for (const selection of this.trainDragManager.selections) {
       selection.updateShape();

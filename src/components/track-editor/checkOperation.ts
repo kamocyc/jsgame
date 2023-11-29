@@ -83,6 +83,7 @@ export function checkStationTrackOccupation(
         errors.push({
           type: 'DoubleArrival',
           stationId: platform.station.stationId,
+          arrivalOrDeparture: 'arrivalTime',
           platformId: platform.platformId,
           diaTimeId: times[index].diaTimeId,
           trainId: times[index].train.trainId,
@@ -93,6 +94,7 @@ export function checkStationTrackOccupation(
         errors.push({
           type: 'DoubleDeparture',
           stationId: platform.station.stationId,
+          arrivalOrDeparture: 'departureTime',
           platformId: platform.platformId,
           diaTimeId: times[index].diaTimeId,
           trainId: times[index].train.trainId,

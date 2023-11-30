@@ -58,20 +58,28 @@ export function TimetableEditorParentComponent({
   const setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => HistoryItem | undefined) => void = (
     timetableDataFunction: (oldTimetableData: OutlinedTimetableData) => HistoryItem | undefined
   ) => {
-    const newTimetableData = produce(appStates.outlinedTimetableData, (d) => {
-      const newHistory = timetableDataFunction(d);
-      if (newHistory !== undefined) {
-        appStates.historyManager.push(newHistory);
+    const newTimetableData = produce(
+      appStates.outlinedTimetableData,
+      (d) => {
+        const newHistory = timetableDataFunction(d);
+        if (newHistory !== undefined) {
+          appStates.historyManager.push(newHistory);
+        }
+        OutlinedTimetableFunc.updateOperations(d);
+      },
+      (patches, inversePatches) => {
+        console.log({ patches, inversePatches });
       }
-      OutlinedTimetableFunc.updateOperations(d);
-    });
+    );
     appStates.outlinedTimetableData = newTimetableData;
 
+    console.log(appStates.outlinedTimetableData._trains[3]);
     // TODO: UIに表示する
-    setErrors(newTimetableData._errors);
+    setErrors([...newTimetableData._errors]);
     // update();
   };
 
+  console.log(appStates.outlinedTimetableData._trains[3]);
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
   // const setTimetableData = (timetableData: OutlinedTimetableData) => {
   //   appStates.outlinedTimetableData = timetableData;
@@ -82,6 +90,11 @@ export function TimetableEditorParentComponent({
   //   // TODO: UIに表示する
   //   setErrors(errors);
   // };
+  const update = () => {
+    setAppStates((appStates) => ({
+      ...appStates,
+    }));
+  };
 
   return (
     <>
@@ -162,9 +175,9 @@ export function TimetableEditorParentComponent({
               const railwayLine = appStates.railwayLines.find(
                 (railwayLine) => railwayLine.railwayLineId === e.currentTarget.value
               );
-              if (railwayLine != null) {
-                update();
-              }
+              // if (railwayLine != null) {
+              //   update();
+              // }
             }}
           >
             {appStates.railwayLines.map((railwayLine) => (
@@ -207,3 +220,8 @@ export function TimetableEditorParentComponent({
     </>
   );
 }
+
+// immer
+// patchを使った方式にする。
+// その方が人間が把握しやすそう
+// operationがかさばるので、差分が無いときは更新しないようにする

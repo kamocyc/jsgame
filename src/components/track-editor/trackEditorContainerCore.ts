@@ -21,6 +21,7 @@ import {
   Track,
   generateId,
 } from '../../model';
+import { OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { getMidPoint, isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad, TerrainType } from '../extendedMapModel';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
@@ -599,7 +600,7 @@ export function onmouseup(
         if (appStates.mapState.currentRailwayLine !== null) {
           appStates.railwayLines.push(appStates.mapState.currentRailwayLine);
           const [timetable, newTrains] = getInitialTimetable(appStates.mapState.currentRailwayLine);
-          appStates.outlinedTimetableData.addTimetable(timetable, newTrains);
+          OutlinedTimetableFunc.addTimetable(appStates.outlinedTimetableData, timetable, newTrains);
           appStates.mapState.currentRailwayLine = null;
         }
       } else {

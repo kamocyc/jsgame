@@ -306,14 +306,19 @@ export function TrainListComponent({
     train: DeepReadonly<Train>,
     diaStations: DeepReadonly<StationLike[]>
   ): DeepReadonly<DiaTime[]> {
-    return diaStations.map((diaStation) => {
-      const diaTime = train.diaTimes.find((diaTime) => diaTime.stationId === diaStation.stationId);
-      if (diaTime) {
-        return diaTime;
-      } else {
-        throw new Error('diaTime not found');
-      }
-    });
+    try {
+      return diaStations.map((diaStation) => {
+        const diaTime = train.diaTimes.find((diaTime) => diaTime.stationId === diaStation.stationId);
+        if (diaTime) {
+          return diaTime;
+        } else {
+          throw new Error('diaTime not found');
+        }
+      });
+    } catch (e) {
+      // 暫定
+      return [];
+    }
   }
 
   return (

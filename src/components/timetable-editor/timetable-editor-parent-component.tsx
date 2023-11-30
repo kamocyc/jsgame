@@ -4,7 +4,7 @@ import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates, OperationError } from '../../mapEditorModel';
 import { PlatformLike } from '../../model';
-import { HistoryItem, OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
+import { OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { createAgentManager } from '../track-editor/agentManager';
 import { toDetailedTimetable } from '../track-editor/timetableConverter';
 import { createTrainMove } from '../track-editor/trainMoveBase';
@@ -55,20 +55,17 @@ export function TimetableEditorParentComponent({
     (timetable) => timetable.railwayLineId === selectedRailwayLineId
   );
 
-  const setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => HistoryItem | undefined) => void = (
-    timetableDataFunction: (oldTimetableData: OutlinedTimetableData) => HistoryItem | undefined
+  const setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => void) => void = (
+    timetableDataFunction: (oldTimetableData: OutlinedTimetableData) => void
   ) => {
     const newTimetableData = produce(
       appStates.outlinedTimetableData,
       (d) => {
-        const newHistory = timetableDataFunction(d);
-        if (newHistory !== undefined) {
-          appStates.historyManager.push(newHistory);
-        }
+        timetableDataFunction(d);
         OutlinedTimetableFunc.updateOperations(d);
       },
       (patches, inversePatches) => {
-        console.log({ patches, inversePatches });
+        appStates.historyManager.push(patches, inversePatches);
       }
     );
     appStates.outlinedTimetableData = newTimetableData;
@@ -187,7 +184,7 @@ export function TimetableEditorParentComponent({
         </span>
         <button
           onClick={() => {
-            appStates.historyManager.undo();
+            appStates.outlinedTimetableData = appStates.historyManager.undo(appStates.outlinedTimetableData);
             update();
           }}
           disabled={!appStates.historyManager.canUndo()}
@@ -196,7 +193,7 @@ export function TimetableEditorParentComponent({
         </button>
         <button
           onClick={() => {
-            appStates.historyManager.redo();
+            appStates.outlinedTimetableData = appStates.historyManager.redo(appStates.outlinedTimetableData);
             update();
           }}
           disabled={!appStates.historyManager.canRedo()}

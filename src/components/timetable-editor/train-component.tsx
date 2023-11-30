@@ -9,7 +9,6 @@ import {
   DiaTime,
   PlatformLike,
   StationLike,
-  StationOperation,
   TimetableDirection,
   Train,
   cloneTrain,
@@ -136,7 +135,7 @@ function TrainListItemComponent({
   diaTime: DiaTime;
   allStations: StationLike[];
   errors: readonly OperationError[];
-  updateTrain: (diaTimeId: string, undo: (diaTime: DiaTime) => void, redo: (diaTime: DiaTime) => void) => void;
+  updateTrain: (diaTimeId: string, updater: (diaTime: DiaTime) => void) => void;
 }>) {
   const errorMap = toMap(errors, (error) => error.diaTimeId ?? undefined);
 
@@ -168,15 +167,9 @@ function TrainListItemComponent({
             cursor: 'pointer',
           }}
           onClick={() => {
-            updateTrain(
-              diaTime.diaTimeId,
-              (diaTime: DiaTime) => {
-                diaTime.isPassing = !diaTime.isPassing;
-              },
-              (diaTime: DiaTime) => {
-                diaTime.isPassing = !diaTime.isPassing;
-              }
-            );
+            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+              diaTime.isPassing = !diaTime.isPassing;
+            });
           }}
         >
           レ
@@ -190,15 +183,9 @@ function TrainListItemComponent({
             cursor: 'pointer',
           }}
           onClick={() => {
-            updateTrain(
-              diaTime.diaTimeId,
-              (diaTime: DiaTime) => {
-                diaTime.isInService = !diaTime.isInService;
-              },
-              (diaTime: DiaTime) => {
-                diaTime.isInService = !diaTime.isInService;
-              }
-            );
+            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+              diaTime.isInService = !diaTime.isInService;
+            });
           }}
         >
           回
@@ -208,47 +195,26 @@ function TrainListItemComponent({
         <TimeInputComponent
           time={diaTime.arrivalTime}
           setTime={(time) => {
-            const oldTime = diaTime.arrivalTime; // undo用
-            updateTrain(
-              diaTime.diaTimeId,
-              (diaTime: DiaTime) => {
-                diaTime.arrivalTime = time;
-              },
-              (diaTime: DiaTime) => {
-                diaTime.arrivalTime = oldTime;
-              }
-            );
+            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+              diaTime.arrivalTime = time;
+            });
           }}
         />
         <PlatformComponent
           diaPlatformId={diaTime.platformId}
           allDiaPlatforms={nn(allStations.find((s) => s.stationId === diaTime.stationId)).platforms}
           setDiaPlatform={(platformId) => {
-            const oldPlatformId = diaTime.platformId; // undo用
-            updateTrain(
-              diaTime.diaTimeId,
-              (diaTime: DiaTime) => {
-                diaTime.platformId = platformId;
-              },
-              (diaTime: DiaTime) => {
-                diaTime.platformId = oldPlatformId;
-              }
-            );
+            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+              diaTime.platformId = platformId;
+            });
           }}
         />
         <TimeInputComponent
           time={diaTime.departureTime}
           setTime={(time) => {
-            const oldTime = diaTime.departureTime; // undo用
-            updateTrain(
-              diaTime.diaTimeId,
-              (diaTime: DiaTime) => {
-                diaTime.departureTime = time;
-              },
-              (diaTime: DiaTime) => {
-                diaTime.departureTime = oldTime;
-              }
-            );
+            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+              diaTime.departureTime = time;
+            });
           }}
         />
       </div>
@@ -256,17 +222,17 @@ function TrainListItemComponent({
   );
 }
 
-function showStationOperation(stationOperation: StationOperation | undefined, firstOrLast: 'First' | 'Last') {
-  if (stationOperation === undefined) {
-    return '接続'; // 未設定
-  } else if (stationOperation.stationOperationType === 'Connection') {
-    return '接続';
-  } else if (stationOperation.stationOperationType === 'InOut') {
-    return firstOrLast === 'First' ? '出区' : '入区';
-  } else {
-    throw new Error('invalid');
-  }
-}
+// function showStationOperation(stationOperation: StationOperation | undefined, firstOrLast: 'First' | 'Last') {
+//   if (stationOperation === undefined) {
+//     return '接続'; // 未設定
+//   } else if (stationOperation.stationOperationType === 'Connection') {
+//     return '接続';
+//   } else if (stationOperation.stationOperationType === 'InOut') {
+//     return firstOrLast === 'First' ? '出区' : '入区';
+//   } else {
+//     throw new Error('invalid');
+//   }
+// }
 
 // 新しい列車番号を生成する（ロジックは適当）
 function getNewTrainCode(trains: DeepReadonly<Train[]>) {
@@ -371,20 +337,13 @@ export function TrainListComponent({
             <EditableTextComponent
               value={train.trainCode}
               onChange={(value) => {
-                const oldTrainCode = train.trainCode; // undo用
-                crudTrain.updateTrain(
-                  train.trainId,
-                  (train) => {
-                    if (value == '') {
-                      train.trainCode = '';
-                    } else {
-                      train.trainCode = value;
-                    }
-                  },
-                  (train) => {
-                    train.trainCode = oldTrainCode;
+                crudTrain.updateTrain(train.trainId, (train) => {
+                  if (value == '') {
+                    train.trainCode = '';
+                  } else {
+                    train.trainCode = value;
                   }
-                );
+                });
 
                 return true;
               }}
@@ -397,20 +356,13 @@ export function TrainListComponent({
             <EditableTextComponent
               value={train.trainName ?? ''}
               onChange={(value) => {
-                const oldTrainName = train.trainName; // undo用
-                crudTrain.updateTrain(
-                  train.trainId,
-                  (train) => {
-                    if (value == '') {
-                      train.trainName = '';
-                    } else {
-                      train.trainName = value;
-                    }
-                  },
-                  (train) => {
-                    train.trainName = oldTrainName;
+                crudTrain.updateTrain(train.trainId, (train) => {
+                  if (value == '') {
+                    train.trainName = '';
+                  } else {
+                    train.trainName = value;
                   }
-                );
+                });
 
                 return true;
               }}
@@ -425,23 +377,16 @@ export function TrainListComponent({
               style={{ height: 22 + 'px', width: '56px' }}
               onChange={(e) => {
                 if ((e.target as HTMLSelectElement)?.value != null) {
-                  const oldTrainType = train.trainType; // undo用
-                  crudTrain.updateTrain(
-                    train.trainId,
-                    (train) => {
-                      const newTrainType = trainTypes.find(
-                        (trainType) => trainType.trainTypeId === (e.target as HTMLSelectElement).value
-                      );
-                      if (newTrainType) {
-                        train.trainType = newTrainType;
-                      } else {
-                        train.trainType = undefined;
-                      }
-                    },
-                    (train) => {
-                      train.trainType = oldTrainType;
+                  crudTrain.updateTrain(train.trainId, (train) => {
+                    const newTrainType = trainTypes.find(
+                      (trainType) => trainType.trainTypeId === (e.target as HTMLSelectElement).value
+                    );
+                    if (newTrainType) {
+                      train.trainType = newTrainType;
+                    } else {
+                      train.trainType = undefined;
                     }
-                  );
+                  });
                 }
               }}
             >
@@ -487,20 +432,12 @@ export function TrainListComponent({
                 errors={errors}
                 allStations={stations}
                 diaTime={diaTime}
-                updateTrain={(diaTimeId, undo, redo) => {
-                  crudTrain.updateTrain(
-                    train.trainId,
-                    (train) => {
-                      const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
-                      assert(diaTime !== undefined);
-                      undo(diaTime);
-                    },
-                    (train) => {
-                      const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
-                      assert(diaTime !== undefined);
-                      redo(diaTime);
-                    }
-                  );
+                updateTrain={(diaTimeId, updater) => {
+                  crudTrain.updateTrain(train.trainId, (train) => {
+                    const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
+                    assert(diaTime !== undefined);
+                    updater(diaTime);
+                  });
                 }}
               />
             ))}

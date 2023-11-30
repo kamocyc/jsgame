@@ -280,5 +280,5 @@ export interface CrudTrain {
   addTrains: (addingNewTrains: AddingNewTrain[]) => void;
   addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => void;
   deleteTrains: (trainIds: string[]) => void;
-  updateTrain: (trainId: string, redo: (train: Train) => void, undo: (train: Train) => void) => void;
+  updateTrain: (trainId: string, updater: (train: Train) => void) => void;
 }

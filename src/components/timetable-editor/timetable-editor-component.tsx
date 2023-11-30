@@ -17,7 +17,6 @@ import {
 } from '../../model';
 import {
   AddingNewTrain,
-  HistoryItem,
   OutlinedTimetable,
   OutlinedTimetableData,
   OutlinedTimetableFunc,
@@ -129,7 +128,7 @@ export type TimetableEditorDirectedProps = {
 
 export type TimetableEditorComponentProps = DeepReadonly<{
   timetableData: OutlinedTimetableData;
-  setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => undefined | HistoryItem) => void;
+  setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => void) => void;
   timetable: OutlinedTimetable;
   railwayLine: RailwayLine;
   mapInfo: MapInfo;
@@ -257,9 +256,9 @@ export function TimetableEditorComponent({
         return OutlinedTimetableFunc.deleteTrains(draftTimetableData, timetable.timetableId, trainIds);
       });
     },
-    updateTrain: (trainId, redo, undo) => {
+    updateTrain: (trainId, updater) => {
       setTimetableData((draftTimetableData) => {
-        return OutlinedTimetableFunc.updateTrain(draftTimetableData, timetable.timetableId, trainId, redo, undo);
+        OutlinedTimetableFunc.updateTrain(draftTimetableData, timetable.timetableId, trainId, updater);
       });
     },
   };

@@ -1,3 +1,4 @@
+import { Patch, applyPatches } from 'immer';
 import { DeepReadonly } from 'ts-essentials';
 import { assert } from './common';
 import { checkStationTrackOccupation } from './components/track-editor/checkOperation';
@@ -26,8 +27,8 @@ export function getDirection(timetable: DeepReadonly<OutlinedTimetable>, trainId
 }
 
 export interface HistoryItem {
-  undo: () => void;
-  redo: () => void;
+  patches: Patch[];
+  inversePatches: Patch[];
 }
 
 export class HistoryManager {
@@ -35,9 +36,9 @@ export class HistoryManager {
   private currentIndex: number = 0;
   private maxHistoryNumber: number = 100;
 
-  push(item: HistoryItem) {
+  push(patches: Patch[], inversePatches: Patch[]) {
     this.histories.splice(this.currentIndex);
-    this.histories.push(item);
+    this.histories.push({ patches, inversePatches });
     this.currentIndex = this.histories.length;
 
     if (this.histories.length > this.maxHistoryNumber) {
@@ -46,11 +47,13 @@ export class HistoryManager {
     }
   }
 
-  undo() {
+  undo(timetableData: OutlinedTimetableData) {
     if (this.currentIndex > 0) {
       this.currentIndex--;
-      this.histories[this.currentIndex].undo();
+      return applyPatches(timetableData, this.histories[this.currentIndex].inversePatches);
     }
+
+    return timetableData;
   }
 
   clearHistory() {
@@ -66,11 +69,13 @@ export class HistoryManager {
     return this.currentIndex < this.histories.length;
   }
 
-  redo() {
+  redo(timetableData: OutlinedTimetableData) {
     if (this.currentIndex < this.histories.length) {
-      this.histories[this.currentIndex].redo();
+      const result = applyPatches(timetableData, this.histories[this.currentIndex].patches);
       this.currentIndex++;
+      return result;
     }
+    return timetableData;
   }
 }
 
@@ -191,33 +196,10 @@ export const OutlinedTimetableFunc = {
     const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
-    // undo用に、削除される前の状態を保存
-    const allTrains = that._trains;
+    timetable.inboundTrainIds = timetable.inboundTrainIds.filter((id) => !trainIds.some((tid) => tid === id));
+    timetable.outboundTrainIds = timetable.outboundTrainIds.filter((id) => !trainIds.some((tid) => tid === id));
 
-    const historyItem: HistoryItem = {
-      redo: () => {
-        timetable.inboundTrainIds = timetable.inboundTrainIds.filter((id) => !trainIds.some((tid) => tid === id));
-        timetable.outboundTrainIds = timetable.outboundTrainIds.filter((id) => !trainIds.some((tid) => tid === id));
-
-        this.deleteNotUsedTrains(that);
-      },
-      undo: () => {
-        timetable.inboundTrainIds.push(...trainIds);
-        timetable.outboundTrainIds.push(...trainIds);
-
-        that._trains.push(
-          ...trainIds.map((id) => {
-            const train = allTrains.find((train) => train.trainId === id);
-            assert(train !== undefined);
-            return train;
-          })
-        );
-      },
-    };
-
-    historyItem.redo();
-
-    return historyItem;
+    this.deleteNotUsedTrains(that);
   },
 
   clearTimetable(that: OutlinedTimetableData, timetableId: string) {
@@ -241,74 +223,37 @@ export const OutlinedTimetableFunc = {
     const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
-    const historyItem: HistoryItem = {
-      redo: () => {
-        that._trains.push(...newTrains.map((train) => train.train));
+    that._trains.push(...newTrains.map((train) => train.train));
 
-        for (const { train, beforeTrainId, direction } of newTrains) {
-          if (direction === 'Inbound') {
-            if (beforeTrainId === null) {
-              timetable.inboundTrainIds.push(train.trainId);
-            } else {
-              const index = timetable.inboundTrainIds.findIndex((id) => id === beforeTrainId);
-              assert(index !== -1);
-              timetable.inboundTrainIds.splice(index, 0, train.trainId);
-            }
-          } else {
-            if (beforeTrainId === null) {
-              timetable.outboundTrainIds.push(train.trainId);
-            } else {
-              const index = timetable.outboundTrainIds.findIndex((id) => id === beforeTrainId);
-              assert(index !== -1);
-              timetable.outboundTrainIds.splice(index, 0, train.trainId);
-            }
-          }
+    for (const { train, beforeTrainId, direction } of newTrains) {
+      if (direction === 'Inbound') {
+        if (beforeTrainId === null) {
+          timetable.inboundTrainIds.push(train.trainId);
+        } else {
+          const index = timetable.inboundTrainIds.findIndex((id) => id === beforeTrainId);
+          assert(index !== -1);
+          timetable.inboundTrainIds.splice(index, 0, train.trainId);
         }
-      },
-      undo: () => {
-        const trainsAfterDeleted = that._trains.filter(
-          (train) => !newTrains.some((t) => t.train.trainId === train.trainId)
-        );
-        that._trains.splice(0, that._trains.length);
-        that._trains.push(...trainsAfterDeleted);
-      },
-    };
-
-    historyItem.redo();
-
-    return historyItem;
+      } else {
+        if (beforeTrainId === null) {
+          timetable.outboundTrainIds.push(train.trainId);
+        } else {
+          const index = timetable.outboundTrainIds.findIndex((id) => id === beforeTrainId);
+          assert(index !== -1);
+          timetable.outboundTrainIds.splice(index, 0, train.trainId);
+        }
+      }
+    }
   },
 
-  updateTrain(
-    that: OutlinedTimetableData,
-    timetableId: string,
-    trainId: string,
-    redo: (train: Train) => void,
-    undo: (train: Train) => void
-  ) {
+  updateTrain(that: OutlinedTimetableData, timetableId: string, trainId: string, updater: (train: Train) => void) {
     const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
     const train = this.getTrain(that, trainId);
 
-    const historyItem: HistoryItem = {
-      redo: () => {
-        redo(train);
-      },
-      undo: () => {
-        undo(train);
-      },
-    };
-
-    historyItem.redo();
-
-    return historyItem;
+    updater(train);
   },
-  // commitTrain(that: OutlinedTimetableData, historyItem: HistoryItem) {
-  //   historyItem.redo.bind(historyItem.this)();
-
-  //   this.historyManager.push(historyItem);
-  // }
 
   reverseTimetableDirection(that: OutlinedTimetableData, timetableId: string) {
     const timetable = that._timetables.find((t) => t.timetableId === timetableId);
@@ -356,19 +301,7 @@ export const OutlinedTimetableFunc = {
     const oldTimetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(oldTimetable !== undefined);
 
-    const historyItem: HistoryItem = {
-      redo: () => {
-        updateTimetable(oldTimetable);
-      },
-      undo: () => {
-        const timetableIndex = that._timetables.findIndex((t) => t.timetableId === timetableId);
-        assert(timetableIndex !== -1);
-        that._timetables[timetableIndex] = oldTimetable;
-      },
-    };
-
-    historyItem.redo();
-    return historyItem;
+    updateTimetable(oldTimetable);
   },
 
   addTimetable(that: OutlinedTimetableData, timetable: OutlinedTimetable, trains: Train[]) {

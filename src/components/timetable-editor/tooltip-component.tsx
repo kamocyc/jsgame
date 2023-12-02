@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState } from 'react';
 import './tooltip-component.css';
 
 export function TooltipComponent({ children, content }: { children: any /* Child components */; content: string }) {

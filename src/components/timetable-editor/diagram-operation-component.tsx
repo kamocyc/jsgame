@@ -24,6 +24,9 @@ export function DiagramOperationComponent(props: DeepReadonly<DiagramOperationPr
 
   return (
     <ListSettingCommonComponent<Operation | OperationTypeAll>
+      getKey={(operation) => {
+        return 'type' in operation ? operation.type : operation.operationId;
+      }}
       datas={operations}
       defaultData={operations[0]}
       setDatas={() => {}}
@@ -49,16 +52,14 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
   const maxTrainCount = Math.max(...props.operations.map((operation) => operation.trainIds.length));
   return (
     <>
-      <table class='operation-table'>
+      <table className='operation-table'>
         <thead>
           <tr>
             <th>運用番号</th>
             {upto(maxTrainCount).map((i) => (
-              <>
-                <th key={(i + 1).toString()} colSpan={2}>
-                  {i + 1}
-                </th>
-              </>
+              <th key={(i + 1).toString()} colSpan={2}>
+                {i + 1}
+              </th>
             ))}
           </tr>
         </thead>
@@ -67,7 +68,7 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
             return (
               <>
                 {/* 列車番号 */}
-                <tr class='operation-row' key={i.toString() + '_01'}>
+                <tr className='operation-row' key={i.toString() + '_01'}>
                   <th rowSpan={3}>{operation.operationCode}</th>
                   {upto(maxTrainCount).map((i) => {
                     const trainId = operation.trainIds[i];
@@ -90,7 +91,7 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                   })}
                 </tr>
                 {/* 始発、終了時刻 */}
-                <tr class='operation-row' key={i.toString() + '_02'}>
+                <tr className='operation-row' key={i.toString() + '_02'}>
                   {upto(maxTrainCount).map((i) => {
                     const trainId = operation.trainIds[i];
                     if (trainId === undefined || getTrain(props, trainId)?.diaTimes.length === 0) {
@@ -114,7 +115,7 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                   })}
                 </tr>
                 {/* 始発、終了駅 */}
-                <tr class='operation-row' key={i.toString() + '_03'}>
+                <tr className='operation-row' key={i.toString() + '_03'}>
                   {upto(maxTrainCount).map((i) => {
                     const trainId = operation.trainIds[i];
                     if (trainId === undefined || getTrain(props, trainId)?.diaTimes.length === 0) {
@@ -161,7 +162,7 @@ export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperatio
   const operation = props.operation;
   return (
     <>
-      <table class='operation-table'>
+      <table className='operation-table'>
         <thead>
           <tr>
             <th>列車番号</th>

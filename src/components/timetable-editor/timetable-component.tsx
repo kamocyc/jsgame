@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
 import { DiaTime, StationLike, TimetableDirection, Train } from '../../model';
@@ -48,7 +48,7 @@ function StationTimetableComponent({
               <td style={{ borderRight: 'solid 1px black', padding: '3px' }}>{hour}</td>
               <td>
                 {stationTimetable[Number(hour)].map(([diaTime, stationId]) => (
-                  <span style={{ margin: '5px' }}>
+                  <span key={diaTime.diaTimeId} style={{ margin: '5px' }}>
                     <span>{showMinutes(diaTime.departureTime!)}</span>
                     <span style={{ fontSize: '10px' }}>{nn(stations.get(stationId)).stationName}</span>
                   </span>
@@ -92,7 +92,9 @@ export function StationTimetablePageComponent({
           }}
         >
           {stationIds.map((stationId) => (
-            <option value={stationId}>{nn(stations.get(stationId)).stationName}</option>
+            <option key={stationId} value={stationId}>
+              {nn(stations.get(stationId)).stationName}
+            </option>
           ))}
         </select>
       </div>

@@ -1,4 +1,4 @@
-import { StateUpdater, useEffect, useState } from 'preact/hooks';
+import { StateUpdater, useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { assert, merge, nn, removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';

@@ -1,6 +1,6 @@
-import { StateUpdater, useState } from 'preact/hooks';
+import { useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
-import { assert, nn, toMap } from '../../common';
+import { StateUpdater, assert, nn, toMap } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import {
   AppClipboard,
@@ -46,6 +46,7 @@ function TrainContextMenuComponent({
       menuItems={[
         {
           label: '列車を削除',
+          menuItemId: 'delete-train',
           onClick: () => {
             if (selectedTrain != null) {
               crudTrain.deleteTrains([selectedTrain.trainId]);
@@ -55,6 +56,7 @@ function TrainContextMenuComponent({
         },
         {
           label: '列車をコピー',
+          menuItemId: 'copy-train',
           onClick: () => {
             const index = trains.findIndex((train) => train.trainId === selectedTrain?.trainId);
             if (selectedTrain != null && index >= 0) {
@@ -69,6 +71,7 @@ function TrainContextMenuComponent({
         },
         {
           label: '列車を貼り付け',
+          menuItemId: 'paste-train',
           onClick: () => {
             if (clipboard.trains.length > 0) {
               const newTrains = clipboard.trains;
@@ -118,9 +121,13 @@ export function PlatformComponent({
         }
       }}
     >
-      <option value={-1}>-</option>
+      <option key={-1} value={-1}>
+        -
+      </option>
       {allDiaPlatforms.map((diaPlatform) => (
-        <option value={diaPlatform.platformId}>{diaPlatform.platformName}</option>
+        <option key={diaPlatform.platformId} value={diaPlatform.platformId}>
+          {diaPlatform.platformName}
+        </option>
       ))}
     </select>
   );
@@ -390,9 +397,11 @@ export function TrainListComponent({
                 }
               }}
             >
-              <option value=''></option>
+              <option value='' key={'empty'}></option>
               {trainTypes.map((trainType) => (
-                <option value={trainType.trainTypeId}>{trainType.trainTypeName}</option>
+                <option key={trainType.trainTypeId} value={trainType.trainTypeId}>
+                  {trainType.trainTypeName}
+                </option>
               ))}
             </select>
           </div>
@@ -429,6 +438,7 @@ export function TrainListComponent({
             {/* 時刻リスト */}
             {getDiaTimesOfStations(train, stations).map((diaTime) => (
               <TrainListItemComponent
+                key={diaTime.diaTimeId}
                 errors={errors}
                 allStations={stations}
                 diaTime={diaTime}

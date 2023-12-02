@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef } from 'react';
 import { DiagramProps } from '../konva-diagram-editor/drawer-util';
 import { KonvaManager } from '../konva-diagram-editor/konva-manager';
 

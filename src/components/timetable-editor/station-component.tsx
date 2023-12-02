@@ -1,6 +1,6 @@
-import { StateUpdater, useState } from 'preact/hooks';
+import { useState } from 'react';
 import { DeepReadonly, assert } from 'ts-essentials';
-import { nn } from '../../common';
+import { StateUpdater, nn } from '../../common';
 import { ContextData, SettingData, StationLike, Train } from '../../model';
 import { ContextMenuComponent, EditableTextComponent, SetTimetable } from './common-component';
 import './timetable-editor.css';
@@ -60,6 +60,7 @@ DeepReadonly<{
       menuItems={[
         {
           label: '駅を削除',
+          menuItemId: 'delete-station',
           onClick: () => {
             if (selectedStationId) {
               setTimetable((draftTimetable, trainData) => {
@@ -82,6 +83,7 @@ DeepReadonly<{
         },
         {
           label: 'オプション',
+          menuItemId: 'option',
           onClick: () => {
             showStationDetail(selectedStationId!);
             setContextData({ ...contextData, visible: false });
@@ -180,6 +182,7 @@ export function StationListComponent({
       >
         {stationIds.map((stationId) => (
           <div
+            key={stationId}
             style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', paddingRight: '3px' }}
             id={'dia-station-block-' + stationId}
           >

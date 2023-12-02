@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState } from 'react';
 import { AppStates, Cell, EditorDialogMode } from '../../mapEditorModel';
 import { PlatformLike, Point, Switch } from '../../model';
 import { ConstructType, TerrainType } from '../extendedMapModel';

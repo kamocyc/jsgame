@@ -1,9 +1,14 @@
 import { enableMapSet, enablePatches, setAutoFreeze } from 'immer';
-import { render } from 'preact';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 import { App } from './AppComponent';
 
 enablePatches();
 enableMapSet();
 setAutoFreeze(true);
 
-render(<App />, document.getElementById('app') as HTMLElement);
+ReactDOM.createRoot(document.getElementById('app')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

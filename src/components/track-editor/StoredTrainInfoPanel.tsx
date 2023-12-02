@@ -31,6 +31,7 @@ export function StoreTrainInfoPanel({
         </h2>
         <ListSettingCommonComponent<StoredTrain>
           datas={storedTrains}
+          getKey={(storedTrain) => storedTrain.placedTrainId}
           setDatas={(storedTrains) => {
             setStoredTrains([...storedTrains]);
           }}

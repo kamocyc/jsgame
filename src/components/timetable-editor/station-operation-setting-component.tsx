@@ -1,4 +1,4 @@
-// import { useEffect } from 'preact/hooks';
+// import { useEffect } from 'react';
 // import { DeepReadonly } from 'ts-essentials';
 // import { assert, nn } from '../../common';
 // import { StationLike, StationOperation, Train } from '../../model';

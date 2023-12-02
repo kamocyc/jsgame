@@ -1,4 +1,4 @@
-// import { useState } from 'preact/hooks';
+// import { useState } from 'react';
 // import { DetailedTimetable, Platform, Switch } from '../../model';
 // import { TimeInputComponent } from '../timetable-editor/common-component';
 // import { StoredTrain } from './trainMoveBase';

@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import React, { useState } from 'react';
 import { SettingColumnComponent } from '../timetable-editor/common-component';
 
 export function ListSettingCommonComponent<T>({
@@ -8,6 +8,7 @@ export function ListSettingCommonComponent<T>({
   selectData,
   getSettingComponent,
   getDisplayName,
+  getKey,
   excludeFromDatas,
   getNewData,
   settingColumnWidth,
@@ -16,8 +17,9 @@ export function ListSettingCommonComponent<T>({
   defaultData?: T | undefined;
   setDatas: (datas: T[]) => void;
   selectData: (data: T) => void;
-  getSettingComponent: (data: T) => any /* JSX.Element */;
+  getSettingComponent: (data: T) => React.ReactNode;
   getDisplayName: (data: T) => string;
+  getKey: (data: T) => string;
   excludeFromDatas: ((datas: T[], data: T) => T[]) | null;
   getNewData: (() => T) | null;
   settingColumnWidth?: string;
@@ -29,7 +31,7 @@ export function ListSettingCommonComponent<T>({
       <div style={{ flex: '1 1 auto' }}>
         <div style={{ width: '200px' }}>
           {datas.map((data) => (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div key={getKey(data)} style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div
                 style={{ width: '140px', backgroundColor: settingData === data ? '#ddd' : '', cursor: 'pointer' }}
                 onClick={() => {

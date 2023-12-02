@@ -1,7 +1,6 @@
-import { ComponentChild } from 'preact';
-import { Ref, StateUpdater, useEffect, useRef, useState } from 'preact/hooks';
+import { RefObject, useEffect, useRef, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
-import { parseTime, toStringFromSeconds } from '../../common';
+import { StateUpdater, parseTime, toStringFromSeconds } from '../../common';
 import { ContextData, Track, Train, getDefaultTime } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 import './timetable-editor.css';
@@ -40,7 +39,7 @@ export class MapInfo {
 }
 
 // このコールバックでsetXXXを実行すると当然ながらコンポーネントが再描画される。パフォーマンスやよきせぬ動作になるので注意。
-export function useOnClickOutside(ref: Ref<HTMLElement>, handler: () => void) {
+export function useOnClickOutside(ref: RefObject<HTMLElement>, handler: () => void) {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (ref.current && (event.target == null || !ref.current.contains(event.target as Node))) {
@@ -236,7 +235,7 @@ export function ContextMenuComponent({
 }: {
   contextData: ContextData;
   setContextData: StateUpdater<ContextData>;
-  menuItems: { label: string; onClick: () => void }[];
+  menuItems: { label: string; menuItemId: string; onClick: () => void }[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useOnClickOutside(ref, () => {
@@ -256,7 +255,7 @@ export function ContextMenuComponent({
       }}
     >
       {menuItems.map((menuItem) => (
-        <ContextMenuItemComponent label={menuItem.label} onClick={menuItem.onClick} />
+        <ContextMenuItemComponent key={menuItem.menuItemId} label={menuItem.label} onClick={menuItem.onClick} />
       ))}
     </div>
   );
@@ -267,7 +266,7 @@ export function SettingColumnComponent({
   setSettingData,
   width,
 }: {
-  children: ComponentChild;
+  children: React.ReactNode;
   setSettingData: (settingData: null) => void;
   width?: string;
 }) {
@@ -318,6 +317,7 @@ export function TabComponent({
       <div style={{ display: 'flex', flexDirection: 'row' }}>
         {tabs.map((tab) => (
           <div
+            key={tab.tabId}
             style={{
               borderStyle: 'solid',
               borderWidth: '1px',
@@ -358,7 +358,9 @@ export function SplitViewComponent({ splitViews }: { splitViews: SplitView[] }) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {splitViews.map((splitView) => (
-        <div style={{ borderStyle: 'solid', borderWidth: '5px', borderBottom: 'none' }}>{splitView.component()}</div>
+        <div key={splitView.splitViewId} style={{ borderStyle: 'solid', borderWidth: '5px', borderBottom: 'none' }}>
+          {splitView.component()}
+        </div>
       ))}
     </div>
   );

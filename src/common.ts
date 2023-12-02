@@ -2,6 +2,8 @@ import { DeepReadonly } from 'ts-essentials';
 import { StationLike } from './model';
 import namesJson from './names.json';
 
+export type StateUpdater<T> = React.Dispatch<React.SetStateAction<T>>;
+
 export function max(arr: number[]): number {
   let cur = Number.MIN_SAFE_INTEGER;
   for (const n of arr) {

@@ -1,5 +1,5 @@
 import { produce } from 'immer';
-import { StateUpdater, useEffect, useState } from 'preact/hooks';
+import { StateUpdater, useEffect, useState } from 'react';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates, OperationError } from '../../mapEditorModel';
@@ -178,7 +178,9 @@ export function TimetableEditorParentComponent({
             }}
           >
             {appStates.railwayLines.map((railwayLine) => (
-              <option value={railwayLine.railwayLineId}>{railwayLine.railwayLineName}</option>
+              <option key={railwayLine.railwayLineId} value={railwayLine.railwayLineId}>
+                {railwayLine.railwayLineName}
+              </option>
             ))}
           </select>
         </span>

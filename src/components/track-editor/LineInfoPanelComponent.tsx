@@ -44,6 +44,7 @@ export function LineInfoPanel({
         </button>
         <ListSettingCommonComponent<RailwayLine>
           datas={railwayLines}
+          getKey={(railwayLine) => railwayLine.railwayLineId}
           setDatas={(railwayLines) => {
             setRailwayLines([...railwayLines]);
           }}

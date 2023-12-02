@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { TrainType, generateId } from '../../model';
 import { SettingColumnComponent } from './common-component';
@@ -63,7 +63,7 @@ export function TrainTypeSettingComponent({
       <div style={{ flex: '1 1 auto' }}>
         <div style={{ width: '200px' }}>
           {trainTypes.map((trainType) => (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div key={trainType.trainTypeId} style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div
                 style={{ width: '140px' }}
                 onClick={() => {

@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState } from 'react';
 import { AppStates, Cell, GameMap, MapState, createMapContext } from '../mapEditorModel';
 import { DetailedTimetable, StationLike, Train } from '../model';
 import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData';

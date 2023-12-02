@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
 import { importOutdiaFile } from '../../file';
@@ -24,8 +24,8 @@ import { TrainTypeSettingComponent } from './traintype-component';
 export function TrainListRowHeaderComponent({ stationIds }: { stationIds: DeepReadonly<string[]> }) {
   return (
     <div>
-      {stationIds.map((_) => (
-        <div style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', width: '32px' }}>
+      {stationIds.map((stationId) => (
+        <div key={stationId} style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', width: '32px' }}>
           <div style={{ height: 24 + 'px' }}>着</div>
           <div style={{ height: 24 + 'px' }}>番線</div>
           <div style={{ height: 24 + 'px' }}>発</div>

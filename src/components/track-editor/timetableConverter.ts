@@ -1,3 +1,4 @@
+import { DeepReadonly } from 'ts-essentials';
 import { assert, nn } from '../../common';
 import {
   DetailedTimetable,
@@ -20,24 +21,27 @@ import {
   getNextTracks,
 } from '../../trackUtil';
 
-function toPlatformTTItems(allPlatforms: PlatformLike[], tracks: Track[], trains: Train[]): PlatformTimetableMap {
+function toPlatformTTItems(
+  allPlatforms: PlatformLike[],
+  tracks: Track[],
+  trains: DeepReadonly<Map<string, Train>>
+): PlatformTimetableMap {
   const allTrackPlatformIds = new Set<string>(allPlatforms.map((p) => p.platformId));
 
   // platformは基本的には時刻をそのまま転記すればよい
   const platformTTItems: PlatformTTItem[] = [];
 
-  for (const train of trains) {
+  for (const train of trains.values()) {
     let diaTimeIndex = 0;
     for (const diaTime of train.diaTimes) {
-      if (!allTrackPlatformIds.has(diaTime.platform!.platformId)) {
-        throw new Error('Platform not found in allTrackStations (' + diaTime.platform!.platformId + ')');
+      if (!allTrackPlatformIds.has(diaTime.platformId!)) {
+        throw new Error('Platform not found in allTrackStations (' + diaTime.platformId! + ')');
       }
 
       platformTTItems.push({
         trainId: train.trainId,
         diaTimeId: diaTime.diaTimeId,
-        platformId: getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platform!)!.track.platform!.platformId,
-        /* 暫定的、名称で一致させるとIDが合わなくなるので { ...diaTime.diaPlatform } */
+        platformId: getTrackOfPlatform(tracks, train.diaTimes[diaTimeIndex].platformId!)!.track.platform!.platformId,
         departureTime: diaTime.departureTime,
         arrivalTime: diaTime.arrivalTime,
         isInService: diaTime.isInService,
@@ -68,12 +72,11 @@ function toPlatformTTItems(allPlatforms: PlatformLike[], tracks: Track[], trains
   );
 }
 
-function getTrackOfPlatform(tracks: Track[], platform: PlatformLike): Track | undefined {
+function getTrackOfPlatform(tracks: Track[], platformId: string): Track | undefined {
   return tracks.find(
-    (t) =>
-      t.track.platform?.platformId === platform.platformId ||
-      /* TODO: 暫定的に名称で一致させる */ (t.track.platform?.station.stationName === platform.station.stationName &&
-        t.track.platform.platformName === platform.platformName)
+    (t) => t.track.platform?.platformId === platformId /* ||
+      /* TODO: 暫定的に名称で一致させたほうがいい？ * / (t.track.platform?.station.stationName === platform.station.stationName &&
+        t.track.platform.platformName === platform.platformName) */
   );
 }
 
@@ -122,8 +125,8 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTTItem[] {
 
   for (let diaTimeIndex = 0; diaTimeIndex < diaTimes.length - 1; diaTimeIndex++) {
     // TODO: これは、反対方向のトラックが入ることがある。 => searchTrackPath で吸収したので大丈夫なはず
-    const track1 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex].platform!);
-    const track2 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex + 1].platform!);
+    const track1 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex].platformId!);
+    const track2 = getTrackOfPlatform(tracks, diaTimes[diaTimeIndex + 1].platformId!);
     if (!track1 || !track2) {
       throw new Error('Track not found');
     }
@@ -192,9 +195,9 @@ function toSwitchTTItems(tracks: Track[], train: Train): SwitchTTItem[] {
 }
 
 function isPlatformsIsNotNull(timetable: OutlinedTimetableData) {
-  const nullPlatforms = timetable
-    .getTrains()
-    .filter((t) => t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platform === null));
+  const nullPlatforms = [...timetable._trains.values()].filter((t) =>
+    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.platformId === null)
+  );
 
   if (nullPlatforms.length > 0) {
     alert('番線が設定されていない箇所があります');
@@ -232,22 +235,19 @@ export function toDetailedTimetable(
   // というかまずは単に時刻が入っていないのをエラーにすべき気がする。。。
 
   // 方向をどうするか。。。設置時？基本的にはダイヤ変換時に設定する。ホームトラック終端の上下 > （上下が同じなら）左右方向の区別とする。トラックが移動や回転された場合は再設定が必要になるが、その場合はどちらにしても再設定がいる。
-  const platformTimetableMap = toPlatformTTItems(allPlatforms, tracks, timetableData.getTrains());
+  const platformTimetableMap = toPlatformTTItems(allPlatforms, tracks, timetableData._trains);
 
   // switchは、駅と駅の間の経路を探索し、通過したswitchを追加する
   // changeTimeをどうするか。。。 通過の列車の指定のほうがいい気がする。。？でも列車の指定はあるから、そんなに重複することはないか。1列車が駅に到着せずに一つのswitchを複数回通過することはないはず。
   const switchTTItems: SwitchTTItem[] = [];
 
-  for (const train of timetableData.getTrains()) {
+  for (const train of timetableData._trains.values()) {
     switchTTItems.push(...toSwitchTTItems(tracks, train));
   }
 
   const switchTimetableMap = toTimetableMap(switchTTItems);
 
-  const operations = timetableData
-    .getTimetables()
-    .map((timetable) => timetable.operations)
-    .flat();
+  const operations = timetableData._timetables.map((timetable) => timetable.operations).flat();
 
   return {
     platformTimetableMap,

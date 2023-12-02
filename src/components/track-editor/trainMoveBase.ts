@@ -35,7 +35,7 @@ export type TrainMoveCommonProps = TrainMoveProps & TrainRailwayMoveProps;
 export interface ITrainMove {
   tick(props: TrainMoveCommonProps): void;
   getPlacedTrains(): PlacedTrain[];
-  resetTrainMove(globalTimeManager: GlobalTimeManager): void;
+  resetTrainMove(globalTimeManager: GlobalTimeManager, trains: DeepReadonly<Map<string, Train>>): void;
   getTrainMoveType(): 'TrainMove' | 'TrainRailwayMove';
 }
 
@@ -83,7 +83,8 @@ export function shouldStopTrain(train: PlacedTrain): false | Point {
 const TimeActionMode: 'Just' | 'After' = 'After';
 const StartIfNoTimetable = true;
 
-export function getFirstTimeOfTrain(train: DeepReadonly<Train>) {
+export function getFirstTimeOfTrain(trains: DeepReadonly<Map<string, Train>>, trainId: DeepReadonly<string>) {
+  const train = nn(trains.get(trainId));
   return nn(train.diaTimes[0].arrivalTime ?? train.diaTimes[0].departureTime);
 }
 
@@ -93,8 +94,10 @@ export function getLastTimeOfTrain(train: DeepReadonly<Train>) {
   );
 }
 
-export function getMinTimetableTime(timetable: DetailedTimetable): number {
-  const minTimetableTime = Math.min(...timetable.operations.map((o) => getFirstTimeOfTrain(fst_(o.trains)) - 60));
+export function getMinTimetableTime(trains: DeepReadonly<Map<string, Train>>, timetable: DetailedTimetable): number {
+  const minTimetableTime = Math.min(
+    ...timetable.operations.map((o) => getFirstTimeOfTrain(trains, fst_(o.trainIds)) - 60)
+  );
   return minTimetableTime;
 }
 
@@ -102,4 +105,5 @@ export interface TrainMoveProps {
   globalTimeManager: GlobalTimeManager;
   moneyManager: MoneyManager;
   tracks: Track[];
+  trains: Map<string, Train>;
 }

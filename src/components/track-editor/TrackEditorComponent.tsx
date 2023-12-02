@@ -1,4 +1,5 @@
 import { StateUpdater, useEffect, useState } from 'preact/hooks';
+import { DeepReadonly } from 'ts-essentials';
 import { assert, merge, nn, removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
@@ -12,8 +13,8 @@ import {
   createMapContext,
   timesVector,
 } from '../../mapEditorModel';
-import { DetailedTimetable, Station, Switch, Train } from '../../model';
-import { OutlinedTimetable, OutlinedTimetableData } from '../../outlinedTimetableData';
+import { DetailedTimetable, StationLike, Train } from '../../model';
+import { OutlinedTimetable, OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct, TerrainType } from '../extendedMapModel';
 import { LineInfoPanel } from './LineInfoPanelComponent';
@@ -68,25 +69,40 @@ function saveEditorDataFile(appStates: AppStates) {
   URL.revokeObjectURL(link.href);
 }
 
+type SaveData = {
+  map: Cell[][];
+  storedTrains: StoredTrain[];
+  timetable: DetailedTimetable;
+  timetableData: DeepReadonly<{
+    trains: Train[];
+    timetables: OutlinedTimetable[];
+  }>;
+  extendedMap: ExtendedGameMap;
+  placedTrains: PlacedTrain[];
+  railwayLines: any[];
+  stations: StationLike[];
+};
+
 function toStringEditorData(appStates: AppStates) {
   // if (appStates.detailedTimetable == null) {
   //   return;
   // }
-  const obj = {
+  const obj: SaveData = {
     map: appStates.map,
     storedTrains: appStates.storedTrains,
     timetable: appStates.detailedTimetable,
-    timetableData: appStates.outlinedTimetableData.toDataToSave(),
+    timetableData: OutlinedTimetableFunc.toDataToSave(appStates.outlinedTimetableData),
     extendedMap: appStates.mapState.extendedMap,
     placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
+    stations: [...appStates.mapState.stations.values()],
   };
 
   return JSON.stringify(JSON_decycle(obj), null, 2);
 }
 
 function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
-  const obj = JSON_retrocycle(JSON.parse(buf));
+  const obj = JSON_retrocycle(JSON.parse(buf)) as SaveData;
 
   if (obj['map'] === undefined) {
     alert('マップデータが不正です');
@@ -101,7 +117,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
   }
   assert(mapWidth !== undefined && mapHeight !== undefined);
 
-  const extendedMap = obj['extendedMap'] as ExtendedGameMap;
+  const extendedMap = obj.extendedMap;
 
   for (let i = 0; i < mapWidth; i++) {
     for (let j = 0; j < mapHeight; j++) {
@@ -112,44 +128,42 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     }
   }
 
-  const storedTrains: StoredTrain[] = obj['storedTrains'] ?? [];
-  const placedTrains: PlacedTrain[] = obj['placedTrains'] ?? [];
-  const timetable = (obj['timetable'] ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
-  const timetableDataRaw = obj['timetableData'];
+  const stationIds = removeDuplicates(
+    mapData.flatMap(
+      (row) =>
+        row
+          .flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.stationId))
+          .filter((x) => x != null) as string[]
+    ),
+    (s1, s2) => s1 === s2
+  );
+
+  const stations = new Map<string, StationLike>((obj.stations ?? []).map((station) => [station.stationId, station]));
+
+  assert([...stations.keys()].map((stationId) => stationId).every((stationId) => stationIds.includes(stationId)));
+  const storedTrains: StoredTrain[] = obj.storedTrains ?? [];
+  // const placedTrains: PlacedTrain[] = obj.placedTrains ?? [];
+  const timetable = (obj.timetable ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
+  const timetableDataRaw = obj.timetableData;
   const timetableData: OutlinedTimetableData =
     timetableDataRaw.trains && timetableDataRaw.timetables
       ? {
-          _trains: timetableDataRaw.trains as Train[],
+          _trains: new Map<string, Train>((timetableDataRaw.trains as Train[]).map((train) => [train.trainId, train])),
           _timetables: timetableDataRaw.timetables as OutlinedTimetable[],
           _errors: [],
+          _stations: stations,
         }
       : {
-          _trains: [],
+          _trains: new Map(),
           _timetables: [],
           _errors: [],
+          _stations: new Map(),
         };
   const railwayLines = obj['railwayLines'] ?? [];
 
   const trainMove = createTrainMove(timetable);
-  // trainMove.placedTrains = placedTrains;
-  const switches = mapData.flatMap(
-    (row) =>
-      row
-        .map((cell) => (cell.lineType?.lineClass === 'Branch' ? cell.lineType.switch : null))
-        .filter((x) => x != null) as Switch[]
-  );
   const tracks = mapData.flatMap((row) =>
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
-  );
-
-  const stations = removeDuplicates(
-    mapData.flatMap(
-      (row) =>
-        row
-          .flatMap((cell) => cell.lineType?.tracks.map((track) => track.track.platform?.station))
-          .filter((x) => x != null) as Station[]
-    ),
-    (s1, s2) => s1.stationId === s2.stationId
   );
 
   // generateTerrain(extendedMap);
@@ -291,6 +305,7 @@ export function TrackEditorComponent({
         storedTrains: appStates.storedTrains,
         moneyManager: appStates.mapState.moneyManager,
         tracks: appStates.tracks,
+        trains: appStates.outlinedTimetableData._trains,
       });
       addAgents(appStates);
       appStates.mapState.agentManager.tick({
@@ -326,6 +341,7 @@ export function TrackEditorComponent({
       {showLineInfoPanel ? (
         <div className='dialog'>
           <LineInfoPanel
+            stations={appStates.outlinedTimetableData._stations}
             timetableData={appStates.outlinedTimetableData}
             railwayLines={appStates.railwayLines}
             selectedRailwayLineId={appStates.selectedRailwayLineId}
@@ -560,7 +576,10 @@ export function TrackEditorComponent({
       <button
         onClick={() => {
           stopInterval();
-          appStates.mapState.trainMove.resetTrainMove(appStates.globalTimeManager);
+          appStates.mapState.trainMove.resetTrainMove(
+            appStates.globalTimeManager,
+            appStates.outlinedTimetableData._trains
+          );
           startTop(100);
         }}
       >

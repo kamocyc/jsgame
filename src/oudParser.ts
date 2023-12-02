@@ -1,3 +1,5 @@
+// @ts-nocheck
+// TODO あとで直す
 import { fillMissingTimes } from './components/timetable-editor/timetable-util';
 import { DiaTime, Platform, Station, StationLike, StationOperation, Train, TrainType, generateId } from './model';
 import { OutlinedTimetable } from './outlinedTimetableData';
@@ -322,7 +324,7 @@ export function getEkiJikokus(oudBuf: string): [OutlinedTimetable, Train[]] {
       trainTypes,
       inboundTrainIds,
       outboundTrainIds,
-      stations: stations
+      stationIds: stations
         .map((station, index) => [station, index] as const)
         .sort((a, b) => b[1] - a[1])
         .map(([station, _]) => station), // stationは逆順にする

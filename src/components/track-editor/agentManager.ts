@@ -59,7 +59,7 @@ interface Agent {
 
 type NextStationInfo = {
   currentStationDiaTime: DiaTime;
-  nextStation: StationLike;
+  nextStationId: string;
   nextStationArrivalTime: number;
 };
 
@@ -76,9 +76,9 @@ export function getAdjacentStations(
   currentTime: number
 ): NextStationInfo[] {
   const nextStations = removeNull(
-    timetableData.getTrains().map((train) => {
+    [...timetableData._trains.values()].map((train) => {
       const [currentStationDiaTime, nextStationDiaTime] = (() => {
-        const i = train.diaTimes.findIndex((diaTime) => diaTime.station.stationId === currentStation.stationId);
+        const i = train.diaTimes.findIndex((diaTime) => diaTime.stationId === currentStation.stationId);
         if (i === -1 || i >= train.diaTimes.length - 1) {
           // 駅を通らない or 最後の駅
           return [null, null];
@@ -103,7 +103,7 @@ export function getAdjacentStations(
 
       return {
         currentStationDiaTime,
-        nextStation: nextStationDiaTime.station,
+        nextStationId: nextStationDiaTime.stationId,
         nextStationArrivalTime,
       };
     })
@@ -113,7 +113,7 @@ export function getAdjacentStations(
 }
 
 export function createAgentPath(
-  stations: StationLike[],
+  stations: Map<string, StationLike>,
   agent: Agent,
   gameMap: GameMap,
   currentTime: number,
@@ -263,7 +263,7 @@ export function createAgentPath(
 }
 
 type StationAndRailwayLine = {
-  station: StationLike;
+  stationId: string;
   railwayLine: RailwayLine;
   stop: RailwayLineStop;
 };
@@ -278,9 +278,9 @@ function getAdjacentStations2(sr: StationAndRailwayLine, railwayLines: RailwayLi
   }
   const nextStopIndex = stopIndex === sr.railwayLine.stops.length - 1 ? 0 : stopIndex + 1;
   const nextStop = sr.railwayLine.stops[nextStopIndex];
-  const nextStation = nextStop.platform.station;
+  const nextStationId = nextStop.platform.stationId;
   candidates.push({
-    station: nextStation,
+    stationId: nextStationId,
     railwayLine: sr.railwayLine,
     stop: nextStop,
   });
@@ -290,10 +290,10 @@ function getAdjacentStations2(sr: StationAndRailwayLine, railwayLines: RailwayLi
     .filter((r) => r.railwayLineId !== sr.railwayLine.railwayLineId)
     .map((r) => r.stops.map((s) => [r, s] as const))
     .flat()
-    .filter(([_, s]) => s.platform.station.stationId === sr.station.stationId);
+    .filter(([_, s]) => s.platform.stationId === sr.stationId);
   candidates.push(
     ...otherRailwayLineStops.map(([r, s]) => ({
-      station: sr.station,
+      stationId: sr.stationId,
       railwayLine: r,
       stop: s,
     }))
@@ -310,10 +310,7 @@ function getDistanceBetweenStation2(sr1: StationAndRailwayLine, sr2: StationAndR
     // 同じ路線の場合 => pathの長さを利用
     let length = 0;
     for (const path of sr1.stop.platformPaths) {
-      if (
-        path.track.platform?.station.stationId !== sr1.station.stationId &&
-        path.track.platform?.station.stationId !== sr2.station.stationId
-      ) {
+      if (path.track.platform?.stationId !== sr1.stationId && path.track.platform?.stationId !== sr2.stationId) {
         length += getDistance(path.begin, path.end);
       }
       return length;
@@ -321,7 +318,7 @@ function getDistanceBetweenStation2(sr1: StationAndRailwayLine, sr2: StationAndR
   }
 
   // 異なる路線の場合 => 同じ駅であるはず
-  if (sr1.station.stationId !== sr2.station.stationId) {
+  if (sr1.stationId !== sr2.stationId) {
     throw new Error('sr1.station.stationId !== sr2.station.stationId');
   }
 
@@ -330,7 +327,7 @@ function getDistanceBetweenStation2(sr1: StationAndRailwayLine, sr2: StationAndR
 }
 
 export function searchPath2(
-  initialPosition: Station,
+  initialPositionId: string,
   destination: Station,
   railwayLine: RailwayLine,
   stop: RailwayLineStop,
@@ -338,14 +335,14 @@ export function searchPath2(
 ) {
   return abstractSearch<StationAndRailwayLine>(
     {
-      station: initialPosition,
+      stationId: initialPositionId,
       railwayLine: railwayLine,
       stop: stop,
     },
-    (sr) => sr.station.stationId + '__' + sr.railwayLine.railwayLineId + '__' + sr.stop.stopId,
+    (sr) => sr.stationId + '__' + sr.railwayLine.railwayLineId + '__' + sr.stop.stopId,
     (sr) => getAdjacentStations2(sr, railwayLines),
     (sr1, sr2) => getDistanceBetweenStation2(sr1, sr2),
-    (sr) => sr.station.stationId === destination.stationId
+    (sr) => sr.stationId === destination.stationId
   );
 }
 
@@ -358,12 +355,9 @@ export function searchPath(
 ): readonly [readonly [StationLike, number][], StationPath | null] {
   const previous: { [key: string]: [StationLike, DiaTime] } = {};
 
-  const stations = timetableData
-    .getTimetables()
-    .map((timetable) => timetable.stations)
-    .flat();
+  const stations = timetableData._stations;
   // 駅ノードの初期化（未確定のノードのみ）
-  let stationNodes = stations.map((station) => ({
+  let stationNodes = [...stations.values()].map((station) => ({
     station: station,
     distance: station.stationId === initialPosition.stationId ? startTime : Number.MAX_SAFE_INTEGER,
   }));
@@ -379,14 +373,12 @@ export function searchPath(
     stationNodes = stationNodes.filter((node) => node.station.stationId !== nextDetermineNode.station.stationId);
 
     const adjacentStations = getAdjacentStations(nextDetermineNode.station, timetableData, currentTime).filter(
-      (node_) => !determinedIds.has(node_.nextStation.stationId)
+      (node_) => !determinedIds.has(node_.nextStationId)
     );
 
     for (const adjacentStation of adjacentStations) {
       const newDistance = adjacentStation.nextStationArrivalTime;
-      const adjacentStationNode = stationNodes.find(
-        (node) => node.station.stationId === adjacentStation.nextStation.stationId
-      );
+      const adjacentStationNode = stationNodes.find((node) => node.station.stationId === adjacentStation.nextStationId);
       assert(adjacentStationNode !== undefined, 'adjacentStationNode is undefined');
       if (newDistance < adjacentStationNode.distance) {
         adjacentStationNode.distance = newDistance;
@@ -424,7 +416,7 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManagerProps {
   extendedMap: ExtendedGameMap;
-  stations: StationLike[];
+  stations: Map<string, StationLike>;
   gameMap: GameMap;
   outlinedTimetableData: OutlinedTimetableData;
   placedTrains: PlacedTrain[];
@@ -514,8 +506,8 @@ export class AgentManager implements AgentManagerBase {
       if (agent.path.length === 0) continue;
       if (agent.path[0].stepType !== 'station') continue;
       if (agent.placedTrain !== null) continue;
-      const platformId = agent.path[0].stationPathStep.diaTime.platform?.platformId;
-      assert(platformId !== undefined, 'platformId !== undefined');
+      const platformId = agent.path[0].stationPathStep.diaTime.platformId;
+      assert(platformId != null, 'platformId != null');
       counts.add([platformId]);
     }
 
@@ -579,9 +571,9 @@ export class AgentManager implements AgentManagerBase {
           if (props.globalTimeManager.globalTime >= diaTime.departureTime) {
             // 時刻表の時間になった（過ぎた）ら、対応するtrainを探して。乗る
             // diaTime -> Train -> operations.train
-            const train = props.outlinedTimetableData
-              .getTrains()
-              .find((train) => train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId));
+            const train = [...props.outlinedTimetableData._trains.values()].find((train) =>
+              train.diaTimes.some((dt) => dt.diaTimeId === diaTime.diaTimeId)
+            );
             assert(train !== undefined, 'train is undefined');
             const placedTrain = props.placedTrains.find((t) => t.train?.trainId === train.trainId);
             if (placedTrain === undefined) {
@@ -601,7 +593,7 @@ export class AgentManager implements AgentManagerBase {
           // 電車から降りる
           if (
             agent.placedTrain.stationStatus === 'Arrived' &&
-            agent.placedTrain.track.track.platform?.station.stationId === step.stationPathStep.nextStation.stationId
+            agent.placedTrain.track.track.platform?.stationId === step.stationPathStep.nextStation.stationId
           ) {
             agent.placedTrain = null;
 

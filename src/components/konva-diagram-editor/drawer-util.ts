@@ -4,7 +4,8 @@ import { AppClipboard, CrudTrain, StationLike, Train } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 
 export type DiagramProps = DeepReadonly<{
-  stations: StationLike[];
+  stationIds: string[];
+  stations: Map<string, StationLike>;
   crudTrain: CrudTrain;
   inboundTrains: readonly Train[];
   outboundTrains: readonly Train[];
@@ -13,7 +14,7 @@ export type DiagramProps = DeepReadonly<{
   railwayLine: RailwayLine;
   errors: readonly OperationError[];
   setClipboard: (clipboard: AppClipboard) => void;
-  getTrainsWithDirections: () => [readonly Train[], readonly Train[]];
+  getTrainsWithDirections: () => DeepReadonly<[Train[], Train[]]>;
 }>;
 
 export const hitStrokeWidth = 10;
@@ -21,7 +22,7 @@ export const hitStrokeWidth = 10;
 // let editMode: 'Edit' | 'Create' = 'Edit';
 
 export interface StationPosition {
-  station: StationLike;
+  stationId: string;
   diagramPosition: number;
 }
 

@@ -133,7 +133,7 @@ function TrainListItemComponent({
   updateTrain,
 }: DeepReadonly<{
   diaTime: DiaTime;
-  allStations: StationLike[];
+  allStations: Map<string, StationLike>;
   errors: readonly OperationError[];
   updateTrain: (diaTimeId: string, updater: (diaTime: DiaTime) => void) => void;
 }>) {
@@ -202,7 +202,7 @@ function TrainListItemComponent({
         />
         <PlatformComponent
           diaPlatformId={diaTime.platformId}
-          allDiaPlatforms={nn(allStations.find((s) => s.stationId === diaTime.stationId)).platforms}
+          allDiaPlatforms={nn(allStations.get(diaTime.stationId)).platforms}
           setDiaPlatform={(platformId) => {
             updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
               diaTime.platformId = platformId;
@@ -270,10 +270,10 @@ export function TrainListComponent({
 
   function getDiaTimesOfStations(
     train: DeepReadonly<Train>,
-    diaStations: DeepReadonly<StationLike[]>
+    diaStations: DeepReadonly<Map<string, StationLike>>
   ): DeepReadonly<DiaTime[]> {
     try {
-      return diaStations.map((diaStation) => {
+      return [...diaStations.values()].map((diaStation) => {
         const diaTime = train.diaTimes.find((diaTime) => diaTime.stationId === diaStation.stationId);
         if (diaTime) {
           return diaTime;
@@ -461,7 +461,7 @@ export function TrainListComponent({
               trainId: generateId(),
               trainName: '',
               trainType: undefined,
-              diaTimes: stations.map((station) => {
+              diaTimes: [...stations.values()].map((station) => {
                 const platform = getRailwayPlatform(
                   railwayLine,
                   station.stationId,

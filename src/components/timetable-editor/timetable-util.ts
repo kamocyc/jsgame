@@ -1,18 +1,7 @@
 import { DeepReadonly } from 'ts-essentials';
 import { assert, nn } from '../../common';
 import { RailwayLine, RailwayLineStop, splitStops } from '../../mapEditorModel';
-import {
-  DefaultStationDistance,
-  DiaTime,
-  Platform,
-  PlatformLike,
-  Station,
-  StationLike,
-  TimetableDirection,
-  Train,
-  TrainType,
-  generateId,
-} from '../../model';
+import { DiaTime, Platform, Station, StationLike, TimetableDirection, Train, TrainType, generateId } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 import { checkStationTrackOccupation } from '../track-editor/checkOperation';
 import './timetable-editor.css';
@@ -29,29 +18,29 @@ export function getRailwayPlatform(
   const { preStops, postStops } = splitStops(railwayLine.stops, railwayLine.returnStopId);
 
   const stops = firstHalfOrLastHalf === 'First' ? preStops : postStops;
-  const stop = stops.find((stop) => stop.platform.station.stationId === stationId);
+  const stop = stops.find((stop) => stop.platform.stationId === stationId);
   assert(stop !== undefined);
 
   return stop.platform;
 }
 
-export function getDefaultPlatform(station: DeepReadonly<StationLike>, direction: TimetableDirection): PlatformLike {
-  if (station.stationType === 'Station') {
-    const result =
-      direction === 'Outbound'
-        ? station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultOutboundPlatformId)
-        : station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultInboundPlatformId);
-    if (result == null) {
-      throw new Error('default platform not found');
-    }
-    return { ...result } as PlatformLike;
-  } else if (station.stationType === 'Depot') {
-    assert(station.platforms.length > 0);
-    const result = station.platforms[0];
-    return { ...result } as PlatformLike;
-  }
-  assert(false);
-}
+// export function getDefaultPlatform(station: DeepReadonly<StationLike>, direction: TimetableDirection): PlatformLike {
+//   if (station.stationType === 'Station') {
+//     const result =
+//       direction === 'Outbound'
+//         ? station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultOutboundPlatformId)
+//         : station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultInboundPlatformId);
+//     if (result == null) {
+//       throw new Error('default platform not found');
+//     }
+//     return { ...result } as PlatformLike;
+//   } else if (station.stationType === 'Depot') {
+//     assert(station.platforms.length > 0);
+//     const result = station.platforms[0];
+//     return { ...result } as PlatformLike;
+//   }
+//   assert(false);
+// }
 
 export function createNewStation(stationName: string): Station {
   const newPlatforms = [
@@ -69,12 +58,12 @@ export function createNewStation(stationName: string): Station {
     stationId: generateId(),
     stationName: stationName,
     platforms: newPlatforms,
-    defaultInboundPlatformId: newPlatforms[0].platformId,
-    defaultOutboundPlatformId: newPlatforms[1].platformId,
-    distance: DefaultStationDistance,
+    // defaultInboundPlatformId: newPlatforms[0].platformId,
+    // defaultOutboundPlatformId: newPlatforms[1].platformId,
+    // distance: DefaultStationDistance,
   };
-  newPlatforms[0].station = newStation;
-  newPlatforms[1].station = newStation;
+  newPlatforms[0].stationId = newStation.stationId;
+  newPlatforms[1].stationId = newStation.stationId;
 
   return newStation;
 }
@@ -97,8 +86,8 @@ export function getInitialTrainTypes(): TrainType[] {
 function createTrain(
   firstStop: DeepReadonly<RailwayLineStop>,
   lastStop: DeepReadonly<RailwayLineStop>,
-  diaTimes: DeepReadonly<DiaTime[]>
-): DeepReadonly<Train> {
+  diaTimes: DiaTime[]
+): Train {
   const trainId = generateId();
   return {
     trainId: trainId,
@@ -108,15 +97,15 @@ function createTrain(
     diaTimes: diaTimes,
     firstStationOperation: {
       stationOperationType: 'InOut',
-      stationId: diaTimes[0].station.stationId,
-      platformId: nn(diaTimes[0].platform).platformId,
+      stationId: diaTimes[0].stationId,
+      platformId: nn(diaTimes[0].platformId),
       trackId: firstStop.platformTrack.trackId,
       operationTime: nn(diaTimes[0].departureTime),
     },
     lastStationOperation: {
       stationOperationType: 'InOut',
-      stationId: diaTimes[diaTimes.length - 1].station.stationId,
-      platformId: nn(diaTimes[diaTimes.length - 1].platform).platformId,
+      stationId: diaTimes[diaTimes.length - 1].stationId,
+      platformId: nn(diaTimes[diaTimes.length - 1].platformId),
       trackId: lastStop.platformTrack.trackId,
       operationTime: nn(diaTimes[diaTimes.length - 1].arrivalTime) + 60,
     },
@@ -124,25 +113,24 @@ function createTrain(
 }
 
 function showStops(stops: DeepReadonly<RailwayLineStop[]>) {
-  return stops.map((stop) => stop.platform.station.stationName).join(' ');
+  return stops.map((stop) => stop.platform.stationId).join(' ');
 }
 
 // 路線から初期のダイヤを作成する
-export function getInitialTimetable(railwayLine: DeepReadonly<RailwayLine>): [OutlinedTimetable, Train[]] {
+export function getInitialTimetable(
+  stations: Map<string, StationLike>,
+  railwayLine: DeepReadonly<RailwayLine>
+): [OutlinedTimetable, Train[]] {
   const baseTime = 10 * 60 * 60;
 
-  function createDiaTime(
-    stop: DeepReadonly<RailwayLineStop>,
-    index: number,
-    maxStopLength: number
-  ): DeepReadonly<DiaTime> {
+  function createDiaTime(stop: DeepReadonly<RailwayLineStop>, index: number, maxStopLength: number): DiaTime {
     return {
       diaTimeId: generateId(),
       arrivalTime: index === 0 ? null : currentTime,
       departureTime: index === maxStopLength - 1 ? null : currentTime + 1,
       isPassing: false,
-      station: stop.platform.station,
-      platform: stop.platform,
+      stationId: stop.platform.stationId,
+      platformId: stop.platform.platformId,
       trackId: stop.platformTrack.trackId,
       isInService: true,
     };
@@ -153,8 +141,8 @@ export function getInitialTimetable(railwayLine: DeepReadonly<RailwayLine>): [Ou
   console.log({ stops: showStops(railwayLine.stops), preStops: showStops(preStops), postStops: showStops(postStops) });
 
   let currentTime: number;
-  let inboundDiaTimes: DeepReadonly<DiaTime>[];
-  let outboundDiaTimes: DeepReadonly<DiaTime>[];
+  let inboundDiaTimes: DiaTime[];
+  let outboundDiaTimes: DiaTime[];
   {
     currentTime = baseTime;
     inboundDiaTimes = preStops.map((stop, index) => {
@@ -178,14 +166,10 @@ export function getInitialTimetable(railwayLine: DeepReadonly<RailwayLine>): [Ou
     });
   }
 
-  const stations = preStops.map((stop) => stop.platform.station);
+  const stationIds = preStops.map((stop) => stop.platform.stationId);
 
-  const inboundTrains: DeepReadonly<Train[]> = [
-    createTrain(preStops[0], preStops[preStops.length - 1], inboundDiaTimes),
-  ];
-  const outboundTrains: DeepReadonly<Train[]> = [
-    createTrain(postStops[0], postStops[postStops.length - 1], outboundDiaTimes),
-  ];
+  const inboundTrains: Train[] = [createTrain(preStops[0], preStops[preStops.length - 1], inboundDiaTimes)];
+  const outboundTrains: Train[] = [createTrain(postStops[0], postStops[postStops.length - 1], outboundDiaTimes)];
 
   const trains = inboundTrains.concat(outboundTrains);
 
@@ -193,9 +177,10 @@ export function getInitialTimetable(railwayLine: DeepReadonly<RailwayLine>): [Ou
     timetableId: generateId(),
     inboundTrainIds: inboundTrains.map((diaTime) => diaTime.trainId),
     outboundTrainIds: outboundTrains.map((diaTime) => diaTime.trainId),
-    operations: checkStationTrackOccupation(trains, stations.map((s) => s.platforms).flat()).operations,
+    operations: checkStationTrackOccupation(trains, stationIds.map((s) => nn(stations.get(s)).platforms).flat())
+      .operations,
     railwayLineId: railwayLine.railwayLineId,
-    stations: stations,
+    stationIds: stationIds,
     trainTypes: getInitialTrainTypes(),
     inboundIsFirstHalf: true,
   };
@@ -206,12 +191,12 @@ export function getInitialTimetable(railwayLine: DeepReadonly<RailwayLine>): [Ou
 // 足りない駅の時刻を補完する
 export function fillMissingTimes(train: Train, stations: StationLike[]): void {
   for (const station of stations) {
-    const diaTime = train.diaTimes.find((diaTime) => diaTime.station.stationId === station.stationId);
+    const diaTime = train.diaTimes.find((diaTime) => diaTime.stationId === station.stationId);
     if (diaTime === undefined) {
       train.diaTimes.push({
         diaTimeId: generateId(),
-        station: station,
-        platform: null,
+        stationId: station.stationId,
+        platformId: null,
         arrivalTime: null,
         departureTime: null,
         isPassing: false,

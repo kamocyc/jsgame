@@ -1,4 +1,5 @@
 import { DeepReadonly } from 'ts-essentials';
+import { StationLike } from './model';
 import namesJson from './names.json';
 
 export function max(arr: number[]): number {
@@ -260,3 +261,5 @@ export function toMap<T>(arr: readonly T[], key: (v: T) => string | undefined): 
   }
   return map;
 }
+
+export const stationDbg = new Map<string, StationLike>();

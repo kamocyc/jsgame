@@ -1,4 +1,5 @@
 import Konva from 'konva';
+import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
 import { DiaTime, StationLike, TimetableDirection } from '../../model';
 import { DragRectKonva } from './drag-rect-konva';
@@ -43,12 +44,12 @@ export function createPositionDiaTimeMap(
   const stationPositions = viewStateManager.getStationPositions();
 
   const positionDiaTimeMap = diaTimes.flatMap((diaTime, diaTimeIndex) => {
-    const stationPosition = stationPositions.find((station) => station.station.stationId === diaTime.station.stationId);
+    const stationPosition = stationPositions.find((station) => station.stationId === diaTime.stationId);
     if (!stationPosition) {
-      throw new Error(`station ${diaTime.station.stationId} not found`);
+      throw new Error(`station ${diaTime.stationId} not found`);
     }
 
-    const isStationExpanded = viewStateManager.isStationExpanded(diaTime.station.stationId);
+    const isStationExpanded = viewStateManager.isStationExpanded(diaTime.stationId);
 
     let [arrivalTime, departureTime] = [diaTime.arrivalTime, diaTime.departureTime];
     if (arrivalTime === null && departureTime === null) return [];
@@ -57,7 +58,7 @@ export function createPositionDiaTimeMap(
 
     const times = [];
     if (isStationExpanded) {
-      const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platform?.platformId);
+      const platformIndex = diaTime.station.platforms.findIndex((p) => p.platformId === diaTime.platformId);
       if (platformIndex !== -1) {
         const [platformPositions, lastLinePosition] = getPlatformPositions(diaTime.station.platforms);
         const platformPosition = platformPositions[platformIndex];
@@ -135,28 +136,28 @@ export class ViewStateManager {
   private readonly isStationExpandedMap: Map<string, boolean>;
   private readonly secondWidth: number;
 
-  constructor(stations: StationLike[]) {
+  constructor(stationIds: DeepReadonly<string[]>, private stations: DeepReadonly<Map<string, StationLike>>) {
     const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
-    const stationPositions = this.createStationPositions(stations);
+    const stationPositions = this.createStationPositions(stationIds);
 
     this.stationPositions = stationPositions;
     this.secondWidth = secondWidth;
 
     this.isStationExpandedMap = new Map();
     for (const stationPosition of stationPositions) {
-      this.isStationExpandedMap.set(stationPosition.station.stationId, false);
+      this.isStationExpandedMap.set(stationPosition.stationId, false);
     }
   }
 
-  private createStationPositions(stations: StationLike[]): StationPosition[] {
+  private createStationPositions(stationIds: DeepReadonly<string[]>): StationPosition[] {
     let position = 50;
 
     const stationPositions: StationPosition[] = [];
-    for (const station of stations) {
-      stationPositions.push({ station, diagramPosition: position });
+    for (const stationId of stationIds) {
+      stationPositions.push({ stationId: stationId, diagramPosition: position });
       position += 50;
-      if (this.isStationExpandedMap && this.isStationExpandedMap.get(station.stationId)) {
-        position += 30 * station.platforms.length + 20;
+      if (this.isStationExpandedMap && this.isStationExpandedMap.get(stationId)) {
+        position += 30 * stationId.platforms.length + 20;
       }
     }
 
@@ -172,9 +173,7 @@ export class ViewStateManager {
   }
 
   getStationPosition(stationId: string): number | null {
-    const stationPosition = this.stationPositions.find(
-      (stationPosition) => stationPosition.station.stationId === stationId
-    );
+    const stationPosition = this.stationPositions.find((stationPosition) => stationPosition.stationId === stationId);
     if (stationPosition == null) return null;
 
     return stationPosition.diagramPosition;
@@ -182,7 +181,7 @@ export class ViewStateManager {
 
   setStationIsExpanded(stationId: string, isExpanded: boolean) {
     this.isStationExpandedMap.set(stationId, isExpanded);
-    this.stationPositions = this.createStationPositions(this.stationPositions.map((s) => s.station));
+    this.stationPositions = this.createStationPositions(this.stationPositions.map((s) => s.stationId));
   }
 
   isStationExpanded(stationId: string) {

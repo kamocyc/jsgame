@@ -1,6 +1,6 @@
 import { DeepReadonly } from 'ts-essentials';
-import { toStringFromSeconds, upto } from '../../common';
-import { Operation, Train } from '../../model';
+import { nn, toStringFromSeconds, upto } from '../../common';
+import { Operation, StationLike, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonComponent';
 import './operation-table.css';
@@ -10,6 +10,7 @@ export interface DiagramOperationProps {
   outboundTrains: readonly Train[];
   operations: Operation[];
   timetable: OutlinedTimetable;
+  stations: Map<string, StationLike>;
 }
 
 interface DiagramOperationSubProps extends DiagramOperationProps {
@@ -29,7 +30,7 @@ export function DiagramOperationComponent(props: DeepReadonly<DiagramOperationPr
       selectData={() => {}}
       getSettingComponent={(operation) => {
         if ('type' in operation) {
-          return <DiagramOperationSubAllComponent operations={props.operations} />;
+          return <DiagramOperationSubAllComponent {...props} operations={props.operations} />;
         } else {
           return <DiagramOperationSubComponent {...props} operation={operation} />;
         }
@@ -44,8 +45,8 @@ export function DiagramOperationComponent(props: DeepReadonly<DiagramOperationPr
   );
 }
 
-export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ operations: Operation[] }>) {
-  const maxTrainCount = Math.max(...operations.map((operation) => operation.trains.length));
+export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOperationProps>) {
+  const maxTrainCount = Math.max(...props.operations.map((operation) => operation.trainIds.length));
   return (
     <>
       <table class='operation-table'>
@@ -62,15 +63,15 @@ export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ o
           </tr>
         </thead>
         <tbody>
-          {operations.map((operation, i) => {
+          {props.operations.map((operation, i) => {
             return (
               <>
                 {/* 列車番号 */}
                 <tr class='operation-row' key={i.toString() + '_01'}>
                   <th rowSpan={3}>{operation.operationCode}</th>
                   {upto(maxTrainCount).map((i) => {
-                    const train = operation.trains[i];
-                    if (train === undefined) {
+                    const trainId = operation.trainIds[i];
+                    if (trainId === undefined) {
                       return (
                         <>
                           <td style={{ height: '19.1px' }}></td>
@@ -78,6 +79,7 @@ export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ o
                         </>
                       );
                     } else {
+                      const train = nn(getTrain(props, trainId));
                       return (
                         <>
                           <td>{train.trainCode}</td>
@@ -90,8 +92,8 @@ export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ o
                 {/* 始発、終了時刻 */}
                 <tr class='operation-row' key={i.toString() + '_02'}>
                   {upto(maxTrainCount).map((i) => {
-                    const train = operation.trains[i];
-                    if (train === undefined || train.diaTimes.length === 0) {
+                    const trainId = operation.trainIds[i];
+                    if (trainId === undefined || getTrain(props, trainId)?.diaTimes.length === 0) {
                       return (
                         <>
                           <td></td>
@@ -99,6 +101,7 @@ export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ o
                         </>
                       );
                     } else {
+                      const train = nn(getTrain(props, trainId));
                       const departureTime = train.diaTimes[0].departureTime;
                       const arrivalTime = train.diaTimes[train.diaTimes.length - 1].arrivalTime;
                       return (
@@ -113,8 +116,8 @@ export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ o
                 {/* 始発、終了駅 */}
                 <tr class='operation-row' key={i.toString() + '_03'}>
                   {upto(maxTrainCount).map((i) => {
-                    const train = operation.trains[i];
-                    if (train === undefined || train.diaTimes.length === 0) {
+                    const trainId = operation.trainIds[i];
+                    if (trainId === undefined || getTrain(props, trainId)?.diaTimes.length === 0) {
                       return (
                         <>
                           <td></td>
@@ -122,10 +125,13 @@ export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ o
                         </>
                       );
                     } else {
+                      const train = nn(getTrain(props, trainId));
                       return (
                         <>
-                          <td>{train.diaTimes[0].station.stationName}</td>
-                          <td>{train.diaTimes[train.diaTimes.length - 1].station.stationName}</td>
+                          <td>{nn(props.stations.get(train.diaTimes[0].stationId)).stationName}</td>
+                          <td>
+                            {nn(props.stations.get(train.diaTimes[train.diaTimes.length - 1].stationId)).stationName}
+                          </td>
                         </>
                       );
                     }
@@ -138,6 +144,17 @@ export function DiagramOperationSubAllComponent({ operations }: DeepReadonly<{ o
       </table>
     </>
   );
+}
+
+function getTrain(
+  props: DeepReadonly<{ inboundTrains: Train[]; outboundTrains: Train[] }>,
+  trainId: string
+): DeepReadonly<Train> | undefined {
+  const train = props.inboundTrains.find((train) => train.trainId === trainId);
+  if (train !== undefined) {
+    return train;
+  }
+  return props.outboundTrains.find((train) => train.trainId === trainId);
 }
 
 export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperationSubProps>) {
@@ -158,8 +175,9 @@ export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperatio
           </tr>
         </thead>
         <tbody>
-          {operation.trains.map((train, i) => {
-            const direction = getDirection(props.timetable, train.trainId);
+          {operation.trainIds.map((trainId, i) => {
+            const train = nn(getTrain(props, trainId));
+            const direction = getDirection(props.timetable, trainId);
             // 上り -> 下り を 左 -> 右 にする
             const [diaTime1, directionText, diaTime2] =
               direction === 'Inbound'
@@ -174,10 +192,10 @@ export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperatio
                 <td>{train.trainCode}</td>
                 <td>{train.trainType?.trainTypeName}</td>
                 <td>{train.trainName}</td>
-                <td>{diaTime1.station.stationName}</td>
+                <td>{nn(props.stations.get(diaTime1.stationId)).stationName}</td>
                 <td>{time1 !== null ? toStringFromSeconds(time1) : ''}</td>
                 <td>{directionText}</td>
-                <td>{diaTime2.station.stationName}</td>
+                <td>{nn(props.stations.get(diaTime2.stationId)).stationName}</td>
                 <td>{time2 !== null ? toStringFromSeconds(time2) : ''}</td>
               </tr>
             );

@@ -1,15 +1,19 @@
+import { nn } from '../../common';
 import { RailwayLine } from '../../mapEditorModel';
+import { StationLike } from '../../model';
 import { OutlinedTimetableData } from '../../outlinedTimetableData';
 import { ListSettingCommonComponent } from './ListSettingCommonComponent';
 
 export function LineInfoPanel({
   railwayLines,
+  stations,
   timetableData,
   setRailwayLines,
   selectedRailwayLineId,
   setSelectedRailwayLineId,
 }: {
   railwayLines: RailwayLine[];
+  stations: Map<string, StationLike>;
   timetableData: OutlinedTimetableData;
   setRailwayLines: (railwayLines: RailwayLine[]) => void;
   selectedRailwayLineId: string | null;
@@ -75,7 +79,7 @@ export function LineInfoPanel({
                   駅一覧:
                   <ul>
                     {railwayLine.stops.map((stop) => (
-                      <li>{stop.platform.station.stationName}</li>
+                      <li>{nn(stations.get(stop.platform.stationId)).stationName}</li>
                     ))}
                   </ul>
                 </div>
@@ -87,9 +91,11 @@ export function LineInfoPanel({
           }}
           excludeFromDatas={(railwayLines, railwayLine) => {
             // TODO: 削除確認ダイアログを出す？
-            const timetable = timetableData.getTimetables().find((t) => t.railwayLineId === railwayLine.railwayLineId);
+            const timetable = timetableData._timetables.find((t) => t.railwayLineId === railwayLine.railwayLineId);
             if (timetable != null) {
-              timetableData.deleteTimetable(timetable.timetableId);
+              // TODO
+              throw new Error('TODO');
+              // OutlinedTimetableFunc.deleteTimetable(timetableData, timetable.timetableId);
             }
             return railwayLines.filter((rl) => rl.railwayLineId !== railwayLine.railwayLineId);
           }}

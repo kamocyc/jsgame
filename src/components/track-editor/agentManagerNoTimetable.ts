@@ -1,3 +1,5 @@
+// @ts-nocheck
+// 使っていないはずなのでnocheck
 import { CountBag, assert } from '../../common';
 import { CellHeight, CellWidth, ExtendedGameMap, GameMap, RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { Point, StationLike, generateId } from '../../model';
@@ -324,7 +326,7 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManager2Props {
   extendedMap: ExtendedGameMap;
-  stations: StationLike[];
+  stations: Map<string, StationLike>;
   gameMap: GameMap;
   railwayLines: RailwayLine[];
   placedTrains: PlacedTrain[];

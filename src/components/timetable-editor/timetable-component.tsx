@@ -1,39 +1,39 @@
 import { useState } from 'preact/hooks';
 import { DeepReadonly } from 'ts-essentials';
+import { nn } from '../../common';
 import { DiaTime, StationLike, TimetableDirection, Train } from '../../model';
 
-function getStationTimetable(trains: DeepReadonly<Train[]>, diaStation: DeepReadonly<StationLike>) {
-  const stationTimetable = trains
+function getStationTimetable(trains: DeepReadonly<Train[]>, stationId: string) {
+  const stationTimetable: [DiaTime, string][] = trains
     .map((train) => {
-      const stationTimes = train.diaTimes.filter(
-        (diaTime) => diaTime.station.stationId === diaStation.stationId && !diaTime.isPassing
-      );
+      const stationTimes = train.diaTimes.filter((diaTime) => diaTime.stationId === stationId && !diaTime.isPassing);
       if (stationTimes.length === 0) {
         return null;
       }
 
       // 終着駅の情報はこれだとまずい？
-      const finalStation = train.diaTimes[train.diaTimes.length - 1].station;
+      const finalStationId = train.diaTimes[train.diaTimes.length - 1].stationId;
 
-      return [stationTimes[0], finalStation] as [DiaTime, StationLike];
+      return [stationTimes[0], finalStationId] as [DiaTime, string];
     })
-    .filter((t) => t != null && t[0].departureTime != null) as [DiaTime, StationLike][];
+    .filter((t) => t != null && t[0].departureTime != null) as [DiaTime, string][];
 
-  return stationTimetable.reduce((acc, [diaTime, diaStation]) => {
+  return stationTimetable.reduce((acc, [diaTime, stationId]) => {
     const hour = Math.floor(diaTime.departureTime! / 60 / 60);
     if (acc[hour] === undefined) {
       acc[hour] = [];
     }
-    acc[hour].push([diaTime, diaStation]);
+    acc[hour].push([diaTime, stationId]);
     return acc;
-  }, [] as { [key: number]: [DiaTime, StationLike][] });
+  }, [] as { [key: number]: [DiaTime, string][] });
 }
 
 function StationTimetableComponent({
   trains,
-  diaStation,
-}: DeepReadonly<{ trains: readonly Train[]; diaStation: StationLike }>) {
-  const stationTimetable = getStationTimetable(trains, diaStation);
+  stations,
+  stationId,
+}: DeepReadonly<{ trains: Train[]; stations: Map<string, StationLike>; stationId: string }>) {
+  const stationTimetable = getStationTimetable(trains, stationId);
 
   function showMinutes(seconds: number) {
     return (Math.floor(seconds / 60) % 60).toString().padStart(2, '0');
@@ -47,10 +47,10 @@ function StationTimetableComponent({
             <tr>
               <td style={{ borderRight: 'solid 1px black', padding: '3px' }}>{hour}</td>
               <td>
-                {stationTimetable[Number(hour)].map(([diaTime, diaStation]) => (
+                {stationTimetable[Number(hour)].map(([diaTime, stationId]) => (
                   <span style={{ margin: '5px' }}>
                     <span>{showMinutes(diaTime.departureTime!)}</span>
-                    <span style={{ fontSize: '10px' }}>{diaStation.stationName}</span>
+                    <span style={{ fontSize: '10px' }}>{nn(stations.get(stationId)).stationName}</span>
                   </span>
                 ))}
               </td>
@@ -65,13 +65,15 @@ function StationTimetableComponent({
 export function StationTimetablePageComponent({
   inboundTrains,
   outboundTrains,
-  diaStations,
+  stations,
+  stationIds,
 }: DeepReadonly<{
-  inboundTrains: readonly Train[];
-  outboundTrains: readonly Train[];
-  diaStations: StationLike[];
+  inboundTrains: Train[];
+  outboundTrains: Train[];
+  stations: Map<string, StationLike>;
+  stationIds: string[];
 }>) {
-  const [selectedDiaStation, setSelectedDiaStation] = useState(diaStations[0]);
+  const [selectedStationId, setSelectedDiaStation] = useState(stationIds[0]);
   const [timetableDirection, setTimetableDirection] = useState<TimetableDirection>('Inbound');
 
   return (
@@ -79,18 +81,18 @@ export function StationTimetablePageComponent({
       <div>
         <span>駅:</span>
         <select
-          value={selectedDiaStation.stationId}
+          value={selectedStationId}
           onChange={(e) => {
             const diaStationId = e.currentTarget.value;
-            const diaStation = diaStations.find((diaStation) => diaStation.stationId === diaStationId);
+            const diaStation = stationIds.find((stationId) => stationId === diaStationId);
             if (diaStation == null) {
               return;
             }
             setSelectedDiaStation(diaStation);
           }}
         >
-          {diaStations.map((diaStation) => (
-            <option value={diaStation.stationId}>{diaStation.stationName}</option>
+          {stationIds.map((stationId) => (
+            <option value={stationId}>{nn(stations.get(stationId)).stationName}</option>
           ))}
         </select>
       </div>
@@ -108,7 +110,8 @@ export function StationTimetablePageComponent({
       </div>
       <div>
         <StationTimetableComponent
-          diaStation={selectedDiaStation}
+          stationId={selectedStationId}
+          stations={stations}
           trains={timetableDirection === 'Inbound' ? inboundTrains : outboundTrains}
         />
       </div>

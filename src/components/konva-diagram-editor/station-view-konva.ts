@@ -188,7 +188,7 @@ export class StationViewKonva {
 
     this.stationKonvas = [];
     for (const stationPosition of this.viewStateManger.getStationPositions()) {
-      this.stationKonvas.push(new StationKonva(layer, stationPosition.station, viewStateManger, canvasWidth, this));
+      this.stationKonvas.push(new StationKonva(layer, stationPosition.stationId, viewStateManger, canvasWidth, this));
     }
 
     this.stage = stage;

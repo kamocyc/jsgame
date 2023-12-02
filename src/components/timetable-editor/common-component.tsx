@@ -2,7 +2,8 @@ import { ComponentChild } from 'preact';
 import { Ref, StateUpdater, useEffect, useRef, useState } from 'preact/hooks';
 import { DeepReadonly } from 'ts-essentials';
 import { parseTime, toStringFromSeconds } from '../../common';
-import { ContextData, Track, getDefaultTime } from '../../model';
+import { ContextData, Track, Train, getDefaultTime } from '../../model';
+import { OutlinedTimetable } from '../../outlinedTimetableData';
 import './timetable-editor.css';
 
 // function parseInputTextAsTime(text: string): string | undefined {
@@ -362,3 +363,7 @@ export function SplitViewComponent({ splitViews }: { splitViews: SplitView[] }) 
     </div>
   );
 }
+
+export type SetTimetable = (
+  f: (draftTimetable: OutlinedTimetable, trainData: { trains: Train[]; otherDirectionTrains: Train[] }) => void
+) => void;

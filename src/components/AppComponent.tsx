@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { AppStates, Cell, GameMap, MapState, createMapContext } from '../mapEditorModel';
-import { DetailedTimetable } from '../model';
+import { DetailedTimetable, StationLike, Train } from '../model';
 import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData';
 import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
@@ -58,7 +58,8 @@ export function getInitialAppStates(): AppStates {
   const timetableData: OutlinedTimetableData = {
     _errors: [],
     _timetables: [],
-    _trains: [],
+    _stations: new Map<string, StationLike>(),
+    _trains: new Map<string, Train>(),
   };
   const storedTrains = [
     {
@@ -84,7 +85,7 @@ export function getInitialAppStates(): AppStates {
     shouldAutoGrow: true,
     trainMove: trainMove,
     agentManager: createAgentManager(),
-    stations: [],
+    stations: new Map(),
     currentRailwayLine: null,
     moneyManager: new MoneyManager(),
     mapManager: new MapManager(),

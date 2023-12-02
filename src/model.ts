@@ -40,9 +40,6 @@ export interface Station {
   stationId: string;
   stationName: string;
   platforms: Platform[];
-  distance: number;
-  defaultOutboundPlatformId: string;
-  defaultInboundPlatformId: string;
 }
 
 export interface Platform {
@@ -176,13 +173,13 @@ export interface ContextData {
 
 export interface StationSettingData {
   settingType: 'StationSetting';
-  station: StationLike;
+  stationId: string;
 }
 
 export interface StationOperationSettingData {
   settingType: 'StationOperationSetting';
   firstOrLast: 'First' | 'Last';
-  train: Train;
+  trainId: string;
 }
 
 export type SettingData = StationSettingData | StationOperationSettingData;
@@ -209,7 +206,7 @@ export type BranchDirection = 'Straight' | 'Branch';
 export interface Operation {
   operationId: string;
   operationCode: string;
-  trains: DeepReadonly<Train[]>;
+  trainIds: readonly string[];
 }
 
 export interface PlatformTTItem {

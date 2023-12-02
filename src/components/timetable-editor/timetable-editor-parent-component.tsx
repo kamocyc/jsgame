@@ -70,13 +70,13 @@ export function TimetableEditorParentComponent({
     );
     appStates.outlinedTimetableData = newTimetableData;
 
-    console.log(appStates.outlinedTimetableData._trains[3]);
+    // console.log(appStates.outlinedTimetableData._trains[3]);
     // TODO: UIに表示する
     setErrors([...newTimetableData._errors]);
     // update();
   };
 
-  console.log(appStates.outlinedTimetableData._trains[3]);
+  // console.log(appStates.outlinedTimetableData._trains[3]);
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
   // const setTimetableData = (timetableData: OutlinedTimetableData) => {
   //   appStates.outlinedTimetableData = timetableData;

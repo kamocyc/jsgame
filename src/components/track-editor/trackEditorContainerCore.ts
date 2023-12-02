@@ -1,4 +1,4 @@
-import { assert, deepEqual, generatePlaceName, getNewName, getRandomColor } from '../../common';
+import { assert, deepEqual, generatePlaceName, getNewName, getRandomColor, stationDbg } from '../../common';
 import {
   AppStates,
   Cell,
@@ -9,18 +9,7 @@ import {
   GameMap,
   MapContext,
 } from '../../mapEditorModel';
-import {
-  DefaultStationDistance,
-  Depot,
-  DepotLine,
-  Platform,
-  PlatformLike,
-  Point,
-  Station,
-  Switch,
-  Track,
-  generateId,
-} from '../../model';
+import { Depot, DepotLine, Platform, PlatformLike, Point, Station, Switch, Track, generateId } from '../../model';
 import { OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { getMidPoint, isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad, TerrainType } from '../extendedMapModel';
@@ -67,9 +56,9 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
       stationId: generateId(),
       stationName: '駅' + generateId(),
       platforms: [],
-      distance: DefaultStationDistance,
-      defaultInboundPlatformId: id,
-      defaultOutboundPlatformId: id,
+      // distance: DefaultStationDistance,
+      // defaultInboundPlatformId: id,
+      // defaultOutboundPlatformId: id,
     };
 
     const newPlatform: Platform = {
@@ -244,14 +233,14 @@ function placeStation(
     newPlatforms.push(newPlatform);
   }
 
-  // stationを完成させる
-  if (newPlatforms.length === 1) {
-    newStation.defaultOutboundPlatformId = newPlatforms[0].platformId;
-    newStation.defaultInboundPlatformId = newPlatforms[0].platformId;
-  } else {
-    newStation.defaultOutboundPlatformId = newPlatforms[newPlatforms.length / 2 - 1].platformId;
-    newStation.defaultInboundPlatformId = newPlatforms[newPlatforms.length / 2].platformId;
-  }
+  // // stationを完成させる
+  // if (newPlatforms.length === 1) {
+  //   newStation.defaultOutboundPlatformId = newPlatforms[0].platformId;
+  //   newStation.defaultInboundPlatformId = newPlatforms[0].platformId;
+  // } else {
+  //   newStation.defaultOutboundPlatformId = newPlatforms[newPlatforms.length / 2 - 1].platformId;
+  //   newStation.defaultInboundPlatformId = newPlatforms[newPlatforms.length / 2].platformId;
+  // }
 
   return [newTracks, newSwitches, newStation];
 }
@@ -392,9 +381,11 @@ export function onmousedown(
         setToast
       );
       if (result) {
-        const [newTracks, newSwitches, newStation] = result;
+        const [newTracks, _, newStation] = result;
         appStates.tracks.push(...newTracks);
-        appStates.mapState.stations.push(newStation);
+        appStates.mapState.stations.set(newStation.stationId, newStation);
+        appStates.outlinedTimetableData._stations = appStates.mapState.stations;
+        stationDbg.set(newStation.stationId, newStation);
       }
     } else if (appStates.mapState.editMode === 'Create') {
       setMouseDragMode('Create');
@@ -501,12 +492,15 @@ function deleteVariousThings(
   const platformId = getPlatformId(mouseStartCell, mouseEndCell);
   if (platformId !== null) {
     // 駅の削除
-    const station = appStates.mapState.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
+    const station = [...appStates.mapState.stations.values()].filter((s) =>
+      s.platforms.some((p) => p.platformId === platformId)
+    )[0];
     const result = deleteStation(appStates.map, station);
     if (result !== true && 'error' in result) {
       setToast(result.error);
     } else {
-      appStates.mapState.stations.splice(appStates.mapState.stations.indexOf(station), 1);
+      appStates.mapState.stations.delete(station.stationId);
+      appStates.outlinedTimetableData._stations = appStates.mapState.stations;
       appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
       validateAppState(appStates);
     }
@@ -599,7 +593,10 @@ export function onmouseup(
         // 選択終了
         if (appStates.mapState.currentRailwayLine !== null) {
           appStates.railwayLines.push(appStates.mapState.currentRailwayLine);
-          const [timetable, newTrains] = getInitialTimetable(appStates.mapState.currentRailwayLine);
+          const [timetable, newTrains] = getInitialTimetable(
+            appStates.mapState.stations,
+            appStates.mapState.currentRailwayLine
+          );
           OutlinedTimetableFunc.addTimetable(appStates.outlinedTimetableData, timetable, newTrains);
           appStates.mapState.currentRailwayLine = null;
         }

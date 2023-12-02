@@ -130,7 +130,7 @@ const moveProbFuncs: MoveProbFunc = {
 };
 
 interface AgentDestinationProps {
-  stations: StationLike[];
+  stations: Map<string, StationLike>;
   extendedMap: ExtendedCell[][];
   gameMap: GameMap;
   globalTimeManager: GlobalTimeManager;
@@ -208,7 +208,7 @@ export function getAgentDestination(
   return destination;
 }
 
-export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
+export function getStationPositions(stations: Map<string, StationLike>, gameMap: GameMap) {
   const platforms = gameMap
     .map((row) =>
       row
@@ -219,9 +219,9 @@ export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
     )
     .flat()
     .filter((track) => track?.track?.platform != null);
-  const stations_ = stations.map((station) => {
+  const stations_ = [...stations.values()].map((station) => {
     // ホームは横向きになっている。その一番上と下のセルを取得する
-    const stationPlatforms = platforms.filter((p) => p.track.platform!.station.stationId === station.stationId);
+    const stationPlatforms = platforms.filter((p) => p.track.platform!.stationId === station.stationId);
     stationPlatforms.sort((a, b) => a.begin.y - b.begin.y);
     const topPlatform = fst(stationPlatforms);
     const bottomPlatform = lst(stationPlatforms);

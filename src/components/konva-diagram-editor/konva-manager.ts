@@ -10,7 +10,7 @@ export class KonvaManager {
   private readonly stationCanvasWidth = 100;
 
   constructor(stationContainer: HTMLDivElement, diagramProps: DiagramProps, mainContainer: HTMLDivElement) {
-    const viewStateManger = new ViewStateManager(diagramProps.stations);
+    const viewStateManger = new ViewStateManager(diagramProps.stationIds, diagramProps.stations);
 
     this.stationViewKonva = new StationViewKonva(stationContainer, this.stationCanvasWidth, viewStateManger);
     this.mainKonva = new MainViewKonvaManager(mainContainer, diagramProps, viewStateManger, this.stationViewKonva);

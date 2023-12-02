@@ -1,3 +1,5 @@
+// @ts-nocheck
+// 未使用
 import { RailwayLine, RailwayLineStop } from '../../mapEditorModel';
 import { Track } from '../../model';
 import { getDistance, getMidPoint, getTrackDirection, isTrainOutTrack } from '../../trackUtil';

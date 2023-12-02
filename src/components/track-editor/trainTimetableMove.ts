@@ -21,17 +21,17 @@ import {
   getStopPosition,
 } from './trainMoveBase.js';
 
-function getNextTrain(operation: Operation, currentTrainId: string): DeepReadonly<Train> | null {
-  const index = operation.trains.findIndex((train) => train.trainId === currentTrainId);
+function getNextTrain(operation: Operation, currentTrainId: string): string | null {
+  const index = operation.trainIds.findIndex((trainId) => trainId === currentTrainId);
   if (index === -1) {
     throw new Error('currentTrainIdが見つからない');
   }
 
-  if (index === operation.trains.length - 1) {
+  if (index === operation.trainIds.length - 1) {
     return null;
   }
 
-  return operation.trains[index + 1];
+  return operation.trainIds[index + 1];
 }
 
 export class TrainTimetableMove implements ITrainMove {
@@ -51,9 +51,9 @@ export class TrainTimetableMove implements ITrainMove {
     return 'TrainMove' as const;
   }
 
-  resetTrainMove(globalTimeManager: GlobalTimeManager): void {
+  resetTrainMove(globalTimeManager: GlobalTimeManager, trains: DeepReadonly<Map<string, Train>>): void {
     this.placedTrains = [];
-    globalTimeManager.resetGlobalTime(getMinTimetableTime(this.timetable));
+    globalTimeManager.resetGlobalTime(getMinTimetableTime(trains, this.timetable));
   }
 
   private getNextTrack(track: Track, placedTrain: PlacedTrain): Track {
@@ -82,14 +82,15 @@ export class TrainTimetableMove implements ITrainMove {
     }
   }
 
-  private setTrainForOperation(placedTrain: PlacedTrain, operationTrain: DeepReadonly<Train>, props: TrainMoveProps) {
+  private setTrainForOperation(placedTrain: PlacedTrain, operationTrainId: string, props: TrainMoveProps) {
+    const operationTrain = nn(props.trains.get(operationTrainId));
     const firstDiaTime = operationTrain.diaTimes[0];
     const track = props.tracks.find((t) => t.trackId === firstDiaTime.trackId);
     assert(track != undefined);
 
     placedTrain.train = operationTrain;
     placedTrain.placedTrainName = operationTrain.trainName;
-    placedTrain.trainId = operationTrain.trainId;
+    placedTrain.trainId = operationTrainId;
     placedTrain.speed = 10;
     placedTrain.stationWaitTime = 0;
     placedTrain.stationStatus = 'Arrived';
@@ -120,15 +121,15 @@ export class TrainTimetableMove implements ITrainMove {
 
       const operation = this.timetable.operations.find((o) => o.operationId === placedTrain.operationId);
       assert(operation !== undefined, 'operation !== undefined');
-      const nextTrain = getNextTrain(operation, placedTrain.trainId);
-      if (nextTrain === null) {
+      const nextTrainId = getNextTrain(operation, placedTrain.trainId);
+      if (nextTrainId === null) {
         // 次の運用がないときは、留置にする
         placedTrain.operatingStatus = 'Parking';
         return false;
       }
 
       // 次の運用に設定
-      this.setTrainForOperation(placedTrain, nextTrain, props);
+      this.setTrainForOperation(placedTrain, nextTrainId, props);
       return false;
     }
 
@@ -138,7 +139,7 @@ export class TrainTimetableMove implements ITrainMove {
       );
       // 出発時刻を過ぎたら出発する
       placedTrain.stationStatus = 'Running';
-      const nextDiaTime = this.getNextDiaTime(placedTrain)?.diaTimeId;
+      const nextDiaTime = this.getNextDiaTime(placedTrain, props)?.diaTimeId;
       assert(nextDiaTime !== undefined, 'nextDiaTime !== undefined');
       placedTrain.diaTimeId = nextDiaTime;
       placedTrain.justDepartedPlatformId = nn(placedTrain.track.track.platform).platformId;
@@ -148,16 +149,17 @@ export class TrainTimetableMove implements ITrainMove {
     return false;
   }
 
-  private getDiaTimes(placedTrain: PlacedTrain): DeepReadonly<DiaTime[]> {
-    const diaTimes = this.timetable.operations
+  private getDiaTimes(placedTrain: PlacedTrain, props: TrainMoveProps): DeepReadonly<DiaTime[]> {
+    const trainId = this.timetable.operations
       .find((o) => o.operationId === placedTrain.operationId)
-      ?.trains.find((t) => t.trainId === placedTrain.trainId)?.diaTimes;
+      ?.trainIds.find((trainId) => trainId === placedTrain.trainId);
+    const diaTimes = trainId !== undefined ? props.trains.get(trainId)?.diaTimes : undefined;
     assert(diaTimes !== undefined, 'diaTimes !== undefined');
     return diaTimes;
   }
 
-  private getNextDiaTime(placedTrain: PlacedTrain): DiaTime | null {
-    const diaTimes = this.getDiaTimes(placedTrain);
+  private getNextDiaTime(placedTrain: PlacedTrain, props: TrainMoveProps): DiaTime | null {
+    const diaTimes = this.getDiaTimes(placedTrain, props);
     const diaTimeIndex = diaTimes.findIndex((d) => d.diaTimeId === placedTrain.diaTimeId);
     assert(diaTimeIndex !== -1, 'diaTimeIndex !== -1');
 
@@ -168,7 +170,7 @@ export class TrainTimetableMove implements ITrainMove {
     return null;
   }
 
-  private shouldStopTrain(train: PlacedTrain): false | Point {
+  private shouldStopTrain(train: PlacedTrain, props: TrainMoveProps): false | Point {
     if (!train.track.track.platform || train.stationStatus === 'Arrived') return false;
 
     const stationTrack = train.track;
@@ -180,7 +182,7 @@ export class TrainTimetableMove implements ITrainMove {
       return false;
     }
 
-    const diaTime = this.getDiaTimes(train).find((diaTime) => diaTime.diaTimeId === train.diaTimeId);
+    const diaTime = this.getDiaTimes(train, props).find((diaTime) => diaTime.diaTimeId === train.diaTimeId);
     assert(diaTime !== undefined);
     const nextStopPlatform = diaTime.platformId;
     if (nextStopPlatform !== stationTrack.track.platform?.platformId) {
@@ -214,7 +216,7 @@ export class TrainTimetableMove implements ITrainMove {
 
     while (true) {
       // stationの停止位置か、それを過ぎた場合 => 停止位置に止めて停止状態にする
-      const stopPosition = this.shouldStopTrain(placedTrain);
+      const stopPosition = this.shouldStopTrain(placedTrain, props);
       if (stopPosition) {
         placedTrain.position.x = stopPosition.x;
         placedTrain.position.y = stopPosition.y;
@@ -253,17 +255,18 @@ export class TrainTimetableMove implements ITrainMove {
 
     // 初期位置に列車を配置
     for (const operation of this.timetable.operations) {
-      const firstTrain = operation.trains[0];
+      const firstTrainId = fst_(operation.trainIds);
+      const firstTrain = nn(props.trains.get(firstTrainId));
       const firstDiaTime = firstTrain.diaTimes[0];
       const nextDiaTime = firstTrain.diaTimes[1];
       if (
-        getFirstTimeOfTrain(fst_(operation.trains)) <= props.globalTimeManager.globalTime &&
-        getLastTimeOfTrain(lst_(operation.trains)) >= props.globalTimeManager.globalTime &&
+        getFirstTimeOfTrain(props.trains, firstTrainId) <= props.globalTimeManager.globalTime &&
+        getLastTimeOfTrain(nn(props.trains.get(lst_(operation.trainIds)))) >= props.globalTimeManager.globalTime &&
         !placedTrains.some((placedTrain) => placedTrain.trainId === firstTrain.trainId) &&
         (nextDiaTime.arrivalTime != null || nextDiaTime.departureTime != null) &&
         (nextDiaTime.arrivalTime ?? nextDiaTime.departureTime)! >= props.globalTimeManager.globalTime
       ) {
-        const operationTrackId = fst_(fst_(operation.trains).diaTimes).trackId;
+        const operationTrackId = fst_(firstTrain.diaTimes).trackId;
         const track = props.tracks.find((t) => t.trackId === operationTrackId);
         assert(track != null);
 

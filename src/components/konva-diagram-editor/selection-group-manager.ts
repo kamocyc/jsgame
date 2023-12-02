@@ -78,13 +78,13 @@ function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewSt
   const stationPositions = viewStateManager.getStationPositions();
   const stationLineWidth = 16;
   const foundStations = stationPositions.map((station) => {
-    const isPlatformExpanded = viewStateManager.isStationExpanded(station.station.stationId);
+    const isPlatformExpanded = viewStateManager.isStationExpanded(station.stationId.stationId);
     const stationY = station.diagramPosition;
 
     if (isPlatformExpanded) {
       // プラットフォーム
       if (stationY < y) {
-        const [platformPositions, _] = getPlatformPositions(station.station.platforms);
+        const [platformPositions, _] = getPlatformPositions(station.stationId.platforms);
 
         const platformPositionIndex = platformPositions.findIndex((platformPosition, i) => {
           const platformY = station.diagramPosition + platformPosition;
@@ -93,7 +93,7 @@ function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewSt
           return platformYStart <= y && y <= platformYEnd;
         });
         if (platformPositionIndex !== -1) {
-          return { platform: station.station.platforms[platformPositionIndex], station: null };
+          return { platform: station.stationId.platforms[platformPositionIndex], station: null };
         } else {
           return null;
         }

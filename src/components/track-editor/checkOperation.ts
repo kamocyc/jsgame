@@ -27,10 +27,10 @@ export function checkStationTrackOccupation(
   for (const train of trains) {
     for (const diaTime of train.diaTimes) {
       if (diaTime.arrivalTime !== null) {
-        if (diaTime.platform === null) {
-          console.warn('diaTime.platform === null');
+        if (diaTime.platformId === null) {
+          console.warn('diaTime.platformId === null');
         } else {
-          nn(platformTimesMap.get(diaTime.platform?.platformId)).push({
+          nn(platformTimesMap.get(diaTime.platformId)).push({
             arrivalOrDeparture: 'Arrival',
             diaTimeId: diaTime.diaTimeId,
             train: train,
@@ -40,10 +40,10 @@ export function checkStationTrackOccupation(
       }
 
       if (diaTime.departureTime !== null) {
-        if (diaTime.platform === null) {
+        if (diaTime.platformId === null) {
           console.warn('diaTime.platform === null');
         } else {
-          nn(platformTimesMap.get(diaTime.platform?.platformId)).push({
+          nn(platformTimesMap.get(diaTime.platformId)).push({
             arrivalOrDeparture: 'Departure',
             diaTimeId: diaTime.diaTimeId,
             train: train,
@@ -72,8 +72,8 @@ export function checkStationTrackOccupation(
     for (let index = 1; index < times.length; index++) {
       if (isOccupied && times[index].arrivalOrDeparture === 'Arrival') {
         console.log({
-          station: platforms.find((p) => p.platformId === platform.platformId)?.station.stationName,
-          stationId: platform.station.stationId,
+          // station: platforms.find((p) => p.platformId === platform.platformId)?.station.stationName,
+          stationId: platform.stationId,
           platform: platform.platformName,
           platformId: platform.platformId,
           train: times[index].train,
@@ -83,7 +83,7 @@ export function checkStationTrackOccupation(
         });
         errors.push({
           type: 'DoubleArrival',
-          stationId: platform.station.stationId,
+          stationId: platform.stationId,
           arrivalOrDeparture: 'arrivalTime',
           platformId: platform.platformId,
           diaTimeId: times[index].diaTimeId,
@@ -94,7 +94,7 @@ export function checkStationTrackOccupation(
       if (!isOccupied && times[index].arrivalOrDeparture === 'Departure') {
         errors.push({
           type: 'DoubleDeparture',
-          stationId: platform.station.stationId,
+          stationId: platform.stationId,
           arrivalOrDeparture: 'departureTime',
           platformId: platform.platformId,
           diaTimeId: times[index].diaTimeId,
@@ -116,7 +116,7 @@ export function checkStationTrackOccupation(
 
 type OperationSimple = DeepReadonly<{
   operationId: string;
-  trains: Train[];
+  trainIds: string[];
 }>;
 
 function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<string, StationTimes>): Operation[] {
@@ -126,7 +126,7 @@ function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<s
   for (const train of trains) {
     const operationId = generateId();
     trainIdToOperationId.set(train.trainId, operationId);
-    operations.set(operationId, { operationId, trains: [train] });
+    operations.set(operationId, { operationId, trainIds: [train.trainId] });
   }
 
   const isFirstDiaTime = (train: DeepReadonly<Train>, diaTimeId: string) => {
@@ -140,16 +140,16 @@ function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<s
     const operationIdOfPrevTrain = nn(trainIdToOperationId.get(prevTrainId));
     const operationIdOfCurrTrain = nn(trainIdToOperationId.get(currTrainId));
     assert(operationIdOfPrevTrain !== operationIdOfCurrTrain);
-    const prevOperationTrains = nn(operations.get(operationIdOfPrevTrain)).trains;
-    const currOperationTrains = nn(operations.get(operationIdOfCurrTrain)).trains;
+    const prevOperationTrainIds = nn(operations.get(operationIdOfPrevTrain)).trainIds;
+    const currOperationTrainIds = nn(operations.get(operationIdOfCurrTrain)).trainIds;
 
-    const mergedOperations = [...prevOperationTrains, ...currOperationTrains];
-    for (const train of mergedOperations) {
-      trainIdToOperationId.set(train.trainId, operationIdOfPrevTrain);
+    const mergedOperations = [...prevOperationTrainIds, ...currOperationTrainIds];
+    for (const trainId of mergedOperations) {
+      trainIdToOperationId.set(trainId, operationIdOfPrevTrain);
     }
     operations.set(operationIdOfPrevTrain, {
       operationId: operationIdOfPrevTrain,
-      trains: mergedOperations,
+      trainIds: mergedOperations,
     });
 
     operations.delete(operationIdOfCurrTrain);
@@ -185,7 +185,7 @@ function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<s
     result.push({
       operationId: operation.operationId,
       operationCode: generateOperationCode(result),
-      trains: operation.trains,
+      trainIds: operation.trainIds,
     });
   }
   return result;

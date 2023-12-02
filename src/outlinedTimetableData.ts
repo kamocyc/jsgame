@@ -1,6 +1,6 @@
 import { Patch, applyPatches } from 'immer';
 import { DeepReadonly } from 'ts-essentials';
-import { assert } from './common';
+import { assert, nn } from './common';
 import { checkStationTrackOccupation } from './components/track-editor/checkOperation';
 import { OperationError } from './mapEditorModel';
 import { Operation, StationLike, StationOperation, Train, TrainType, cloneTrain, generateId } from './model';
@@ -11,7 +11,7 @@ export interface OutlinedTimetable {
   timetableId: string;
   inboundTrainIds: string[];
   outboundTrainIds: string[];
-  stations: StationLike[];
+  stationIds: string[];
   trainTypes: TrainType[];
   operations: Operation[];
 }
@@ -50,6 +50,11 @@ export class HistoryManager {
   undo(timetableData: OutlinedTimetableData) {
     if (this.currentIndex > 0) {
       this.currentIndex--;
+      console.log({
+        currentIndex: this.currentIndex,
+        historyLength: this.histories.length,
+        inversePatches: this.histories[this.currentIndex].inversePatches,
+      });
       return applyPatches(timetableData, this.histories[this.currentIndex].inversePatches);
     }
 
@@ -139,31 +144,37 @@ export function repeatTrains_(trains: Train[]): Train[] {
 
 // Timetableを含む全てのデータ
 export interface OutlinedTimetableData {
-  _trains: Train[];
+  _stations: Map<string, StationLike>;
+  _trains: Map<string, Train>;
   _timetables: OutlinedTimetable[];
   _errors: OperationError[];
 }
 
 export const OutlinedTimetableFunc = {
-  getTrains(that: DeepReadonly<OutlinedTimetableData>): DeepReadonly<Train[]> {
-    return (that as OutlinedTimetableData)._trains;
-  },
   getTimetables(that: DeepReadonly<OutlinedTimetableData>): DeepReadonly<OutlinedTimetable[]> {
     return (that as OutlinedTimetableData)._timetables;
   },
-  toDataToSave(that: DeepReadonly<OutlinedTimetableData>) {
+  toDataToSave(that: DeepReadonly<OutlinedTimetableData>): DeepReadonly<{
+    trains: Train[];
+    timetables: OutlinedTimetable[];
+  }> {
     return {
-      trains: OutlinedTimetableFunc.getTrains(that),
+      trains: [...that._trains.entries()].map(([_, train]) => train),
       timetables: OutlinedTimetableFunc.getTimetables(that),
     };
   },
 
   // update
-  getTrain(that_: { _trains: Train[] }, trainId: string): Train {
+  getTrain(that_: { _trains: Map<string, Train> }, trainId: string): Train {
     const that = that_ as OutlinedTimetableData;
-    const train = that._trains.find((train) => train.trainId === trainId);
+    const train = that._trains.get(trainId);
     assert(train !== undefined);
     return train;
+  },
+  setTrains(trains: Map<string, Train>, newTrains: Train[]) {
+    for (const train of newTrains) {
+      trains.set(train.trainId, train);
+    }
   },
   repeatTrainsInTimetable(that_: OutlinedTimetableData, timetableId: string) {
     const that = that_ as OutlinedTimetableData;
@@ -171,11 +182,11 @@ export const OutlinedTimetableFunc = {
     assert(timetable !== undefined);
 
     const newInboundTrains = repeatTrains_(timetable.inboundTrainIds.map((trainId) => this.getTrain(that, trainId)));
-    that._trains.push(...newInboundTrains);
+    this.setTrains(that._trains, newInboundTrains);
     timetable.inboundTrainIds.push(...newInboundTrains.map((t) => t.trainId));
 
     const newOutboundTrains = repeatTrains_(timetable.outboundTrainIds.map((trainId) => this.getTrain(that, trainId)));
-    that._trains.push(...newOutboundTrains);
+    this.setTrains(that._trains, newOutboundTrains);
     timetable.outboundTrainIds.push(...newOutboundTrains.map((t) => t.trainId));
   },
   updateOperations(that_: OutlinedTimetableData) {
@@ -183,7 +194,7 @@ export const OutlinedTimetableFunc = {
     const errors: OperationError[] = [];
     for (const timetable of that._timetables) {
       const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(that, id));
-      const platforms = timetable.stations.map((station) => station.platforms).flat();
+      const platforms = timetable.stationIds.map((stationId) => nn(that._stations.get(stationId)).platforms).flat();
       const { errors: occupationErrors, operations } = checkStationTrackOccupation(trains, platforms);
       errors.push(...occupationErrors);
       timetable.operations = operations;
@@ -223,7 +234,10 @@ export const OutlinedTimetableFunc = {
     const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
-    that._trains.push(...newTrains.map((train) => train.train));
+    this.setTrains(
+      that._trains,
+      newTrains.map((train) => train.train)
+    );
 
     for (const { train, beforeTrainId, direction } of newTrains) {
       if (direction === 'Inbound') {
@@ -281,18 +295,20 @@ export const OutlinedTimetableFunc = {
 
     timetable.inboundTrainIds = inboundTrains.map((train) => train.trainId);
     timetable.outboundTrainIds = outboundTrains.map((train) => train.trainId);
-    timetable.stations = timetable.stations.slice().reverse();
+    timetable.stationIds = timetable.stationIds.slice().reverse();
     timetable.inboundIsFirstHalf = !timetable.inboundIsFirstHalf;
     timetable.operations = checkStationTrackOccupation(
       trains,
-      timetable.stations.map((s) => s.platforms).flat()
+      timetable.stationIds.map((s) => nn(that._stations.get(s)).platforms).flat()
     ).operations;
 
-    that._trains.push(...trains);
+    this.setTrains(that._trains, trains);
     this.deleteNotUsedTrains(that);
 
     return undefined;
   },
+
+  updateStation(station: StationLike, updater: (station: StationLike) => void) {},
   updateTimetable(
     that: OutlinedTimetableData,
     timetableId: string,
@@ -307,8 +323,8 @@ export const OutlinedTimetableFunc = {
   addTimetable(that: OutlinedTimetableData, timetable: OutlinedTimetable, trains: Train[]) {
     that._timetables.push(timetable);
     for (const train of trains) {
-      if (!that._trains.find((t) => t.trainId === train.trainId)) {
-        that._trains.push(train);
+      if (!that._trains.has(train.trainId)) {
+        this.setTrains(that._trains, [train]);
       }
     }
   },
@@ -316,15 +332,15 @@ export const OutlinedTimetableFunc = {
     const that = that_ as OutlinedTimetableData;
     const trainMap = new Map<string, Train>();
     for (const train of that._trains) {
-      trainMap.set(train.trainId, train);
+      trainMap.set(train[1].trainId, train[1]);
     }
 
-    that._trains.splice(0, that._trains.length);
+    that._trains = new Map<string, Train>();
     const usedTrainIds = that._timetables.flatMap((t) => [...t.inboundTrainIds, ...t.outboundTrainIds]);
     for (const usedTrainId of usedTrainIds) {
       const train = trainMap.get(usedTrainId);
       assert(train !== undefined);
-      that._trains.push(train);
+      that._trains.set(train.trainId, train);
     }
   },
 };

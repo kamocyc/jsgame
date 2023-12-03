@@ -265,3 +265,11 @@ export function toMap<T>(arr: readonly T[], key: (v: T) => string | undefined): 
 }
 
 export const stationDbg = new Map<string, StationLike>();
+
+export function* whileLoop<T>(initial: T, cond: (x: T) => boolean, next: (x: T) => T) {
+  let x = initial;
+  while (cond(x)) {
+    yield x;
+    x = next(x);
+  }
+}

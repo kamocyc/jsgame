@@ -327,7 +327,7 @@ export function TrainListComponent({
         timetableDirection={timetableDirection}
       />
       {trains.map((train) => (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div key={train.trainId} style={{ display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
               display: 'flex',

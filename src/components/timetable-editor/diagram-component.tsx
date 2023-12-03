@@ -1,60 +1,72 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { Stage } from 'react-konva';
+import { useRecoilState, useRecoilValue } from 'recoil';
 import { DiagramProps } from '../konva-diagram-editor/drawer-util';
-import { KonvaManager } from '../konva-diagram-editor/konva-manager';
+import {
+  canvasHeight,
+  isStationExpandedAtom,
+  stageStateAtom,
+  stationIdsAtom,
+  stationsAtom,
+} from '../konva-diagram-editor/konva-util';
+import { MainViewKonva } from '../konva-diagram-editor/stage-konva';
+import { StationViewKonva } from '../konva-diagram-editor/station-view-konva';
 
 export function KonvaCanvas(props: DiagramProps) {
-  const stationCanvasWidth = 100;
+  const [, setIsStationExpanded] = useRecoilState(isStationExpandedAtom);
+  const [stations, setStationsAtom] = useRecoilState(stationsAtom);
+  const [, setStationIdsAtom] = useRecoilState(stationIdsAtom);
+  const stageState = useRecoilValue(stageStateAtom);
+  const stageY = stageState.y;
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const konvaManagerRef = useRef<KonvaManager | null>(null);
   useEffect(() => {
-    const canvas = containerRef.current;
-    if (canvas) {
-      const stationContainer = document.getElementById('stationsCanvas');
-      const mainContainer = document.getElementById('mainCanvas');
-      if (!stationContainer || !mainContainer) {
-        throw new Error('Canvas not found');
-      }
-
-      const konvaManager = new KonvaManager(stationContainer as HTMLDivElement, props, mainContainer as HTMLDivElement);
-      konvaManagerRef.current = konvaManager;
-    }
-  }, [containerRef]);
+    setStationsAtom(props.stations);
+    setStationIdsAtom(props.stationIds);
+    setIsStationExpanded(new Map<string, boolean>([...props.stations.values()].map((s) => [s.stationId, false])));
+  }, [props.stations]);
 
   return (
-    <div ref={containerRef} style={{ display: 'flex' }}>
-      <div id='stationsCanvas' style={{ width: stationCanvasWidth + 'px', backgroundColor: '#f9f9f9' }}></div>
-      <div
-        id='mainCanvas'
-        onContextMenu={(e) => {
+    <div
+      onContextMenu={(e) => {
+        e.preventDefault();
+      }}
+      // Ctrl+Cを取得する
+      onKeyDown={(e) => {
+        if (e.ctrlKey && e.key === 'c') {
+          konvaManagerRef.current?.copySelections();
+        }
+        // delete keyを取得
+        if (e.key === 'Delete') {
+          konvaManagerRef.current?.deleteSelections();
+        }
+        if (e.key === 'ArrowLeft') {
+          konvaManagerRef.current?.moveSelections(-1, 0);
           e.preventDefault();
-        }}
-        // Ctrl+Cを取得する
-        onKeyDown={(e) => {
-          if (e.ctrlKey && e.key === 'c') {
-            konvaManagerRef.current?.copySelections();
-          }
-          // delete keyを取得
-          if (e.key === 'Delete') {
-            konvaManagerRef.current?.deleteSelections();
-          }
-          if (e.key === 'ArrowLeft') {
-            konvaManagerRef.current?.moveSelections(-1, 0);
-            e.preventDefault();
-          }
-          if (e.key === 'ArrowRight') {
-            konvaManagerRef.current?.moveSelections(1, 0);
-            e.preventDefault();
-          }
-        }}
-        // Ctrl+Vを取得する
-        onKeyUp={(e) => {
-          if (e.ctrlKey && e.key === 'v') {
-            konvaManagerRef.current?.pasteTrains();
-          }
-        }}
-        tabIndex={-1}
-      ></div>
+        }
+        if (e.key === 'ArrowRight') {
+          konvaManagerRef.current?.moveSelections(1, 0);
+          e.preventDefault();
+        }
+      }}
+      // Ctrl+Vを取得する
+      onKeyUp={(e) => {
+        if (e.ctrlKey && e.key === 'v') {
+          konvaManagerRef.current?.pasteTrains();
+        }
+      }}
+      tabIndex={-1}
+      style={{ display: 'flex' }}
+    >
+      {stations.size === 0 ? (
+        <></>
+      ) : (
+        <>
+          <Stage y={stageY} width={200} height={canvasHeight}>
+            <StationViewKonva />
+          </Stage>
+          <MainViewKonva diagramProps={props} clientHeight={1000 /*dummy*/} clientWidth={canvasHeight} />
+        </>
+      )}
     </div>
   );
 }

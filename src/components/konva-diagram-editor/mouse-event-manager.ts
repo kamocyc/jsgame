@@ -6,22 +6,29 @@ import { Point } from '../../model';
 import { getPointerPosition } from './konva-util';
 
 type HandlerType = (e: KonvaEventObject<MouseEvent>, target: Shape<ShapeConfig> | Stage) => void;
+type DragHandlerType = (
+  e: KonvaEventObject<MouseEvent>,
+  target: Shape<ShapeConfig> | Stage,
+  dragStartPoint: Point
+) => void;
 
 export class MouseEventManager {
   private mousedownStartPoint: null | Point = null;
   private mousedownStartShape: Shape<ShapeConfig> | Stage | null = null;
+  private mousedownStartButton: number | null = null;
   private didDragStartCalled: boolean = false;
   private clickHandlerMap: Map<string, HandlerType> = new Map();
   private dragStartHandlerMap: Map<string, HandlerType> = new Map();
-  private dragMoveHandlerMap: Map<string, HandlerType> = new Map();
-  private dragEndHandlerMap: Map<string, HandlerType> = new Map();
+  private dragMoveHandlerMap: Map<string, DragHandlerType> = new Map();
+  private dragEndHandlerMap: Map<string, DragHandlerType> = new Map();
   private lastDragMoveTime: number = 0;
+  private stage: Konva.Stage | null = null;
 
-  private getHandler(map: Map<string, HandlerType>, target: Shape<ShapeConfig> | Stage) {
+  private getHandler<T>(map: Map<string, T>, target: Shape<ShapeConfig> | Stage): T | null {
     while (true) {
       const targetId = target.id();
       const handler = map.get(targetId);
-      if (handler !== undefined) {
+      if (handler != null) {
         return handler;
       }
       const parent = target.getParent();
@@ -29,21 +36,40 @@ export class MouseEventManager {
         console.log('parent === target');
         return null;
       }
-      target = parent;
+      target = parent as Shape<ShapeConfig> | Stage;
     }
   }
 
-  constructor(private layer: Konva.Layer) {
-    layer.getStage().on('mousedown', (e) => {
+  setStage(stage: Konva.Stage) {
+    this.stage = stage;
+
+    this.removeEventHandlers(stage);
+    this.setEventHandlers(stage);
+  }
+
+  removeEventHandlers(stage: Konva.Stage) {
+    stage.off('mousedown');
+    stage.off('mousemove');
+    stage.off('mouseup');
+
+    this.clickHandlerMap.clear();
+    this.dragStartHandlerMap.clear();
+    this.dragMoveHandlerMap.clear();
+    this.dragEndHandlerMap.clear();
+  }
+
+  setEventHandlers(stage: Konva.Stage) {
+    stage.on('mousedown', (e) => {
       console.log('mousedown');
-      this.mousedownStartPoint = getPointerPosition(layer.getStage());
+      this.mousedownStartPoint = getPointerPosition(stage);
       this.mousedownStartShape = e.target;
       this.didDragStartCalled = false;
+      this.mousedownStartButton = e.evt.button;
     });
-    layer.getStage().on('mousemove', (e) => {
+    stage.on('mousemove', (e) => {
       if (this.mousedownStartPoint === null || this.mousedownStartShape === null) return;
 
-      if (!this.didDragStartCalled && this.isClick(this.mousedownStartPoint!, getPointerPosition(layer.getStage()))) {
+      if (!this.didDragStartCalled && this.isClick(this.mousedownStartPoint!, getPointerPosition(stage))) {
         return;
       }
 
@@ -55,20 +81,21 @@ export class MouseEventManager {
       if (!this.didDragStartCalled) {
         const handler = this.getHandler(this.dragStartHandlerMap, this.mousedownStartShape);
         if (handler != null) {
-          handler(e, this.mousedownStartShape);
+          handler({ ...e, evt: { ...e.evt, button: this.mousedownStartButton! } }, this.mousedownStartShape);
         }
         this.didDragStartCalled = true;
       }
 
       const handler = this.getHandler(this.dragMoveHandlerMap, this.mousedownStartShape);
       if (handler != null) {
-        handler(e, this.mousedownStartShape);
+        handler(e, this.mousedownStartShape, this.mousedownStartPoint);
       }
     });
-    layer.getStage().on('mouseup', (e) => {
+
+    const mouseupHandler = (e: KonvaEventObject<MouseEvent>) => {
       if (this.mousedownStartPoint === null || this.mousedownStartShape === null) return;
 
-      if (this.isClick(this.mousedownStartPoint!, getPointerPosition(layer.getStage()))) {
+      if (this.isClick(this.mousedownStartPoint!, getPointerPosition(stage))) {
         const handler = this.getHandler(this.clickHandlerMap, this.mousedownStartShape);
         if (handler != null) {
           handler(e, this.mousedownStartShape);
@@ -76,17 +103,21 @@ export class MouseEventManager {
       } else {
         const handler = this.getHandler(this.dragEndHandlerMap, this.mousedownStartShape);
         if (handler != null) {
-          handler(e, this.mousedownStartShape);
+          handler(e, this.mousedownStartShape, this.mousedownStartPoint);
         }
       }
 
+      this.mousedownStartButton = null;
       this.mousedownStartPoint = null;
       this.didDragStartCalled = false;
-    });
+    };
+    stage.on('mouseup', mouseupHandler);
   }
 
-  deleteDestroyedShape(shapeId: string, map: Map<string, HandlerType>) {
-    const results = this.layer.find('#' + shapeId);
+  deleteDestroyedShape(shapeId: string, map: Map<string, unknown>) {
+    if (this.stage === null) return;
+
+    const results = this.stage.find('#' + shapeId);
     if (results.length === 0) {
       // TODO: 直す
       // console.log('deleted')
@@ -114,10 +145,10 @@ export class MouseEventManager {
   registerDragStartHandler(shapeId: string, handler: HandlerType) {
     this.dragStartHandlerMap.set(shapeId, handler);
   }
-  registerDragMoveHandler(shapeId: string, handler: HandlerType) {
+  registerDragMoveHandler(shapeId: string, handler: DragHandlerType) {
     this.dragMoveHandlerMap.set(shapeId, handler);
   }
-  registerDragEndHandler(shapeId: string, handler: HandlerType) {
+  registerDragEndHandler(shapeId: string, handler: DragHandlerType) {
     this.dragEndHandlerMap.set(shapeId, handler);
   }
 }

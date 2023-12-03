@@ -9,6 +9,7 @@ export type DiagramProps = DeepReadonly<{
   crudTrain: CrudTrain;
   inboundTrains: readonly Train[];
   outboundTrains: readonly Train[];
+  trains: Map<string, Train>;
   timetable: OutlinedTimetable;
   clipboard: AppClipboard;
   railwayLine: RailwayLine;

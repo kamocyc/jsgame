@@ -14,6 +14,7 @@ import { MapInfo, SetTimetable, SettingColumnComponent, TabComponent, reverseArr
 import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
 // import { SetTimetable, StationListComponent } from './station-component';
+import { RecoilRoot } from 'recoil';
 import { StationListComponent } from './station-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
@@ -423,24 +424,26 @@ export function TimetableEditorComponent({
                 tabId: 5,
                 tabText: 'ダイヤグラム',
                 component: () => (
-                  <KonvaCanvas
-                    timetable={timetable}
-                    stations={timetableData._stations}
-                    stationIds={timetable.stationIds}
-                    inboundTrains={inboundTrains}
-                    outboundTrains={outboundTrains}
-                    crudTrain={crudTrain}
-                    clipboard={clipboard}
-                    setClipboard={setClipboard}
-                    railwayLine={railwayLine}
-                    errors={errors}
-                    getTrainsWithDirections={() => {
-                      return [
-                        timetable.inboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
-                        timetable.outboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
-                      ];
-                    }}
-                  />
+                  <RecoilRoot>
+                    <KonvaCanvas
+                      timetable={timetable}
+                      stations={timetableData._stations}
+                      stationIds={timetable.stationIds}
+                      inboundTrains={inboundTrains}
+                      outboundTrains={outboundTrains}
+                      crudTrain={crudTrain}
+                      clipboard={clipboard}
+                      setClipboard={setClipboard}
+                      railwayLine={railwayLine}
+                      errors={errors}
+                      getTrainsWithDirections={() => {
+                        return [
+                          timetable.inboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
+                          timetable.outboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
+                        ];
+                      }}
+                    />
+                  </RecoilRoot>
                 ),
               },
               {

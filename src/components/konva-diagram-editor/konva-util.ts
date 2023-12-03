@@ -28,11 +28,7 @@ export function getPointerPosition(stage: Konva.Stage) {
   return { x: (vec.x - stage.x()) / stage.scaleX(), y: (vec.y - stage.y()) / stage.scaleY() };
 }
 
-export function useViewStateValues(): DeepReadonly<{
-  secondWidth: number;
-  stationPositions: StationPosition[];
-  isStationExpanded: Map<string, boolean>;
-}> {
+export function useViewStateValues(): DeepReadonly<ViewState> {
   const secondWidth = useRecoilValue(secondWidthAtom);
   const stationPositions = useRecoilValue(stationPositionsAtom);
   const isStationExpanded = useRecoilValue(isStationExpandedAtom);
@@ -242,7 +238,6 @@ export type ViewState = DeepReadonly<{
   secondWidth: number;
   stationPositions: StationPosition[];
   isStationExpanded: Map<string, boolean>;
-  setIsStationExpanded: (stationId: string, isExpanded: boolean) => void;
 }>;
 
 export const isStationExpandedAtom = atom<DeepReadonly<Map<string, boolean>>>({
@@ -261,7 +256,7 @@ export const stationsAtom = atom<DeepReadonly<Map<string, StationLike>>>({
   key: 'stationsAtom',
   default: new Map(),
 });
-export const stationPositionsAtom = selector<StationPosition[]>({
+export const stationPositionsAtom = selector<DeepReadonly<StationPosition[]>>({
   key: 'stationPositionsAtom',
   get: ({ get }) => {
     const stationIds = get(stationIdsAtom);
@@ -283,7 +278,7 @@ export const stationPositionsAtom = selector<StationPosition[]>({
     return stationPositions;
   },
 });
-export const selectedTrainIdsAtom = atom<string[]>({
+export const selectedTrainIdsAtom = atom<DeepReadonly<string[]>>({
   key: 'selectedTrainIdsAtom',
   default: [],
 });

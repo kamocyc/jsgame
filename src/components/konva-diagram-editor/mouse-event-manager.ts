@@ -9,8 +9,10 @@ type HandlerType = (e: KonvaEventObject<MouseEvent>, target: Shape<ShapeConfig> 
 type DragHandlerType = (
   e: KonvaEventObject<MouseEvent>,
   target: Shape<ShapeConfig> | Stage,
-  dragStartPoint: Point
+  dragStartPoint: Point,
+  dragStartData: unknown
 ) => void;
+type DragStartHandlerType = (e: KonvaEventObject<MouseEvent>, target: Shape<ShapeConfig> | Stage) => unknown;
 
 export class MouseEventManager {
   private mousedownStartPoint: null | Point = null;
@@ -18,18 +20,19 @@ export class MouseEventManager {
   private mousedownStartButton: number | null = null;
   private didDragStartCalled: boolean = false;
   private clickHandlerMap: Map<string, HandlerType> = new Map();
-  private dragStartHandlerMap: Map<string, HandlerType> = new Map();
+  private dragStartHandlerMap: Map<string, DragStartHandlerType> = new Map();
+  private dragStartDataMap: Map<string, unknown> = new Map();
   private dragMoveHandlerMap: Map<string, DragHandlerType> = new Map();
   private dragEndHandlerMap: Map<string, DragHandlerType> = new Map();
   private lastDragMoveTime: number = 0;
   private stage: Konva.Stage | null = null;
 
-  private getHandler<T>(map: Map<string, T>, target: Shape<ShapeConfig> | Stage): T | null {
+  private getHandler<T>(map: Map<string, T>, target: Shape<ShapeConfig> | Stage): [T, string] | null {
     while (true) {
       const targetId = target.id();
       const handler = map.get(targetId);
       if (handler != null) {
-        return handler;
+        return [handler, targetId];
       }
       const parent = target.getParent();
       if (parent === target || parent === null) {
@@ -81,14 +84,18 @@ export class MouseEventManager {
       if (!this.didDragStartCalled) {
         const handler = this.getHandler(this.dragStartHandlerMap, this.mousedownStartShape);
         if (handler != null) {
-          handler({ ...e, evt: { ...e.evt, button: this.mousedownStartButton! } }, this.mousedownStartShape);
+          const result = handler[0](
+            { ...e, evt: { ...e.evt, button: this.mousedownStartButton! } },
+            this.mousedownStartShape
+          );
+          this.dragStartDataMap.set(handler[1], result);
         }
         this.didDragStartCalled = true;
       }
 
       const handler = this.getHandler(this.dragMoveHandlerMap, this.mousedownStartShape);
       if (handler != null) {
-        handler(e, this.mousedownStartShape, this.mousedownStartPoint);
+        handler[0](e, this.mousedownStartShape, this.mousedownStartPoint, this.dragStartDataMap.get(handler[1]));
       }
     });
 
@@ -98,12 +105,12 @@ export class MouseEventManager {
       if (this.isClick(this.mousedownStartPoint!, getPointerPosition(stage))) {
         const handler = this.getHandler(this.clickHandlerMap, this.mousedownStartShape);
         if (handler != null) {
-          handler(e, this.mousedownStartShape);
+          handler[0](e, this.mousedownStartShape);
         }
       } else {
         const handler = this.getHandler(this.dragEndHandlerMap, this.mousedownStartShape);
         if (handler != null) {
-          handler(e, this.mousedownStartShape, this.mousedownStartPoint);
+          handler[0](e, this.mousedownStartShape, this.mousedownStartPoint, this.dragStartDataMap.get(handler[1]));
         }
       }
 
@@ -142,7 +149,7 @@ export class MouseEventManager {
   registerClickHandler(shapeId: string, handler: HandlerType) {
     this.clickHandlerMap.set(shapeId, handler);
   }
-  registerDragStartHandler(shapeId: string, handler: HandlerType) {
+  registerDragStartHandler(shapeId: string, handler: DragStartHandlerType) {
     this.dragStartHandlerMap.set(shapeId, handler);
   }
   registerDragMoveHandler(shapeId: string, handler: DragHandlerType) {

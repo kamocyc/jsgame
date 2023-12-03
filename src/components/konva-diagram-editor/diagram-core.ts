@@ -1,8 +1,9 @@
+import { DeepReadonly } from 'ts-essentials';
 import { Train, cloneTrain } from '../../model';
 import { AddingNewTrain, getDirection } from '../../outlinedTimetableData';
 import { DiagramProps } from './drawer-util';
 
-export function copyTrains(props: DiagramProps, selectedTrains: Train[]) {
+export function copyTrains(props: DiagramProps, selectedTrains: DeepReadonly<Train[]>) {
   const trains = [];
   for (const selection of selectedTrains) {
     trains.push(cloneTrain(selection));
@@ -16,7 +17,7 @@ export function copyTrains(props: DiagramProps, selectedTrains: Train[]) {
   console.log('copied: ' + trains.length);
 }
 
-export function deleteTrains(props: DiagramProps, selectedTrains: Train[]) {
+export function deleteTrains(props: DiagramProps, selectedTrains: DeepReadonly<Train[]>) {
   props.crudTrain.deleteTrains(selectedTrains.map((selectedTrain) => selectedTrain.trainId));
 }
 
@@ -37,14 +38,10 @@ export function pasteTrains(props: DiagramProps): Train[] {
     const originalTrain = props.clipboard.originalTrains[i];
     const direction = getDirection(props.timetable, originalTrain.trainId);
     addingNewTrains.push({
-      train: train,
+      train: train as Train,
       beforeTrainId: null,
       direction: direction,
     });
-
-    // selectedTrains.push(train);
-    // const line = drawTrain(train);
-    // addTrainSelection(line, train);
   }
 
   props.crudTrain.addTrains(addingNewTrains);

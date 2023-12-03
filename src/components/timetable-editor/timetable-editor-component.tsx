@@ -423,28 +423,47 @@ export function TimetableEditorComponent({
               {
                 tabId: 5,
                 tabText: 'ダイヤグラム',
-                component: () => (
-                  <RecoilRoot>
-                    <KonvaCanvas
-                      timetable={timetable}
-                      stations={timetableData._stations}
-                      stationIds={timetable.stationIds}
-                      inboundTrains={inboundTrains}
-                      outboundTrains={outboundTrains}
-                      crudTrain={crudTrain}
-                      clipboard={clipboard}
-                      setClipboard={setClipboard}
-                      railwayLine={railwayLine}
-                      errors={errors}
-                      getTrainsWithDirections={() => {
-                        return [
-                          timetable.inboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
-                          timetable.outboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
-                        ];
-                      }}
-                    />
-                  </RecoilRoot>
-                ),
+                component: () => {
+                  const timetableTrains = new Map(
+                    [...timetable.inboundTrainIds, ...timetable.outboundTrainIds].map((trainId) => [
+                      trainId,
+                      nn(timetableData._trains.get(trainId)),
+                    ])
+                  );
+                  return (
+                    <RecoilRoot>
+                      <KonvaCanvas
+                        timetable={timetable}
+                        stations={timetableData._stations}
+                        stationIds={timetable.stationIds}
+                        inboundTrains={inboundTrains}
+                        outboundTrains={outboundTrains}
+                        trains={timetableTrains}
+                        setTrains={(setter) => {
+                          setTimetableData((draftTimetableData) => {
+                            const trains = new Map(
+                              [...draftTimetableData._trains.values()]
+                                .filter((train) => timetableTrains.has(train.trainId))
+                                .map((t) => [t.trainId, t])
+                            );
+                            setter(trains);
+                          });
+                        }}
+                        crudTrain={crudTrain}
+                        clipboard={clipboard}
+                        setClipboard={setClipboard}
+                        railwayLine={railwayLine}
+                        errors={errors}
+                        getTrainsWithDirections={() => {
+                          return [
+                            timetable.inboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
+                            timetable.outboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
+                          ];
+                        }}
+                      />
+                    </RecoilRoot>
+                  );
+                },
               },
               {
                 tabId: 6,

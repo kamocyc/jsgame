@@ -2,13 +2,14 @@ import Konva from 'konva';
 import { KonvaEventObject } from 'konva/lib/Node';
 import { Shape, ShapeConfig } from 'konva/lib/Shape';
 import { Stage } from 'konva/lib/Stage';
+import { DeepReadonly } from 'ts-essentials';
 import { assert, nn } from '../../common';
-import { DiaTime, PlatformLike, Point, Train } from '../../model';
+import { DiaTime, Point, StationLike, Train } from '../../model';
 import { HistoryItem } from '../../outlinedTimetableData';
 import { copyTrains, deleteTrains } from './diagram-core';
 import { DiagramProps } from './drawer-util';
 import { WarningKonva } from './hover-konva';
-import { ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
+import { ViewState, ViewStateManager, generateKonvaId, getPointerPosition } from './konva-util';
 import { getPlatformPositions } from './station-view-konva';
 
 interface DiaTimePartial {
@@ -21,62 +22,67 @@ interface TrainPartial {
   diaTimes: DiaTimePartial[];
 }
 
-function getNewTime(
-  train: Train,
-  diaTime: DiaTime,
-  orgTime: number,
-  timeDiff: number,
-  arrivalOrDeparture: 'ArrivalTime' | 'DepartureTime'
-): number {
-  let newTime = orgTime + timeDiff;
+// function getNewTime(
+//   train: Train,
+//   diaTime: DiaTime,
+//   orgTime: number,
+//   timeDiff: number,
+//   arrivalOrDeparture: 'ArrivalTime' | 'DepartureTime'
+// ): number {
+//   let newTime = orgTime + timeDiff;
 
-  // 前の時間以降にする
-  const diaTimes = train.diaTimes;
-  const index = diaTimes.findIndex((d) => d.diaTimeId === diaTime.diaTimeId);
-  assert(index !== -1);
-  // console.log({ index, newTime, orgTime: orgTime });
+//   // 前の時間以降にする
+//   const diaTimes = train.diaTimes;
+//   const index = diaTimes.findIndex((d) => d.diaTimeId === diaTime.diaTimeId);
+//   assert(index !== -1);
+//   // console.log({ index, newTime, orgTime: orgTime });
 
-  if (arrivalOrDeparture === 'ArrivalTime') {
-    const departureTime = diaTimes[index].departureTime;
-    if (departureTime !== null) {
-      if (newTime > departureTime) {
-        newTime = departureTime;
-      }
-    }
-  } else if (arrivalOrDeparture === 'DepartureTime') {
-    const arrivalTime = diaTimes[index].arrivalTime;
-    if (arrivalTime !== null) {
-      if (newTime < arrivalTime) {
-        newTime = arrivalTime;
-      }
-    }
-  }
+//   if (arrivalOrDeparture === 'ArrivalTime') {
+//     const departureTime = diaTimes[index].departureTime;
+//     if (departureTime !== null) {
+//       if (newTime > departureTime) {
+//         newTime = departureTime;
+//       }
+//     }
+//   } else if (arrivalOrDeparture === 'DepartureTime') {
+//     const arrivalTime = diaTimes[index].arrivalTime;
+//     if (arrivalTime !== null) {
+//       if (newTime < arrivalTime) {
+//         newTime = arrivalTime;
+//       }
+//     }
+//   }
 
-  if (index > 0) {
-    const prevDiaTime = diaTimes[index - 1];
-    const prevTime = Math.max(prevDiaTime.arrivalTime ?? 0, prevDiaTime.departureTime ?? 0);
-    if (newTime < prevTime) {
-      newTime = prevTime;
-    }
-  }
+//   if (index > 0) {
+//     const prevDiaTime = diaTimes[index - 1];
+//     const prevTime = Math.max(prevDiaTime.arrivalTime ?? 0, prevDiaTime.departureTime ?? 0);
+//     if (newTime < prevTime) {
+//       newTime = prevTime;
+//     }
+//   }
 
-  if (index < diaTimes.length - 1) {
-    const nextDiaTime = diaTimes[index + 1];
-    const nextTime = Math.min(nextDiaTime.arrivalTime ?? Infinity, nextDiaTime.departureTime ?? Infinity);
-    if (newTime > nextTime) {
-      newTime = nextTime;
-    }
-  }
+//   if (index < diaTimes.length - 1) {
+//     const nextDiaTime = diaTimes[index + 1];
+//     const nextTime = Math.min(nextDiaTime.arrivalTime ?? Infinity, nextDiaTime.departureTime ?? Infinity);
+//     if (newTime > nextTime) {
+//       newTime = nextTime;
+//     }
+//   }
 
-  return newTime;
-}
+//   return newTime;
+// }
 
-function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewStateManager: ViewStateManager) {
-  const stationPositions = viewStateManager.getStationPositions();
+export function getPlatformUnderCursor(
+  y: number,
+  stations: DeepReadonly<Map<string, StationLike>>,
+  viewState: DeepReadonly<ViewState>
+) {
+  const stationPositions = viewState.stationPositions;
   const stationLineWidth = 16;
-  const foundStations = stationPositions.map((station) => {
-    const isPlatformExpanded = viewStateManager.isStationExpanded(station.stationId);
-    const stationY = station.diagramPosition;
+  const foundStations = stationPositions.map((stationPosition) => {
+    const station = nn(stations.get(stationPosition.stationId));
+    const isPlatformExpanded = viewState.isStationExpanded.get(stationPosition.stationId) ?? false;
+    const stationY = stationPosition.diagramPosition;
 
     if (isPlatformExpanded) {
       // プラットフォーム
@@ -84,7 +90,7 @@ function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewSt
         const [platformPositions, _] = getPlatformPositions(station.platforms);
 
         const platformPositionIndex = platformPositions.findIndex((platformPosition, i) => {
-          const platformY = station.diagramPosition + platformPosition;
+          const platformY = stationPosition.diagramPosition + platformPosition;
           const platformYStart = platformY - stationLineWidth / 2;
           const platformYEnd = platformY + stationLineWidth / 2;
           return platformYStart <= y && y <= platformYEnd;
@@ -102,7 +108,7 @@ function getPlatformUnderCursor(y: number, stageKonva: { scale: number }, viewSt
       const stationYStart = stationY - stationLineWidth / 2;
       const stationYEnd = stationY + stationLineWidth / 2;
       if (stationYStart <= y && y <= stationYEnd) {
-        return { platform: null, station };
+        return { platform: null, station: stationPosition };
       } else {
         return null;
       }
@@ -127,142 +133,142 @@ class TrainDragManager {
     this.isTimeDrag = flag;
   }
 
-  setDragStartPoint() {
-    this.dragStartTrainTimes = [];
-    for (const train of this.selections.map((s) => s.getTrain())) {
-      const partialDiaTimes = train.diaTimes.map((diaTime) => ({
-        diaTimeId: diaTime.diaTimeId,
-        arrivalTime: diaTime.arrivalTime,
-        departureTime: diaTime.departureTime,
-      }));
-      this.dragStartTrainTimes = this.dragStartTrainTimes.concat([
-        {
-          trainId: train.trainId,
-          diaTimes: partialDiaTimes,
-        },
-      ]);
-    }
-  }
+  // setDragStartPoint() {
+  //   this.dragStartTrainTimes = [];
+  //   for (const train of this.selections.map((s) => s.getTrain())) {
+  //     const partialDiaTimes = train.diaTimes.map((diaTime) => ({
+  //       diaTimeId: diaTime.diaTimeId,
+  //       arrivalTime: diaTime.arrivalTime,
+  //       departureTime: diaTime.departureTime,
+  //     }));
+  //     this.dragStartTrainTimes = this.dragStartTrainTimes.concat([
+  //       {
+  //         trainId: train.trainId,
+  //         diaTimes: partialDiaTimes,
+  //       },
+  //     ]);
+  //   }
+  // }
 
-  // スジ全体をドラッグしたとき
-  setDraggingPoint(timeDiff: number) {
-    const dragStartTrainTimes = this.dragStartTrainTimes;
-    const trains = this.selections.map((s) => s.getTrain());
+  // // スジ全体をドラッグしたとき
+  // setDraggingPoint(timeDiff: number) {
+  //   const dragStartTrainTimes = this.dragStartTrainTimes;
+  //   const trains = this.selections.map((s) => s.getTrain());
 
-    return {
-      this: undefined,
-      redo: () => {
-        for (const train of trains) {
-          const startTimes = dragStartTrainTimes.find((t) => t.trainId === train.trainId);
-          assert(startTimes != null);
+  //   return {
+  //     this: undefined,
+  //     redo: () => {
+  //       for (const train of trains) {
+  //         const startTimes = dragStartTrainTimes.find((t) => t.trainId === train.trainId);
+  //         assert(startTimes != null);
 
-          let i = 0;
-          for (const diaTime of train.diaTimes) {
-            if (diaTime.departureTime != null) {
-              const orgTime = startTimes.diaTimes[i].departureTime;
-              assert(orgTime != null);
-              diaTime.departureTime = orgTime + timeDiff;
-            }
-            if (diaTime.arrivalTime != null) {
-              const orgTime = startTimes.diaTimes[i].arrivalTime;
-              assert(orgTime != null);
-              diaTime.arrivalTime = orgTime + timeDiff;
-            }
-            i++;
-          }
-        }
-      },
-      undo: () => {
-        // TODO: undoの先の状態が違う。本来はドラッグ終了時に1回のみ記録したい
-        for (const train of trains) {
-          const startTimes = dragStartTrainTimes.find((t) => t.trainId === train.trainId);
-          assert(startTimes != null);
+  //         let i = 0;
+  //         for (const diaTime of train.diaTimes) {
+  //           if (diaTime.departureTime != null) {
+  //             const orgTime = startTimes.diaTimes[i].departureTime;
+  //             assert(orgTime != null);
+  //             diaTime.departureTime = orgTime + timeDiff;
+  //           }
+  //           if (diaTime.arrivalTime != null) {
+  //             const orgTime = startTimes.diaTimes[i].arrivalTime;
+  //             assert(orgTime != null);
+  //             diaTime.arrivalTime = orgTime + timeDiff;
+  //           }
+  //           i++;
+  //         }
+  //       }
+  //     },
+  //     undo: () => {
+  //       // TODO: undoの先の状態が違う。本来はドラッグ終了時に1回のみ記録したい
+  //       for (const train of trains) {
+  //         const startTimes = dragStartTrainTimes.find((t) => t.trainId === train.trainId);
+  //         assert(startTimes != null);
 
-          let i = 0;
-          for (const diaTime of train.diaTimes) {
-            if (diaTime.departureTime != null) {
-              const orgTime = startTimes.diaTimes[i].departureTime;
-              assert(orgTime != null);
-              diaTime.departureTime = orgTime;
-            }
-            if (diaTime.arrivalTime != null) {
-              const orgTime = startTimes.diaTimes[i].arrivalTime;
-              assert(orgTime != null);
-              diaTime.arrivalTime = orgTime;
-            }
-            i++;
-          }
-        }
-      },
-    };
-  }
+  //         let i = 0;
+  //         for (const diaTime of train.diaTimes) {
+  //           if (diaTime.departureTime != null) {
+  //             const orgTime = startTimes.diaTimes[i].departureTime;
+  //             assert(orgTime != null);
+  //             diaTime.departureTime = orgTime;
+  //           }
+  //           if (diaTime.arrivalTime != null) {
+  //             const orgTime = startTimes.diaTimes[i].arrivalTime;
+  //             assert(orgTime != null);
+  //             diaTime.arrivalTime = orgTime;
+  //           }
+  //           i++;
+  //         }
+  //       }
+  //     },
+  //   };
+  // }
 
-  // 1つの点のみをドラッグしたとき
-  // ドラッグ開始時の時刻点を記録しておく
-  setDraggingPointForTime(
-    timeDiff: number,
-    trainId: string,
-    diaTimeId: string,
-    arrivalOrDeparture: 'arrivalTime' | 'departureTime',
-    movePlatform: boolean,
-    newPlatform: PlatformLike | null
-  ): HistoryItem {
-    const train = this.selections.find((s) => s.getTrain().trainId === trainId);
-    assert(train !== undefined);
-    const diaTime = train.getTrain().diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
-    assert(diaTime !== undefined);
+  // // 1つの点のみをドラッグしたとき
+  // // ドラッグ開始時の時刻点を記録しておく
+  // setDraggingPointForTime(
+  //   timeDiff: number,
+  //   trainId: string,
+  //   diaTimeId: string,
+  //   arrivalOrDeparture: 'arrivalTime' | 'departureTime',
+  //   movePlatform: boolean,
+  //   newPlatform: PlatformLike | null
+  // ): HistoryItem {
+  //   const train = this.selections.find((s) => s.getTrain().trainId === trainId);
+  //   assert(train !== undefined);
+  //   const diaTime = train.getTrain().diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
+  //   assert(diaTime !== undefined);
 
-    const startTimes = this.dragStartTrainTimes.find((t) => t.trainId === train.getTrain().trainId);
-    assert(startTimes != null);
-    const startTime = startTimes.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
-    assert(startTime !== undefined);
+  //   const startTimes = this.dragStartTrainTimes.find((t) => t.trainId === train.getTrain().trainId);
+  //   assert(startTimes != null);
+  //   const startTime = startTimes.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
+  //   assert(startTime !== undefined);
 
-    let orgDepartureTime: number | null = null;
-    let orgArrivalTime: number | null = null;
+  //   let orgDepartureTime: number | null = null;
+  //   let orgArrivalTime: number | null = null;
 
-    if (arrivalOrDeparture === 'departureTime') {
-      if (diaTime.departureTime != null) {
-        orgDepartureTime = startTime.departureTime;
-        assert(orgDepartureTime != null);
-      }
-    } else if (arrivalOrDeparture === 'arrivalTime') {
-      if (diaTime.arrivalTime != null) {
-        orgArrivalTime = startTime.arrivalTime;
-        assert(orgArrivalTime != null);
-      }
-    }
+  //   if (arrivalOrDeparture === 'departureTime') {
+  //     if (diaTime.departureTime != null) {
+  //       orgDepartureTime = startTime.departureTime;
+  //       assert(orgDepartureTime != null);
+  //     }
+  //   } else if (arrivalOrDeparture === 'arrivalTime') {
+  //     if (diaTime.arrivalTime != null) {
+  //       orgArrivalTime = startTime.arrivalTime;
+  //       assert(orgArrivalTime != null);
+  //     }
+  //   }
 
-    let orgPlatform: PlatformLike | null = null;
-    if (movePlatform) {
-      orgPlatform = diaTime.platform;
-    }
+  //   let orgPlatform: PlatformLike | null = null;
+  //   if (movePlatform) {
+  //     orgPlatform = diaTime.platform;
+  //   }
 
-    return {
-      this: undefined,
-      redo: () => {
-        if (orgDepartureTime !== null) {
-          diaTime.departureTime = getNewTime(train.getTrain(), diaTime, orgDepartureTime, timeDiff, 'DepartureTime');
-        }
-        if (orgArrivalTime !== null) {
-          diaTime.arrivalTime = getNewTime(train.getTrain(), diaTime, orgArrivalTime, timeDiff, 'ArrivalTime');
-        }
-        if (movePlatform && newPlatform !== null) {
-          diaTime.platform = newPlatform;
-        }
-      },
-      undo: () => {
-        if (orgDepartureTime !== null) {
-          diaTime.departureTime = orgDepartureTime;
-        }
-        if (orgArrivalTime !== null) {
-          diaTime.arrivalTime = orgArrivalTime;
-        }
-        if (orgPlatform !== null) {
-          diaTime.platform = orgPlatform;
-        }
-      },
-    };
-  }
+  //   return {
+  //     this: undefined,
+  //     redo: () => {
+  //       if (orgDepartureTime !== null) {
+  //         diaTime.departureTime = getNewTime(train.getTrain(), diaTime, orgDepartureTime, timeDiff, 'DepartureTime');
+  //       }
+  //       if (orgArrivalTime !== null) {
+  //         diaTime.arrivalTime = getNewTime(train.getTrain(), diaTime, orgArrivalTime, timeDiff, 'ArrivalTime');
+  //       }
+  //       if (movePlatform && newPlatform !== null) {
+  //         diaTime.platform = newPlatform;
+  //       }
+  //     },
+  //     undo: () => {
+  //       if (orgDepartureTime !== null) {
+  //         diaTime.departureTime = orgDepartureTime;
+  //       }
+  //       if (orgArrivalTime !== null) {
+  //         diaTime.arrivalTime = orgArrivalTime;
+  //       }
+  //       if (orgPlatform !== null) {
+  //         diaTime.platform = orgPlatform;
+  //       }
+  //     },
+  //   };
+  // }
 }
 
 function getKey(train: Train, diaTime: DiaTime, timeType: 'arrivalTime' | 'departureTime', isPlatform: boolean) {
@@ -330,7 +336,6 @@ export class SelectionGroupManager {
       const train = selection.getTrain();
       for (const diaTime of train.diaTimes) {
         for (const timeType of ['arrivalTime', 'departureTime'] as const) {
-          
         }
       }
     }
@@ -390,7 +395,6 @@ export class SelectionGroupManager {
       }
     }
   }
-
 
   // updateShape() {
   //   const scale = this.stageKonva.scale;
@@ -638,13 +642,13 @@ export class SelectionGroupManager {
     this.updateShape();
   }
 
-  private onDragStart() {
-    const pointerPosition = getPointerPosition(this.layer.getStage());
-    this.dragStartPoint = {
-      x: pointerPosition.x,
-      y: pointerPosition.y,
-    };
-    this.trainDragManager.setDragStartPoint();
-    this.updateShape();
-  }
+  // private onDragStart() {
+  //   const pointerPosition = getPointerPosition(this.layer.getStage());
+  //   this.dragStartPoint = {
+  //     x: pointerPosition.x,
+  //     y: pointerPosition.y,
+  //   };
+  //   this.trainDragManager.setDragStartPoint();
+  //   this.updateShape();
+  // }
 }

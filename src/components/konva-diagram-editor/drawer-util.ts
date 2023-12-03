@@ -10,6 +10,7 @@ export type DiagramProps = DeepReadonly<{
   inboundTrains: readonly Train[];
   outboundTrains: readonly Train[];
   trains: Map<string, Train>;
+  setTrains: (f: (trains: Map<string, Train>) => void) => void;
   timetable: OutlinedTimetable;
   clipboard: AppClipboard;
   railwayLine: RailwayLine;

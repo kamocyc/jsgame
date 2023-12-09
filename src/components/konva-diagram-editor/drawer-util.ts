@@ -1,23 +1,18 @@
 import { DeepReadonly } from 'ts-essentials';
 import { OperationError, RailwayLine } from '../../mapEditorModel';
-import { AppClipboard, CrudTrain, StationLike, Train } from '../../model';
+import { AppClipboard, CrudTrain, StationLike } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 
-export type DiagramProps = DeepReadonly<{
-  stationIds: string[];
-  stations: Map<string, StationLike>;
-  crudTrain: CrudTrain;
-  inboundTrains: readonly Train[];
-  outboundTrains: readonly Train[];
-  trains: Map<string, Train>;
-  setTrains: (f: (trains: Map<string, Train>) => void) => void;
-  timetable: OutlinedTimetable;
-  clipboard: AppClipboard;
-  railwayLine: RailwayLine;
-  errors: readonly OperationError[];
-  setClipboard: (clipboard: AppClipboard) => void;
-  getTrainsWithDirections: () => DeepReadonly<[Train[], Train[]]>;
-}>;
+export type DiagramProps = {
+  readonly stationIds: DeepReadonly<string[]>;
+  readonly stations: DeepReadonly<Map<string, StationLike>>;
+  readonly crudTrain: DeepReadonly<CrudTrain>;
+  readonly timetable: DeepReadonly<OutlinedTimetable>;
+  readonly clipboard: AppClipboard;
+  readonly railwayLine: DeepReadonly<RailwayLine>;
+  readonly errors: DeepReadonly<OperationError[]>;
+  readonly setClipboard: (clipboard: AppClipboard) => void;
+};
 
 export const hitStrokeWidth = 10;
 

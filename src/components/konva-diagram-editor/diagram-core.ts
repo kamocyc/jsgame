@@ -11,7 +11,7 @@ export function copyTrains(props: DiagramProps, selectedTrains: DeepReadonly<Tra
 
   props.setClipboard({
     trains: trains,
-    originalTrains: selectedTrains,
+    originalTrainIds: selectedTrains.map((t) => t.trainId),
   });
 
   console.log('copied: ' + trains.length);
@@ -35,8 +35,8 @@ export function pasteTrains(props: DiagramProps): Train[] {
       if (diaTime.arrivalTime != null) diaTime.arrivalTime += 2 * 60;
       if (diaTime.departureTime != null) diaTime.departureTime += 2 * 60;
     }
-    const originalTrain = props.clipboard.originalTrains[i];
-    const direction = getDirection(props.timetable, originalTrain.trainId);
+    const originalTrainId = props.clipboard.originalTrainIds[i];
+    const direction = getDirection(props.timetable, originalTrainId);
     addingNewTrains.push({
       train: train as Train,
       beforeTrainId: null,

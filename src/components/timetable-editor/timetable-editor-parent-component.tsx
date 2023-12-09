@@ -1,5 +1,6 @@
 import { produce } from 'immer';
-import { StateUpdater, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { StateUpdater } from '../../common';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates, OperationError } from '../../mapEditorModel';

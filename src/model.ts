@@ -162,7 +162,7 @@ export function cloneTrain(train: DeepReadonly<Train>): Train {
 
 export interface AppClipboard {
   trains: Train[];
-  originalTrains: DeepReadonly<Train[]>;
+  originalTrainIds: DeepReadonly<string[]>;
 }
 
 export interface ContextData {
@@ -278,4 +278,5 @@ export interface CrudTrain {
   addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => void;
   deleteTrains: (trainIds: string[]) => void;
   updateTrain: (trainId: string, updater: (train: Train) => void) => void;
+  setTrains: (f: (trains: Map<string, Train>) => void) => void;
 }

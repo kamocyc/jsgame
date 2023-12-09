@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
 import { Stage } from 'react-konva';
 import { useRecoilState, useRecoilValue } from 'recoil';
+import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
+import { Train } from '../../model';
 import { copyTrains, deleteTrains, pasteTrains } from '../konva-diagram-editor/diagram-core';
 import { DiagramProps } from '../konva-diagram-editor/drawer-util';
 import {
+  allTrainsMapAtom,
   canvasHeight,
   isStationExpandedAtom,
   stageStateAtom,
@@ -15,12 +18,28 @@ import { MainViewKonva } from '../konva-diagram-editor/stage-konva';
 import { StationViewKonva } from '../konva-diagram-editor/station-view-konva';
 import { getDragStartTimes, setDraggingPoint } from '../konva-diagram-editor/train-collection-konva';
 
-export function KonvaCanvas(props: DiagramProps) {
+export function KonvaCanvas(props: DiagramProps & { trains: DeepReadonly<Map<string, Train>> }) {
   const [, setIsStationExpanded] = useRecoilState(isStationExpandedAtom);
   const [stations, setStationsAtom] = useRecoilState(stationsAtom);
   const [selectedTrainIds, setSelectedTrainIds] = useRecoilState(stationIdsAtom);
   const stageState = useRecoilValue(stageStateAtom);
   const stageY = stageState.y;
+  const [trains, setTrains] = useRecoilState(allTrainsMapAtom);
+
+  const minTime = Math.min(
+    ...(
+      [...trains.values()].map((train) =>
+        train.diaTimes
+          .map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime])
+          .flat()
+          .filter((t) => t !== null)
+      ) as number[][]
+    ).flat()
+  );
+
+  useEffect(() => {
+    setTrains(props.trains);
+  }, [props.trains]);
 
   useEffect(() => {
     setStationsAtom(props.stations);
@@ -48,14 +67,18 @@ export function KonvaCanvas(props: DiagramProps) {
         if (e.key === 'ArrowLeft') {
           const startTimes = getDragStartTimes(selectedTrainIds, props.trains);
           const timeDiff = -1 * 15;
-          setDraggingPoint(selectedTrainIds, props.trains, timeDiff, startTimes);
+          props.crudTrain.setTrains((trains) => {
+            setDraggingPoint(selectedTrainIds, trains, timeDiff, startTimes);
+          });
 
           e.preventDefault();
         }
         if (e.key === 'ArrowRight') {
           const startTimes = getDragStartTimes(selectedTrainIds, props.trains);
           const timeDiff = 1 * 15;
-          setDraggingPoint(selectedTrainIds, props.trains, timeDiff, startTimes);
+          props.crudTrain.setTrains((trains) => {
+            setDraggingPoint(selectedTrainIds, trains, timeDiff, startTimes);
+          });
 
           e.preventDefault();
         }
@@ -76,7 +99,12 @@ export function KonvaCanvas(props: DiagramProps) {
           <Stage y={stageY} width={200} height={canvasHeight}>
             <StationViewKonva />
           </Stage>
-          <MainViewKonva diagramProps={props} clientHeight={1000 /*dummy*/} clientWidth={canvasHeight} />
+          <MainViewKonva
+            diagramProps={props}
+            minTime={minTime}
+            clientHeight={1000 /*dummy*/}
+            clientWidth={canvasHeight}
+          />
         </>
       )}
     </div>

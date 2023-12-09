@@ -167,9 +167,9 @@ export const StationLineKonva = forwardRef(function StationLineKonva(props: Stat
   );
 });
 
-export type StationLineCollectionKonvaProps = {
+export type StationLineCollectionKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;
-};
+}>;
 export const StationLineCollectionKonva = forwardRef(function StationLineCollectionKonva(
   props: StationLineCollectionKonvaProps,
   ref: any

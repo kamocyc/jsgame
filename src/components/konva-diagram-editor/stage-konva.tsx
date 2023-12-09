@@ -388,6 +388,7 @@ export type MainViewKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;
   clientWidth: number;
   clientHeight: number;
+  minTime: number;
 }>;
 
 export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKonvaProps, ref: any) {
@@ -395,18 +396,6 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
 
   const [stageState, setStageState] = useRecoilState(stageStateAtom);
   const secondWidth = useRecoilValue(secondWidthAtom);
-
-  const minTime = Math.min(
-    ...(diagramProps.inboundTrains
-      .map((train) => train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat())
-      .concat(
-        diagramProps.outboundTrains.map((train) =>
-          train.diaTimes.map((diaTime) => [diaTime.arrivalTime, diaTime.departureTime]).flat()
-        )
-      )
-      .flat()
-      .filter((t) => t != null) as number[])
-  );
 
   useEffect(() => {
     const fitStageIntoParentContainer = () => {
@@ -422,7 +411,7 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
 
     setStageState((state) => ({
       ...state,
-      x: Math.min(0, -(minTime - 10 * 60) * secondWidth * stageState.scale),
+      x: Math.min(0, -(props.minTime - 10 * 60) * secondWidth * stageState.scale),
     }));
 
     return () => {

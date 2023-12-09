@@ -1,6 +1,6 @@
 import Konva from 'konva';
-import { atom, selector, useRecoilValue } from 'recoil';
-import { DeepReadonly } from 'ts-essentials';
+import { atom, selector, selectorFamily, useRecoilValue } from 'recoil';
+import { DeepReadonly, assert } from 'ts-essentials';
 import { nn } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import { AppClipboard, DiaTime, StationLike, TimetableDirection, Train } from '../../model';
@@ -40,7 +40,7 @@ export function useViewStateValues(): DeepReadonly<ViewState> {
 }
 
 export function createPositionDiaTimeMap(
-  diagramProps: DiagramProps,
+  diagramProps: DeepReadonly<DiagramProps>,
   {
     secondWidth,
     stationPositions,
@@ -156,7 +156,7 @@ export class ViewStateManager {
 
   constructor(stationIds: DeepReadonly<string[]>, private stations: DeepReadonly<Map<string, StationLike>>) {
     const secondWidth = virtualCanvasWidth / 24 / 60 / 60;
-    const stationPositions = this.createStationPositions(stationIds);
+    const stationPositions = this.createStationPositions(stationIds.map((stationId) => nn(stations.get(stationId))));
 
     this.stationPositions = stationPositions;
     this.secondWidth = secondWidth;
@@ -167,15 +167,15 @@ export class ViewStateManager {
     }
   }
 
-  private createStationPositions(stationIds: DeepReadonly<string[]>): StationPosition[] {
+  private createStationPositions(stations: DeepReadonly<StationLike[]>): StationPosition[] {
     let position = 50;
 
     const stationPositions: StationPosition[] = [];
-    for (const stationId of stationIds) {
-      stationPositions.push({ stationId: stationId, diagramPosition: position });
+    for (const station of stations) {
+      stationPositions.push({ stationId: station.stationId, diagramPosition: position });
       position += 50;
-      if (this.isStationExpandedMap && this.isStationExpandedMap.get(stationId)) {
-        position += 30 * stationId.platforms.length + 20;
+      if (this.isStationExpandedMap && this.isStationExpandedMap.get(station.stationId)) {
+        position += 30 * station.platforms.length + 20;
       }
     }
 
@@ -295,19 +295,15 @@ export const selectedTrainIdsAtom = atom<DeepReadonly<string[]>>({
 //   setClipboard: (clipboard: AppClipboard) => void;
 //   getTrainsWithDirections: () => DeepReadonly<[Train[], Train[]]>;
 // }>;
-export const inboundTrainsAtom = atom<DeepReadonly<Train[]>>({
-  key: 'inboundTrainsAtom',
-  default: [],
-});
-export const outboundTrainsAtom = atom<DeepReadonly<Train[]>>({
-  key: 'outboundTrainsAtom',
-  default: [],
+export const allTrainsMapAtom = atom<DeepReadonly<Map<string, Train>>>({
+  key: 'allTrainsMapAtom',
+  default: new Map(),
 });
 export const clipboard = atom<DeepReadonly<AppClipboard>>({
   key: 'clipboard',
   default: {
     trains: [],
-    originalTrains: [],
+    originalTrainIds: [],
   },
 });
 
@@ -372,3 +368,14 @@ export const getMouseEventManager = () => {
 
   return mouseEventManager;
 };
+
+export const trainSelectorFamily = selectorFamily<DeepReadonly<Train>, string>({
+  key: 'trainAtomFamily',
+  get:
+    (trainId) =>
+    ({ get }) => {
+      const train = get(allTrainsMapAtom).get(trainId);
+      assert(train != null, 'train not found: ' + trainId);
+      return train;
+    },
+});

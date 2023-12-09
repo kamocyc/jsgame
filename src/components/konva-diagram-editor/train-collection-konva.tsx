@@ -7,6 +7,7 @@ import { DiaTime, Point, StationLike, Train } from '../../model';
 import { getDirection } from '../../outlinedTimetableData';
 import { DiagramProps } from './drawer-util';
 import {
+  allTrainsMapAtom,
   createPositionDiaTimeMap,
   getPointerPosition,
   getPositionFromTime,
@@ -414,16 +415,13 @@ function getNewTime(
 // ドラッグ開始時の時刻点を記録しておく
 function setDraggingPointForTime(
   timeDiff: number,
-  trainId: string,
+  train: Train,
   diaTimeId: string,
   arrivalOrDeparture: 'arrivalTime' | 'departureTime',
   movePlatform: boolean,
   newPlatformId: string | null,
-  trains: DeepReadonly<Map<string, Train>>,
   dragStartTrainTimes: DeepReadonly<{ trainId: string; diaTimes: DiaTime[] }[]>
 ) {
-  const train = nn(trains.get(trainId));
-  assert(train !== undefined);
   const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
   assert(diaTime !== undefined);
 
@@ -445,11 +443,6 @@ function setDraggingPointForTime(
       orgArrivalTime = startTime.arrivalTime;
       assert(orgArrivalTime != null);
     }
-  }
-
-  let orgPlatformId: string | null = null;
-  if (movePlatform) {
-    orgPlatformId = diaTime.platformId;
   }
 
   if (orgDepartureTime !== null) {
@@ -529,9 +522,7 @@ export const TrainCollectionKonva = forwardRef(function TrainCollectionKonva(
   const secondWidth = useRecoilValue(secondWidthAtom);
   const viewState = useViewStateValues();
   const selectedTrainIds = useRecoilValue(selectedTrainIdsAtom);
-  const trains = diagramProps.trains;
-
-  const bothTrains = diagramProps.inboundTrains.concat(diagramProps.outboundTrains);
+  const trains = useRecoilValue(allTrainsMapAtom);
 
   mouseEventManager.registerDragStartHandler('train-line-group', (e) => {
     return getDragStartTimes(selectedTrainIds, trains);
@@ -558,19 +549,20 @@ export const TrainCollectionKonva = forwardRef(function TrainCollectionKonva(
       assert(
         trainId !== undefined && diaTimeId !== undefined && platformOrStation !== undefined && timeType !== undefined
       );
-      setDraggingPointForTime(
-        timeDiff,
-        trainId,
-        diaTimeId,
-        timeType,
-        platformOrStation === 'platform',
-        platformId ?? null,
-        trains,
-        dragStartTimes
-      );
+      diagramProps.crudTrain.updateTrain(trainId, (train) => {
+        setDraggingPointForTime(
+          timeDiff,
+          train,
+          diaTimeId,
+          timeType,
+          platformOrStation === 'platform',
+          platformId ?? null,
+          dragStartTimes
+        );
+      });
     } else {
       // スジ全体
-      diagramProps.setTrains((trains) => {
+      diagramProps.crudTrain.setTrains((trains) => {
         setDraggingPoint(selectedTrainIds, trains, timeDiff, dragStartTimes);
       });
     }
@@ -578,7 +570,7 @@ export const TrainCollectionKonva = forwardRef(function TrainCollectionKonva(
 
   return (
     <Group id={'train-line-group'}>
-      {bothTrains.map((train) => (
+      {[...trains.values()].map((train) => (
         <TrainKonva
           key={train.trainId}
           mouseEventManager={mouseEventManager}

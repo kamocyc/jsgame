@@ -44,7 +44,7 @@ function StationTimetableComponent({
       <table>
         <tbody>
           {Object.keys(stationTimetable).map((hour) => (
-            <tr>
+            <tr key={hour}>
               <td style={{ borderRight: 'solid 1px black', padding: '3px' }}>{hour}</td>
               <td>
                 {stationTimetable[Number(hour)].map(([diaTime, stationId]) => (

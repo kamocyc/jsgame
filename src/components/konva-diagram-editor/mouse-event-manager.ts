@@ -50,18 +50,13 @@ export class MouseEventManager {
     this.setEventHandlers(stage);
   }
 
-  removeEventHandlers(stage: Konva.Stage) {
+  private removeEventHandlers(stage: Konva.Stage) {
     stage.off('mousedown');
     stage.off('mousemove');
     stage.off('mouseup');
-
-    this.clickHandlerMap.clear();
-    this.dragStartHandlerMap.clear();
-    this.dragMoveHandlerMap.clear();
-    this.dragEndHandlerMap.clear();
   }
 
-  setEventHandlers(stage: Konva.Stage) {
+  private setEventHandlers(stage: Konva.Stage) {
     stage.on('mousedown', (e) => {
       console.log('mousedown');
       this.mousedownStartPoint = getPointerPosition(stage);
@@ -77,7 +72,7 @@ export class MouseEventManager {
       }
 
       // throttling
-      if (Date.now() < this.lastDragMoveTime + 100) return;
+      if (Date.now() < this.lastDragMoveTime + 50) return;
       this.lastDragMoveTime = Date.now();
 
       // console.log({ targetId: e.target.id() });

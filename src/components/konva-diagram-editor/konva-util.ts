@@ -4,7 +4,7 @@ import { DeepReadonly, assert } from 'ts-essentials';
 import { nn } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import { AppClipboard, DiaTime, StationLike, TimetableDirection, Train } from '../../model';
-import { DiagramProps, StationPosition } from './drawer-util';
+import { StationPosition } from './drawer-util';
 import { MouseEventManager } from './mouse-event-manager';
 import { getPlatformPositions } from './station-view-konva';
 
@@ -40,7 +40,7 @@ export function useViewStateValues(): DeepReadonly<ViewState> {
 }
 
 export function createPositionDiaTimeMap(
-  diagramProps: DeepReadonly<DiagramProps>,
+  stations: DeepReadonly<Map<string, StationLike>>,
   {
     secondWidth,
     stationPositions,
@@ -75,7 +75,7 @@ export function createPositionDiaTimeMap(
 
     const times = [];
     if (isStationExpanded) {
-      const platforms = nn(diagramProps.stations.get(diaTime.stationId)).platforms;
+      const platforms = nn(stations.get(diaTime.stationId)).platforms;
       const platformIndex = platforms.findIndex((p) => p.platformId === diaTime.platformId);
       if (platformIndex !== -1) {
         const [platformPositions, lastLinePosition] = getPlatformPositions(platforms);

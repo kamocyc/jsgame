@@ -468,7 +468,7 @@ export function TrainListComponent({
               trainId: generateId(),
               trainName: '',
               trainType: undefined,
-              diaTimes: [...stations.values()].map((station) => {
+              diaTimes: stations.map((station) => {
                 const platform = getRailwayPlatform(
                   railwayLine,
                   station.stationId,

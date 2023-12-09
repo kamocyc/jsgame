@@ -288,7 +288,6 @@ export function TimetableEditorComponent({
     return [draftTimetable, inboundTrains, outboundTrains] as const;
   };
 
-  console.log({ stations: timetableData._stations, inboundTrains, outboundTrains });
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div>
@@ -373,8 +372,8 @@ export function TimetableEditorComponent({
                 tabText: '上り',
                 component: () => (
                   <TimetableEditorTableComponent
-                    stationIds={timetable.stationIds}
                     stations={timetableData._stations}
+                    stationIds={timetable.stationIds}
                     trains={inboundTrains}
                     otherDirectionTrains={outboundTrains}
                     setTimetable={(f) => {
@@ -402,7 +401,7 @@ export function TimetableEditorComponent({
                 tabText: '下り',
                 component: () => (
                   <TimetableEditorTableComponent
-                    stations={timetableData._stations}
+                    stations={reverseArray(timetableData._stations)}
                     stationIds={reverseArray(timetable.stationIds)}
                     trains={outboundTrains}
                     otherDirectionTrains={inboundTrains}

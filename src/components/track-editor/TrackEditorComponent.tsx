@@ -96,7 +96,7 @@ function toStringEditorData(appStates: AppStates) {
     extendedMap: appStates.mapState.extendedMap,
     placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
-    stations: [...appStates.mapState.stations.values()],
+    stations: appStates.mapState.stations,
   };
 
   return JSON.stringify(JSON_decycle(obj), null, 2);

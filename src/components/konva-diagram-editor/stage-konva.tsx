@@ -493,7 +493,6 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
   useEffect(() => {
     const fitStageIntoParentContainer = () => {
       const clientWidth = document.documentElement.clientWidth - 230; /* この値はなんとかして設定する */
-      console.log({ clientWidth });
       setStageState((state) => ({ ...state, width: clientWidth }));
     };
 

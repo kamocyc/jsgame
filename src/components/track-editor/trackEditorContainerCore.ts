@@ -493,9 +493,7 @@ function deleteVariousThings(
   const platformId = getPlatformId(mouseStartCell, mouseEndCell);
   if (platformId !== null) {
     // 駅の削除
-    const station = [...appStates.mapState.stations.values()].filter((s) =>
-      s.platforms.some((p) => p.platformId === platformId)
-    )[0];
+    const station = appStates.mapState.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
     const result = deleteStation(appStates.map, station);
     if (result !== true && 'error' in result) {
       setToast(result.error);
@@ -634,8 +632,6 @@ export function onmouseup(
 }
 
 export function onwheel(e: React.WheelEvent, appStates: AppStates, update: () => void) {
-  e.preventDefault();
-
   const scaleBy = 1.05;
   const delta = e.deltaY;
 

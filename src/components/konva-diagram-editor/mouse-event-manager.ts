@@ -58,7 +58,6 @@ export class MouseEventManager {
 
   private setEventHandlers(stage: Konva.Stage) {
     stage.on('mousedown', (e) => {
-      console.log('mousedown');
       this.mousedownStartPoint = getPointerPosition(stage);
       this.mousedownStartShape = e.target;
       this.didDragStartCalled = false;

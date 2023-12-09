@@ -357,7 +357,7 @@ export function searchPath(
 
   const stations = timetableData._stations;
   // 駅ノードの初期化（未確定のノードのみ）
-  let stationNodes = [...stations.values()].map((station) => ({
+  let stationNodes = stations.map((station) => ({
     station: station,
     distance: station.stationId === initialPosition.stationId ? startTime : Number.MAX_SAFE_INTEGER,
   }));

@@ -3,14 +3,16 @@ import { Stage } from 'react-konva';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
-import { Train } from '../../model';
+import { StationLike, Train } from '../../model';
 import { copyTrains, deleteTrains, pasteTrains } from '../konva-diagram-editor/diagram-core';
 import { DiagramProps } from '../konva-diagram-editor/drawer-util';
 import {
   allTrainsMapAtom,
   canvasHeight,
   isStationExpandedAtom,
+  mouseState,
   stageStateAtom,
+  stationCanvasWidthAtom,
   stationIdsAtom,
   stationsAtom,
 } from '../konva-diagram-editor/konva-util';
@@ -18,13 +20,16 @@ import { MainViewKonva } from '../konva-diagram-editor/stage-konva';
 import { StationViewKonva } from '../konva-diagram-editor/station-view-konva';
 import { getDragStartTimes, setDraggingPoint } from '../konva-diagram-editor/train-collection-konva';
 
-export function KonvaCanvas(props: DiagramProps & { trains: DeepReadonly<Map<string, Train>> }) {
+export function KonvaCanvas(
+  props: DiagramProps & { trains: DeepReadonly<Map<string, Train>> } & { stations: DeepReadonly<StationLike[]> }
+) {
   const [, setIsStationExpanded] = useRecoilState(isStationExpandedAtom);
   const [stations, setStationsAtom] = useRecoilState(stationsAtom);
   const [selectedTrainIds, setSelectedTrainIds] = useRecoilState(stationIdsAtom);
   const stageState = useRecoilValue(stageStateAtom);
   const stageY = stageState.y;
   const [trains, setTrains] = useRecoilState(allTrainsMapAtom);
+  const stationCanvasWidth = useRecoilValue(stationCanvasWidthAtom);
 
   const minTime = Math.min(
     ...(
@@ -44,7 +49,7 @@ export function KonvaCanvas(props: DiagramProps & { trains: DeepReadonly<Map<str
   useEffect(() => {
     setStationsAtom(props.stations);
     setSelectedTrainIds(props.stationIds);
-    setIsStationExpanded(new Map<string, boolean>([...props.stations.values()].map((s) => [s.stationId, false])));
+    setIsStationExpanded(new Map<string, boolean>(stations.map((s) => [s.stationId, false])));
   }, [props.stations]);
 
   return (
@@ -89,14 +94,20 @@ export function KonvaCanvas(props: DiagramProps & { trains: DeepReadonly<Map<str
           pasteTrains(props);
         }
       }}
+      onMouseDown={() => {
+        mouseState.isMouseDown = true;
+      }}
+      onMouseUp={() => {
+        mouseState.isMouseDown = false;
+      }}
       tabIndex={-1}
       style={{ display: 'flex' }}
     >
-      {stations.size === 0 ? (
+      {stations.length === 0 ? (
         <></>
       ) : (
         <>
-          <Stage y={stageY} width={200} height={canvasHeight}>
+          <Stage y={stageY} width={stationCanvasWidth} height={canvasHeight}>
             <StationViewKonva />
           </Stage>
           <MainViewKonva

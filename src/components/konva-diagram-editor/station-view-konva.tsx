@@ -10,8 +10,8 @@ import {
   isStationExpandedAtom,
   stageStateAtom,
   stationCanvasWidthAtom,
+  stationMapSelector,
   stationPositionsAtom,
-  stationsAtom,
 } from './konva-util';
 
 const initialScale = 1;
@@ -251,7 +251,7 @@ export const StationKonva = forwardRef<Konva.Text | null, Props>(function Statio
   { station, isStationExpanded, canvasWidth }: Props,
   ref
 ) {
-  const fontSize = 20;
+  const fontSize = 16;
   const stageState = useRecoilValue(stageStateAtom);
   const stationPositions = useRecoilValue(stationPositionsAtom);
   const scale = stageState.scale;
@@ -260,8 +260,14 @@ export const StationKonva = forwardRef<Konva.Text | null, Props>(function Statio
 
   return (
     <Group>
-      <Text text={station.stationName} x={0} y={stationPosition - fontSize} />
-      <Text text={isStationExpanded ? '▶' : '▼'} x={canvasWidth - platformFontSize} y={stationPosition + 2} ref={ref} />
+      <Text fontSize={fontSize} text={station.stationName} x={0} y={stationPosition - fontSize} />
+      <Text
+        fontSize={fontSize}
+        text={isStationExpanded ? '▶' : '▼'}
+        x={canvasWidth - platformFontSize}
+        y={stationPosition + 2}
+        ref={ref}
+      />
       <Line points={[0, stationPosition, canvasWidth, stationPosition]} stroke={gridColor} strokeWidth={1} />
       {/* platform group */}
       {isStationExpanded ? (
@@ -275,7 +281,12 @@ export const StationKonva = forwardRef<Konva.Text | null, Props>(function Statio
                   stroke={gridColor}
                   strokeWidth={1}
                 />
-                <Text text={platform.platformName} x={0} y={platformPositions[i] * scale - platformFontSize} />
+                <Text
+                  fontSize={platformFontSize}
+                  text={platform.platformName}
+                  x={0}
+                  y={platformPositions[i] * scale - platformFontSize + 2}
+                />
               </Group>
             );
           })}
@@ -301,12 +312,12 @@ export function StationViewKonva({}: StationViewKonvaProps) {
   const stationKonvaRef = useRef<(Konva.Text | null)[]>([]);
   const stationPositions = useRecoilValue(stationPositionsAtom);
   const [isStationExpanded, setIsStationExpanded] = useRecoilState(isStationExpandedAtom);
-  const stations = useRecoilValue(stationsAtom);
+  const stationMap = useRecoilValue(stationMapSelector);
   const stationCanvasWidth = useRecoilValue(stationCanvasWidthAtom);
   const stageState = useRecoilValue(stageStateAtom);
 
   const stationKonvas = stationPositions.map((stationPosition, i) => {
-    const station = nn(stations.get(stationPosition.stationId));
+    const station = nn(stationMap.get(stationPosition.stationId));
     return (
       <StationKonva
         ref={(el) => (stationKonvaRef.current[i] = el)}

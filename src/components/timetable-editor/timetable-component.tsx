@@ -30,9 +30,9 @@ function getStationTimetable(trains: DeepReadonly<Train[]>, stationId: string) {
 
 function StationTimetableComponent({
   trains,
-  stations,
+  stationMap,
   stationId,
-}: DeepReadonly<{ trains: Train[]; stations: Map<string, StationLike>; stationId: string }>) {
+}: DeepReadonly<{ trains: Train[]; stationMap: Map<string, StationLike>; stationId: string }>) {
   const stationTimetable = getStationTimetable(trains, stationId);
 
   function showMinutes(seconds: number) {
@@ -50,7 +50,7 @@ function StationTimetableComponent({
                 {stationTimetable[Number(hour)].map(([diaTime, stationId]) => (
                   <span key={diaTime.diaTimeId} style={{ margin: '5px' }}>
                     <span>{showMinutes(diaTime.departureTime!)}</span>
-                    <span style={{ fontSize: '10px' }}>{nn(stations.get(stationId)).stationName}</span>
+                    <span style={{ fontSize: '10px' }}>{nn(stationMap.get(stationId)).stationName}</span>
                   </span>
                 ))}
               </td>
@@ -65,12 +65,12 @@ function StationTimetableComponent({
 export function StationTimetablePageComponent({
   inboundTrains,
   outboundTrains,
-  stations,
+  stationMap,
   stationIds,
 }: DeepReadonly<{
   inboundTrains: Train[];
   outboundTrains: Train[];
-  stations: Map<string, StationLike>;
+  stationMap: Map<string, StationLike>;
   stationIds: string[];
 }>) {
   const [selectedStationId, setSelectedDiaStation] = useState(stationIds[0]);
@@ -93,7 +93,7 @@ export function StationTimetablePageComponent({
         >
           {stationIds.map((stationId) => (
             <option key={stationId} value={stationId}>
-              {nn(stations.get(stationId)).stationName}
+              {nn(stationMap.get(stationId)).stationName}
             </option>
           ))}
         </select>
@@ -113,7 +113,7 @@ export function StationTimetablePageComponent({
       <div>
         <StationTimetableComponent
           stationId={selectedStationId}
-          stations={stations}
+          stationMap={stationMap}
           trains={timetableDirection === 'Inbound' ? inboundTrains : outboundTrains}
         />
       </div>

@@ -536,14 +536,14 @@ function getPlatformAgentNumber(agentManager_: AgentManagerBase, platformId: str
 function drawStations(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
-  stations: Map<string, StationLike>,
+  stations: StationLike[],
   tracks: Track[],
   agentManager: AgentManagerBase,
   showInfo: boolean
 ) {
   const fontSize = 14;
 
-  const drawnStationPoints: Map<string, Point[]> = new Map([...stations.keys()].map((s) => [s, []]));
+  const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
 
   for (const track of tracks) {
     const platform = track.track.platform;
@@ -592,19 +592,20 @@ function drawStations(
         }
       }
 
-      const station = [...stations.entries()].find(([_, station]) =>
+      const station = stations.find((station) =>
         station.platforms.some((platform) => platform.platformId === track.track.platform!.platformId)
       );
       assert(station !== undefined);
 
-      drawnStationPoints.get(station[0])!.push(track.begin);
+      drawnStationPoints.get(station.stationId)!.push(track.begin);
     }
   }
 
+  const stationMap = new Map(stations.map((s) => [s.stationId, s]));
   // 駅名を描画
   ctx.fillStyle = '#ffcccc';
   for (const [stationId, points] of drawnStationPoints) {
-    const station = stations.get(stationId)!;
+    const station = stationMap.get(stationId)!;
     const name = station.stationName;
     const x = points.reduce((acc, p) => acc + p.x, 0) / points.length;
     const y = Math.max(...points.map((p) => p.y));

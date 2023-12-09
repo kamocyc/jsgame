@@ -144,7 +144,7 @@ export function repeatTrains_(trains: Train[]): Train[] {
 
 // Timetableを含む全てのデータ
 export interface OutlinedTimetableData {
-  _stations: Map<string, StationLike>;
+  _stations: StationLike[];
   _trains: Map<string, Train>;
   _timetables: OutlinedTimetable[];
   _errors: OperationError[];
@@ -192,15 +192,17 @@ export const OutlinedTimetableFunc = {
   updateOperations(that_: OutlinedTimetableData) {
     const that = that_ as OutlinedTimetableData;
     const errors: OperationError[] = [];
+    const stationMap = new Map<string, StationLike>(that._stations.map((s) => [s.stationId, s]));
     for (const timetable of that._timetables) {
       const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(that, id));
-      const platforms = timetable.stationIds.map((stationId) => nn(that._stations.get(stationId)).platforms).flat();
+      const platforms = timetable.stationIds.map((stationId) => nn(stationMap.get(stationId)).platforms).flat();
       const { errors: occupationErrors, operations } = checkStationTrackOccupation(trains, platforms);
       errors.push(...occupationErrors);
       timetable.operations = operations;
     }
+    that._errors = errors;
 
-    return errors;
+    // return errors;
   },
   deleteTrains(that_: OutlinedTimetableData, timetableId: string, trainIds: ReadonlyArray<string>) {
     const that = that_ as OutlinedTimetableData;
@@ -293,13 +295,14 @@ export const OutlinedTimetableFunc = {
 
     const trains = outboundTrains.concat(inboundTrains);
 
+    const stationMap = new Map<string, StationLike>(that._stations.map((s) => [s.stationId, s]));
     timetable.inboundTrainIds = inboundTrains.map((train) => train.trainId);
     timetable.outboundTrainIds = outboundTrains.map((train) => train.trainId);
     timetable.stationIds = timetable.stationIds.slice().reverse();
     timetable.inboundIsFirstHalf = !timetable.inboundIsFirstHalf;
     timetable.operations = checkStationTrackOccupation(
       trains,
-      timetable.stationIds.map((s) => nn(that._stations.get(s)).platforms).flat()
+      timetable.stationIds.map((s) => nn(stationMap.get(s)).platforms).flat()
     ).operations;
 
     this.setTrains(that._trains, trains);

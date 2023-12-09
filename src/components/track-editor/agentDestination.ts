@@ -130,7 +130,7 @@ const moveProbFuncs: MoveProbFunc = {
 };
 
 interface AgentDestinationProps {
-  stations: Map<string, StationLike>;
+  stations: StationLike[];
   extendedMap: ExtendedCell[][];
   gameMap: GameMap;
   globalTimeManager: GlobalTimeManager;
@@ -208,7 +208,7 @@ export function getAgentDestination(
   return destination;
 }
 
-export function getStationPositions(stations: Map<string, StationLike>, gameMap: GameMap) {
+export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
   const platforms = gameMap
     .map((row) =>
       row

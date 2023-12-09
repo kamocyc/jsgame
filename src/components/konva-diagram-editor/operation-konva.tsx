@@ -6,7 +6,7 @@ import { assert, lst_, nn, whileLoop } from '../../common';
 import { Operation } from '../../model';
 import { getDirection } from '../../outlinedTimetableData';
 import { DiagramProps, hitStrokeWidth } from './drawer-util';
-import { allTrainsMapAtom, createPositionDiaTimeMap, useViewStateValues } from './konva-util';
+import { allTrainsMapAtom, createPositionDiaTimeMap, stationMapSelector, useViewStateValues } from './konva-util';
 
 // export class OperationCollectionKonva_ {
 //   private operationGroup: Konva.Group;
@@ -75,6 +75,7 @@ export const OperationKonva = forwardRef(function OperationKonva(props: Operatio
   const { diagramProps, operation } = props;
   const viewStateValues = useViewStateValues();
   const trains = useRecoilValue(allTrainsMapAtom);
+  const stationMap = useRecoilValue(stationMapSelector);
 
   let prevTrainId = operation.trainIds[0];
 
@@ -93,7 +94,7 @@ export const OperationKonva = forwardRef(function OperationKonva(props: Operatio
         const direction = getDirection(diagramProps.timetable, currTrainId);
 
         const prevTrainTimeDatas = createPositionDiaTimeMap(
-          diagramProps.stations,
+          stationMap,
           viewStateValues,
           nn(trains.get(prevTrainId)).diaTimes,
           direction
@@ -106,7 +107,7 @@ export const OperationKonva = forwardRef(function OperationKonva(props: Operatio
           ? prevTrainTimeDatas[prevTrainTimeDatas.length - 1]
           : prevTrainTimeDatas[prevTrainTimeDatas.length - 1];
         const currTrainTimeDatas = createPositionDiaTimeMap(
-          diagramProps.stations,
+          stationMap,
           viewStateValues,
           nn(trains.get(currTrainId)).diaTimes,
           direction

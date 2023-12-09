@@ -71,23 +71,11 @@ export function TimetableEditorParentComponent({
     );
     appStates.outlinedTimetableData = newTimetableData;
 
-    // console.log(appStates.outlinedTimetableData._trains[3]);
     // TODO: UIに表示する
     setErrors([...newTimetableData._errors]);
-    // update();
   };
 
-  // console.log(appStates.outlinedTimetableData._trains[3]);
   const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
-  // const setTimetableData = (timetableData: OutlinedTimetableData) => {
-  //   appStates.outlinedTimetableData = timetableData;
-  //   update();
-  // };
-  // const update = () => {
-  //   const errors = appStates.outlinedTimetableData.updateOperations();
-  //   // TODO: UIに表示する
-  //   setErrors(errors);
-  // };
   const update = () => {
     setAppStates((appStates) => ({
       ...appStates,
@@ -118,6 +106,8 @@ export function TimetableEditorParentComponent({
             id='file-selector'
             accept='.json'
             onChange={async (event) => {
+              // TODO
+              // @ts-ignore
               const diagram = await loadCustomFile(event);
               if (diagram != null) {
                 appStates.outlinedTimetableData = diagram;

@@ -1,34 +1,9 @@
 import { RefObject, useEffect, useRef, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { StateUpdater, parseTime, toStringFromSeconds } from '../../common';
-import { ContextData, Track, Train, getDefaultTime } from '../../model';
+import { ContextData, StationLike, Track, Train, getDefaultTime } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 import './timetable-editor.css';
-
-// function parseInputTextAsTime(text: string): string | undefined {
-//   text = text.replace(/[^0-9]/g, '');
-//   if (text.length <= 2) {
-//     // 分のみ => TODO: 直前の時間の次の分を利用する
-//   } else if (text.length === 3) {
-//     // 時が1桁
-//     const _hourText = text.substring(0, 1);
-//     const minuteText = text.substring(1);
-
-//     if (Number(minuteText) < 60) {
-//       return text;
-//     }
-//   } else if (text.length === 4) {
-//     // 時が2桁
-//     const hourText = text.substring(0, 2);
-//     const minuteText = text.substring(2);
-
-//     if (Number(hourText) < 24 && Number(minuteText) < 60) {
-//       return text;
-//     }
-//   } else {
-//     return undefined;
-//   }
-// }
 
 export class MapInfo {
   constructor(private readonly tracks: Track[]) {}
@@ -36,6 +11,10 @@ export class MapInfo {
   getTrackOfPlatform(platformId: string): DeepReadonly<Track> | undefined {
     return this.tracks.find((track) => track.track.platform?.platformId === platformId);
   }
+}
+
+export function getStationMap(stations: DeepReadonly<StationLike[]>): DeepReadonly<Map<string, StationLike>> {
+  return new Map(stations.map((station) => [station.stationId, station]));
 }
 
 // このコールバックでsetXXXを実行すると当然ながらコンポーネントが再描画される。パフォーマンスやよきせぬ動作になるので注意。
@@ -116,6 +95,11 @@ export function EditableTextComponent({
 }
 
 export function TimeInputComponent({ time, setTime }: { time: number | null; setTime: (time: number | null) => void }) {
+  const toStringFromTime = (time: number | null) => {
+    return time == null ? '・・' : toStringFromSeconds(time);
+  };
+  const initialValue = toStringFromTime(time);
+  const [inputValue, setInputValue] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
 
   // コントロール外をクリックしたときに編集を終了する
@@ -150,7 +134,6 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
 
   const height = 24;
   const width = 44;
-  const value = time == null ? '・・' : toStringFromSeconds(time);
   const onChange = (value: string) => {
     if (value === '') {
       setTime(null);
@@ -178,17 +161,21 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
         ref={ref}
         className={isEditing ? 'input-common' : 'text-common'}
         style={{ width: width != null ? width - 6 + 'px' : '100%', paddingRight: '2px' }}
-        value={value}
+        value={inputValue}
         onChange={(e) => {
-          const stringValue = (e.target as HTMLInputElement).value.trim();
-          if (!onChange(stringValue)) {
-            (e.target as HTMLInputElement).value = value;
-          }
+          setInputValue((e.target as HTMLInputElement).value);
         }}
         onFocus={() => {
           setIsEditing(true);
         }}
-        onBlur={() => {
+        onBlur={(e) => {
+          const stringValue = (e.target as HTMLInputElement).value.trim();
+          if (onChange(stringValue)) {
+            setInputValue(toStringFromTime(parseTime(stringValue) ?? null));
+          } else {
+            setInputValue(initialValue);
+          }
+
           setIsEditing(false);
         }}
         onKeyDown={(e) => {

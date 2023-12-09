@@ -10,7 +10,7 @@ export interface DiagramOperationProps {
   outboundTrains: readonly Train[];
   operations: Operation[];
   timetable: OutlinedTimetable;
-  stations: Map<string, StationLike>;
+  stationMap: Map<string, StationLike>;
 }
 
 interface DiagramOperationSubProps extends DiagramOperationProps {
@@ -129,9 +129,9 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                       const train = nn(getTrain(props, trainId));
                       return (
                         <>
-                          <td>{nn(props.stations.get(train.diaTimes[0].stationId)).stationName}</td>
+                          <td>{nn(props.stationMap.get(train.diaTimes[0].stationId)).stationName}</td>
                           <td>
-                            {nn(props.stations.get(train.diaTimes[train.diaTimes.length - 1].stationId)).stationName}
+                            {nn(props.stationMap.get(train.diaTimes[train.diaTimes.length - 1].stationId)).stationName}
                           </td>
                         </>
                       );
@@ -193,10 +193,10 @@ export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperatio
                 <td>{train.trainCode}</td>
                 <td>{train.trainType?.trainTypeName}</td>
                 <td>{train.trainName}</td>
-                <td>{nn(props.stations.get(diaTime1.stationId)).stationName}</td>
+                <td>{nn(props.stationMap.get(diaTime1.stationId)).stationName}</td>
                 <td>{time1 !== null ? toStringFromSeconds(time1) : ''}</td>
                 <td>{directionText}</td>
-                <td>{nn(props.stations.get(diaTime2.stationId)).stationName}</td>
+                <td>{nn(props.stationMap.get(diaTime2.stationId)).stationName}</td>
                 <td>{time2 !== null ? toStringFromSeconds(time2) : ''}</td>
               </tr>
             );

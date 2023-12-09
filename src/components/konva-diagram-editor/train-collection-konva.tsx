@@ -6,6 +6,7 @@ import { nn, toStringFromSeconds } from '../../common';
 import { DiaTime, Point, StationLike, Train } from '../../model';
 import { getDirection } from '../../outlinedTimetableData';
 import { DiagramProps } from './drawer-util';
+import { WarningKonva } from './hover-konva';
 import {
   allTrainsMapAtom,
   createPositionDiaTimeMap,
@@ -14,6 +15,7 @@ import {
   secondWidthAtom,
   selectedTrainIdsAtom,
   stageStateAtom,
+  stationMapSelector,
   useViewStateValues,
 } from './konva-util';
 import { MouseEventManager } from './mouse-event-manager';
@@ -139,7 +141,8 @@ export const TrainKonva = forwardRef(function TrainKonva(props: TrainKonvaProps,
   const viewState = useViewStateValues();
   const stationPositions = viewState.stationPositions;
   const direction = getDirection(diagramProps.timetable, train.trainId);
-  const points = createPositionDiaTimeMap(diagramProps.stations, viewState, train.diaTimes, direction)
+  const stationMap = useRecoilValue(stationMapSelector);
+  const points = createPositionDiaTimeMap(stationMap, viewState, train.diaTimes, direction)
     .map(({ x, y }) => [x, y])
     .flat();
   const [, setSelectedTrainIds] = useRecoilState(selectedTrainIdsAtom);
@@ -215,16 +218,32 @@ export const TrainKonva = forwardRef(function TrainKonva(props: TrainKonvaProps,
   return (
     <>
       <Line points={points} stroke={strokeColor} strokeWidth={1} hitStrokeWidth={10} name='trainLine' id={id} />
-      <Rect
-        id={'station-marker-'}
-        width={10}
-        height={10}
-        fill={'blue'}
-        stroke={'black'}
-        strokeWidth={0}
-        x={4000}
-        y={50}
-      />
+      {errors.map((error) => {
+        const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === error.diaTimeId);
+        if (diaTime === undefined) return <></>;
+
+        const time =
+          error.arrivalOrDeparture === 'arrivalTime'
+            ? diaTime?.arrivalTime
+            : error.arrivalOrDeparture === 'departureTime'
+            ? diaTime?.departureTime
+            : diaTime?.arrivalTime ?? diaTime?.departureTime;
+
+        const station = nn(stationMap.get(diaTime.stationId));
+
+        const warningPosition =
+          error != null && error.stationId != null && error.arrivalOrDeparture != null && time !== null
+            ? getTextLabelPosition(train, diaTime, station, time, error?.stationId, scale, error.arrivalOrDeparture)
+            : null;
+
+        if (warningPosition !== null) {
+          return (
+            <WarningKonva x={warningPosition.x + 40 / scale} y={warningPosition.y} message={error.type} scale={scale} />
+          );
+        } else {
+          return <></>;
+        }
+      })}
       {isSelected ? (
         train.diaTimes.map((diaTime) => {
           return timeTypes.map((timeType) => {
@@ -239,7 +258,7 @@ export const TrainKonva = forwardRef(function TrainKonva(props: TrainKonvaProps,
             }
 
             const direction = getDirection(diagramProps.timetable, train.trainId);
-            const station = nn(diagramProps.stations.get(diaTime.stationId));
+            const station = nn(stationMap.get(diaTime.stationId));
 
             const [platformPositions, lastLinePosition] = getPlatformPositions(station.platforms);
             const isStationExpanded = viewState.isStationExpanded.get(diaTime.stationId) ?? false;
@@ -270,14 +289,6 @@ export const TrainKonva = forwardRef(function TrainKonva(props: TrainKonvaProps,
               timePosition.y = positionY + timeOffsetY / scale;
             }
 
-            const error = errors.find(
-              (error) => error.diaTimeId === diaTime.diaTimeId && error.arrivalOrDeparture === timeType
-            );
-            const warningPosition =
-              error != null && error.stationId != null && error.arrivalOrDeparture != null
-                ? getTextLabelPosition(train, diaTime, station, time, error?.stationId, scale, error.arrivalOrDeparture)
-                : null;
-
             return (
               <Fragment key={'timeBox-' + diaTime.diaTimeId + '_' + timeType}>
                 <Rect
@@ -299,28 +310,15 @@ export const TrainKonva = forwardRef(function TrainKonva(props: TrainKonvaProps,
                   hitFunc={() => {}}
                 />
                 {isStationExpanded ? (
-                  <>
-                    <Rect
-                      id={getKey(train, diaTime, timeType, true)}
-                      x={markerPosition.x}
-                      y={positionY + platformPositions[platformIndex] - 5 / scale}
-                      width={10 / scale}
-                      height={10 / scale}
-                      fill={'blue'}
-                      stroke={'black'}
-                      strokeWidth={0}
-                    />
-                  </>
-                ) : (
-                  <></>
-                )}
-                {error && warningPosition ? (
-                  <Text
-                    fill={'#ff9000'}
-                    hitFunc={() => {}}
-                    text={error.type}
-                    x={warningPosition.x + 40 / scale}
-                    y={warningPosition.y}
+                  <Rect
+                    id={getKey(train, diaTime, timeType, true)}
+                    x={markerPosition.x}
+                    y={positionY + platformPositions[platformIndex] - 5 / scale}
+                    width={10 / scale}
+                    height={10 / scale}
+                    fill={'blue'}
+                    stroke={'black'}
+                    strokeWidth={0}
                   />
                 ) : (
                   <></>
@@ -503,14 +501,17 @@ export const TrainCollectionKonva = forwardRef(function TrainCollectionKonva(
   const viewState = useViewStateValues();
   const selectedTrainIds = useRecoilValue(selectedTrainIdsAtom);
   const trains = useRecoilValue(allTrainsMapAtom);
+  const stationMap = useRecoilValue(stationMapSelector);
 
   mouseEventManager.registerDragStartHandler('train-line-group', (e) => {
+    if (e.evt.button !== 0) return null;
     return getDragStartTimes(selectedTrainIds, trains);
   });
 
   mouseEventManager.registerDragMoveHandler('train-line-group', (e, target, dragStartPoint, dragStartTimes_) => {
     const stage = e.target.getStage();
     if (stage === null) return;
+    if (e.evt.button !== 0) return;
 
     if (!dragStartTimes_) return;
     const dragStartTimes = dragStartTimes_ as { trainId: string; diaTimes: DiaTime[] }[];
@@ -519,13 +520,9 @@ export const TrainCollectionKonva = forwardRef(function TrainCollectionKonva(
     if (dragStartPoint == null) return;
 
     const x = Math.round(dragPoint.x / secondWidth) * secondWidth;
-    const platformId = getPlatformUnderCursor(dragPoint.y, diagramProps.stations, viewState)?.platform?.platformId;
+    const platformId = getPlatformUnderCursor(dragPoint.y, stationMap, viewState)?.platform?.platformId;
 
     const timeDiff = Math.round((x - dragStartPoint.x) / secondWidth);
-    console.log({
-      id: target.id().substring(0, 8),
-      platformId: platformId,
-    });
     if (target.id().substring(0, 8) === 'timeBox-') {
       // 1つの時刻のみ
       const [_, trainId, diaTimeId, platformOrStation, timeType] = target.id().split('-');

@@ -326,7 +326,7 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManager2Props {
   extendedMap: ExtendedGameMap;
-  stations: Map<string, StationLike>;
+  stations: StationLike[];
   gameMap: GameMap;
   railwayLines: RailwayLine[];
   placedTrains: PlacedTrain[];

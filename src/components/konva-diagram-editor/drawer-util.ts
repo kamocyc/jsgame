@@ -1,11 +1,10 @@
 import { DeepReadonly } from 'ts-essentials';
 import { OperationError, RailwayLine } from '../../mapEditorModel';
-import { AppClipboard, CrudTrain, StationLike } from '../../model';
+import { AppClipboard, CrudTrain } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 
 export type DiagramProps = {
   readonly stationIds: DeepReadonly<string[]>;
-  readonly stations: DeepReadonly<Map<string, StationLike>>;
   readonly crudTrain: DeepReadonly<CrudTrain>;
   readonly timetable: DeepReadonly<OutlinedTimetable>;
   readonly clipboard: AppClipboard;

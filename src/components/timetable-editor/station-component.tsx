@@ -11,12 +11,12 @@ function StationComponent({
 }: // setDiaStation,
 DeepReadonly<{
   stationId: string;
-  stations: Map<string, DeepReadonly<StationLike>>;
+  stations: DeepReadonly<StationLike[]>;
   // setDiaStation: (diaStation: StationLike) => void;
 }>) {
   return (
     <EditableTextComponent
-      value={nn(stations.get(stationId)).stationName}
+      value={nn(stations.find((s) => s.stationId === stationId)).stationName}
       onChange={(value) => {
         // TODO
         // setDiaStation((station) => {
@@ -124,7 +124,7 @@ export function StationListComponent({
   setSettingData,
 }: DeepReadonly<{
   stationIds: string[];
-  stations: Map<string, DeepReadonly<StationLike>>;
+  stations: DeepReadonly<StationLike[]>;
   // setStations: (stations: StationLike[]) => void;
   setTimetable: SetTimetable;
   trains: readonly Train[];

@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Layer, Stage } from 'react-konva';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
-import { Point, Train } from '../../model';
+import { Point, StationLike, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { Polygon, sat } from '../../sat';
 import { DragRectKonva, DragRectKonvaProps } from './drag-rect-konva';
@@ -18,6 +18,7 @@ import {
   secondWidthAtom,
   selectedTrainIdsAtom,
   stageStateAtom,
+  stationMapSelector,
   useViewStateValues,
   virtualCanvasHeight,
   virtualCanvasWidth,
@@ -426,13 +427,14 @@ function areOverlapped(linePoints: number[], rect: RectState) {
 
 function getOverlappedTrains(
   diagramProps: DeepReadonly<DiagramProps>,
+  stationMap: DeepReadonly<Map<string, StationLike>>,
   viewState: DeepReadonly<ViewState>,
   trains: DeepReadonly<Train[]>,
   dragRectState: RectState
 ) {
   const overlappedTrains = trains.filter((train) => {
     const direction = getDirection(diagramProps.timetable, train.trainId);
-    const points = createPositionDiaTimeMap(diagramProps.stations, viewState, train.diaTimes, direction)
+    const points = createPositionDiaTimeMap(stationMap, viewState, train.diaTimes, direction)
       .map(({ x, y }) => [x, y])
       .flat();
     return areOverlapped(points, dragRectState);
@@ -443,6 +445,7 @@ function getOverlappedTrains(
 
 function getTrainsWithinDragged(
   diagramProps: DeepReadonly<DiagramProps>,
+  stationMap: DeepReadonly<Map<string, StationLike>>,
   viewState: DeepReadonly<ViewState>,
   trains: DeepReadonly<Train[]>,
   dragRectState: DragRectKonvaProps
@@ -454,7 +457,7 @@ function getTrainsWithinDragged(
       width: dragRectState.width,
       height: dragRectState.height,
     };
-    return getOverlappedTrains(diagramProps, viewState, trains, rectState);
+    return getOverlappedTrains(diagramProps, stationMap, viewState, trains, rectState);
   }
   return [];
 }
@@ -482,6 +485,11 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
   const trains = useRecoilValue(allTrainsMapAtom);
   const [selectedTrainIds, setSelectedTrainIds] = useRecoilState(selectedTrainIdsAtom);
 
+  const [dragStartStagePosition, setDragStartStagePosition] = useState<Point | null>(null);
+  const [dragStartPoint, setDragStartPoint] = useState<Point | null>(null);
+  const [dragStartPointWithOffset, setDragStartPointWithOffset] = useState<Point | null>(null);
+  const stationMap = useRecoilValue(stationMapSelector);
+
   useEffect(() => {
     const fitStageIntoParentContainer = () => {
       const clientWidth = document.documentElement.clientWidth - 230; /* この値はなんとかして設定する */
@@ -508,92 +516,89 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
   const mouseEventManager = getMouseEventManager();
 
   useEffect(() => {
-    if (!stageRef.current) return;
-
-    console.log('draw');
-
-    const mouseEventManager = getMouseEventManager();
-    mouseEventManager.setStage(stageRef.current);
-
-    let dragStartStagePosition: null | Point = null;
-    let dragStartPoint: null | Point = null;
-    let dragStartPointWithOffset: null | Point = null;
-
-    mouseEventManager.registerClickHandler('mainStage', (e, target) => {
-      if (target instanceof Konva.Stage) {
-        if (e.evt.button === 0) {
-          if (selectedTrainIds.length > 0) {
-            setSelectedTrainIds([]);
-          }
-        }
-      }
-    });
-    mouseEventManager.registerDragStartHandler('mainStage', (e, target) => {
-      dragStartStagePosition = null;
-      dragStartPoint = null;
-
-      if (target instanceof Konva.Stage) {
-        if (e.evt.button === 0) {
-          dragStartPointWithOffset = getPointerPosition(target);
-        } else if (e.evt.button === 2) {
-          dragStartStagePosition = { x: stageRef.current!.x(), y: stageRef.current!.y() };
-          const stage = target.getPointerPosition()!;
-          dragStartPoint = { x: stage.x / stageState.scale, y: stage.y / stageState.scale };
-        }
-      }
-    });
-
-    mouseEventManager.registerDragMoveHandler('mainStage', (e, target) => {
-      console.log({ target, dragStartStagePosition, dragStartPoint, dragStartPointWithOffset, dragRectState });
-      if (target instanceof Konva.Stage) {
-        if (dragStartStagePosition !== null) {
-          const stage = target.getPointerPosition()!;
-          const dragPoint = { x: stage.x / stageState.scale, y: stage.y / stageState.scale };
-
-          setStageState((prev) => {
-            const newStagePosition = { ...prev };
-            if (dragStartStagePosition !== null && dragStartPoint != null) {
-              newStagePosition.x = dragStartStagePosition!.x + (dragPoint.x - dragStartPoint.x);
-              newStagePosition.y = dragStartStagePosition!.y + (dragPoint.y - dragStartPoint.y);
-            }
-
-            return adjustStagePosition(newStagePosition);
-          });
-        } else if (dragStartPointWithOffset !== null) {
-          const dragEndPoint = getPointerPosition(target);
-
-          setDragRectState({
-            isDragging: true,
-            dragStartX: dragStartPointWithOffset.x,
-            dragStartY: dragStartPointWithOffset.y,
-            width: dragEndPoint.x - dragStartPointWithOffset.x,
-            height: dragEndPoint.y - dragStartPointWithOffset.y,
-          });
-        }
-      }
-    });
-
-    mouseEventManager.registerDragEndHandler('mainStage', (e) => {
-      console.log({ dragStartStagePosition, dragStartPoint, dragStartPointWithOffset, dragRectState });
-      if (dragRectState.isDragging) {
-        const rectSelectedTrains = getTrainsWithinDragged(diagramProps, viewState, [...trains.values()], dragRectState);
-
-        setSelectedTrainIds(rectSelectedTrains.map((train) => train.trainId));
-      }
-
-      dragStartStagePosition = null;
-      dragStartPoint = null;
-      dragStartPointWithOffset = null;
-
-      setDragRectState({
-        isDragging: false,
-        dragStartX: 0,
-        dragStartY: 0,
-        width: 0,
-        height: 0,
-      });
-    });
+    if (stageRef.current !== null) {
+      mouseEventManager.setStage(stageRef.current);
+    }
   }, [stageRef.current]);
+
+  mouseEventManager.registerClickHandler('mainStage', (e, target) => {
+    if (target instanceof Konva.Stage) {
+      if (e.evt.button === 0) {
+        if (selectedTrainIds.length > 0) {
+          setSelectedTrainIds([]);
+        }
+      }
+    }
+  });
+
+  mouseEventManager.registerDragStartHandler('mainStage', (e, target) => {
+    if (e.evt.button === 2) {
+      if (stageRef.current !== null) {
+        setDragStartStagePosition({ x: stageRef.current.x(), y: stageRef.current!.y() });
+        const stage = stageRef.current.getPointerPosition()!;
+        setDragStartPoint({ x: stage.x / stageState.scale, y: stage.y / stageState.scale });
+      }
+    } else if (target instanceof Konva.Stage) {
+      if (e.evt.button === 0) {
+        setDragStartPointWithOffset(getPointerPosition(target));
+      }
+    }
+  });
+
+  mouseEventManager.registerDragMoveHandler('mainStage', (e, target) => {
+    if (dragStartStagePosition !== null && stageRef.current !== null) {
+      const stage = stageRef.current.getPointerPosition()!;
+      const dragPoint = { x: stage.x / stageState.scale, y: stage.y / stageState.scale };
+
+      setStageState((prev) => {
+        const newStagePosition = { ...prev };
+        if (dragStartStagePosition !== null && dragStartPoint != null) {
+          newStagePosition.x = dragStartStagePosition!.x + (dragPoint.x - dragStartPoint.x);
+          newStagePosition.y = dragStartStagePosition!.y + (dragPoint.y - dragStartPoint.y);
+        }
+
+        return adjustStagePosition(newStagePosition);
+      });
+    } else if (target instanceof Konva.Stage) {
+      if (dragStartPointWithOffset !== null) {
+        const dragEndPoint = getPointerPosition(target);
+
+        setDragRectState({
+          isDragging: true,
+          dragStartX: dragStartPointWithOffset.x,
+          dragStartY: dragStartPointWithOffset.y,
+          width: dragEndPoint.x - dragStartPointWithOffset.x,
+          height: dragEndPoint.y - dragStartPointWithOffset.y,
+        });
+      }
+    }
+  });
+
+  mouseEventManager.registerDragEndHandler('mainStage', (e) => {
+    if (dragRectState.isDragging) {
+      const rectSelectedTrains = getTrainsWithinDragged(
+        diagramProps,
+        stationMap,
+        viewState,
+        [...trains.values()],
+        dragRectState
+      );
+
+      setSelectedTrainIds(rectSelectedTrains.map((train) => train.trainId));
+    }
+
+    setDragStartStagePosition(null);
+    setDragStartPoint(null);
+    setDragStartPointWithOffset(null);
+
+    setDragRectState({
+      isDragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      width: 0,
+      height: 0,
+    });
+  });
 
   const adjustStagePosition = (stage_: StagePosition) => {
     const stage = { ...stage_ };
@@ -673,7 +678,7 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
       {/* time and station grid */}
       <Layer>
         <TimeGridKonva layerHeight={virtualCanvasHeight} />
-        <StationLineCollectionKonva diagramProps={diagramProps} />
+        <StationLineCollectionKonva />
       </Layer>
       {/* object */}
       <Layer>

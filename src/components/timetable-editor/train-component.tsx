@@ -15,13 +15,12 @@ import {
   generateId,
   getDefaultConnectionType,
 } from '../../model';
-import { ContextMenuComponent, EditableTextComponent, TimeInputComponent } from './common-component';
+import { ContextMenuComponent, EditableTextComponent, TimeInputComponent, getStationMap } from './common-component';
 import { TimetableEditorDirectedProps } from './timetable-editor-component';
 import { getFirstOrLast, getRailwayPlatform } from './timetable-util';
 import { TooltipComponent } from './tooltip-component';
 
 function TrainContextMenuComponent({
-  trains,
   crudTrain,
   contextData,
   setContextData,
@@ -30,7 +29,6 @@ function TrainContextMenuComponent({
   selectedTrain,
   timetableDirection,
 }: {
-  readonly trains: DeepReadonly<Train[]>;
   readonly crudTrain: DeepReadonly<CrudTrain>;
   readonly contextData: DeepReadonly<ContextData>;
   readonly setContextData: DeepReadonly<StateUpdater<ContextData>>;
@@ -58,13 +56,12 @@ function TrainContextMenuComponent({
           label: '列車をコピー',
           menuItemId: 'copy-train',
           onClick: () => {
-            const index = trains.findIndex((train) => train.trainId === selectedTrain?.trainId);
-            if (selectedTrain != null && index >= 0) {
+            if (selectedTrain !== null) {
               const newTrain: Train = {
                 ...cloneTrain(selectedTrain),
                 trainId: generateId(),
               };
-              setClipboard({ trains: [newTrain], originalTrains: [selectedTrain] });
+              setClipboard({ trains: [newTrain], originalTrainIds: [selectedTrain.trainId] });
             }
             setContextData({ ...contextData, visible: false });
           },
@@ -135,12 +132,12 @@ export function PlatformComponent({
 
 function TrainListItemComponent({
   diaTime,
-  allStations,
+  stationMap,
   errors,
   updateTrain,
 }: DeepReadonly<{
   diaTime: DiaTime;
-  allStations: Map<string, StationLike>;
+  stationMap: Map<string, StationLike>;
   errors: readonly OperationError[];
   updateTrain: (diaTimeId: string, updater: (diaTime: DiaTime) => void) => void;
 }>) {
@@ -209,7 +206,7 @@ function TrainListItemComponent({
         />
         <PlatformComponent
           diaPlatformId={diaTime.platformId}
-          allDiaPlatforms={nn(allStations.get(diaTime.stationId)).platforms}
+          allDiaPlatforms={nn(stationMap.get(diaTime.stationId)).platforms}
           setDiaPlatform={(platformId) => {
             updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
               diaTime.platformId = platformId;
@@ -274,13 +271,14 @@ export function TrainListComponent({
     posY: 0,
   });
   const [selectedTrain, setSelectedTrain] = useState<DeepReadonly<Train> | null>(null);
+  const stationMap = getStationMap(stations);
 
   function getDiaTimesOfStations(
     train: DeepReadonly<Train>,
-    diaStations: DeepReadonly<Map<string, StationLike>>
+    stations: DeepReadonly<StationLike[]>
   ): DeepReadonly<DiaTime[]> {
     try {
-      return [...diaStations.values()].map((diaStation) => {
+      return stations.map((diaStation) => {
         const diaTime = train.diaTimes.find((diaTime) => diaTime.stationId === diaStation.stationId);
         if (diaTime) {
           return diaTime;
@@ -318,7 +316,6 @@ export function TrainListComponent({
     >
       <TrainContextMenuComponent
         contextData={contextData}
-        trains={trains}
         crudTrain={crudTrain}
         setContextData={setContextData}
         clipboard={clipboard}
@@ -440,7 +437,7 @@ export function TrainListComponent({
               <TrainListItemComponent
                 key={diaTime.diaTimeId}
                 errors={errors}
-                allStations={stations}
+                stationMap={stationMap}
                 diaTime={diaTime}
                 updateTrain={(diaTimeId, updater) => {
                   crudTrain.updateTrain(train.trainId, (train) => {

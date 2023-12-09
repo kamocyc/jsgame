@@ -10,7 +10,14 @@ import {
   OutlinedTimetableData,
   OutlinedTimetableFunc,
 } from '../../outlinedTimetableData';
-import { MapInfo, SetTimetable, SettingColumnComponent, TabComponent, reverseArray } from './common-component';
+import {
+  MapInfo,
+  SetTimetable,
+  SettingColumnComponent,
+  TabComponent,
+  getStationMap,
+  reverseArray,
+} from './common-component';
 import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
 // import { SetTimetable, StationListComponent } from './station-component';
@@ -103,7 +110,7 @@ export function TimetableEditorTableComponent({
 export type TimetableEditorDirectedProps = {
   readonly stationIds: DeepReadonly<string[]>;
   // readonly setStations: (diaStations: StationLike[]) => void;
-  readonly stations: DeepReadonly<Map<string, StationLike>>;
+  readonly stations: DeepReadonly<StationLike[]>;
   readonly trains: DeepReadonly<Train[]>;
   readonly otherDirectionTrains: DeepReadonly<readonly Train[]>;
   readonly crudTrain: DeepReadonly<CrudTrain>;
@@ -229,11 +236,6 @@ export function TimetableEditorComponent({
     });
   };
 
-  // const updateTrain = (historyItem: HistoryItem) => {
-  //   timetableData.commitTrain(historyItem);
-  //   update();
-  // };
-
   const timetableTrains = new Map(
     [...timetable.inboundTrainIds, ...timetable.outboundTrainIds].map((trainId) => [
       trainId,
@@ -282,9 +284,11 @@ export function TimetableEditorComponent({
       draftTimetable.inboundTrainIds.map((trainId) => nn(draftTimetableData._trains.get(trainId))),
       draftTimetable.outboundTrainIds.map((trainId) => nn(draftTimetableData._trains.get(trainId))),
     ];
+
     return [draftTimetable, inboundTrains, outboundTrains] as const;
   };
 
+  console.log({ stations: timetableData._stations, inboundTrains, outboundTrains });
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div>
@@ -302,6 +306,8 @@ export function TimetableEditorComponent({
             id='file-selector'
             accept='.oud2'
             onChange={async (event) => {
+              // TODO
+              // @ts-ignore
               const diagram = await importOutdiaFile(event);
               if (diagram != null) {
                 // TODO
@@ -332,7 +338,10 @@ export function TimetableEditorComponent({
 
             setTimetableData((draftTimetableData) => {
               OutlinedTimetableFunc.clearTimetable(draftTimetableData, timetable.timetableId);
-              const [newTimetable, newTrains] = getInitialTimetable(draftTimetableData._stations, railwayLine);
+              const [newTimetable, newTrains] = getInitialTimetable(
+                getStationMap(draftTimetableData._stations),
+                railwayLine
+              );
               OutlinedTimetableFunc.addTimetable(draftTimetableData, newTimetable, newTrains);
               return undefined;
             });
@@ -395,7 +404,6 @@ export function TimetableEditorComponent({
                   <TimetableEditorTableComponent
                     stations={timetableData._stations}
                     stationIds={reverseArray(timetable.stationIds)}
-                    // setStations={(stations) => setStations(reverseArray(stations))}
                     trains={outboundTrains}
                     otherDirectionTrains={inboundTrains}
                     setTimetable={(f) => {
@@ -430,7 +438,7 @@ export function TimetableEditorComponent({
                 tabText: '駅時刻表',
                 component: () => (
                   <StationTimetablePageComponent
-                    stations={timetableData._stations}
+                    stationMap={getStationMap(timetableData._stations)}
                     stationIds={timetable.stationIds}
                     inboundTrains={inboundTrains}
                     outboundTrains={outboundTrains}
@@ -467,7 +475,7 @@ export function TimetableEditorComponent({
                     outboundTrains={outboundTrains}
                     operations={timetable.operations}
                     timetable={timetable}
-                    stations={timetableData._stations}
+                    stationMap={getStationMap(timetableData._stations)}
                   />
                 ),
               },

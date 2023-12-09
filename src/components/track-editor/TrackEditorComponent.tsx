@@ -1,6 +1,6 @@
-import { StateUpdater, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
-import { assert, merge, nn, removeDuplicates } from '../../common';
+import { StateUpdater, assert, merge, nn, removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import {
@@ -17,6 +17,7 @@ import { DetailedTimetable, StationLike, Train } from '../../model';
 import { OutlinedTimetable, OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct, TerrainType } from '../extendedMapModel';
+import { getStationMap } from '../timetable-editor/common-component';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
@@ -138,9 +139,9 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     (s1, s2) => s1 === s2
   );
 
-  const stations = new Map<string, StationLike>((obj.stations ?? []).map((station) => [station.stationId, station]));
+  const stations = obj.stations ?? [];
 
-  assert([...stations.keys()].map((stationId) => stationId).every((stationId) => stationIds.includes(stationId)));
+  assert(stations.map((station) => station.stationId).every((stationId) => stationIds.includes(stationId)));
   const storedTrains: StoredTrain[] = obj.storedTrains ?? [];
   // const placedTrains: PlacedTrain[] = obj.placedTrains ?? [];
   const timetable = (obj.timetable ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
@@ -157,7 +158,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
           _trains: new Map(),
           _timetables: [],
           _errors: [],
-          _stations: new Map(),
+          _stations: [],
         };
   const railwayLines = obj['railwayLines'] ?? [];
 
@@ -341,7 +342,7 @@ export function TrackEditorComponent({
       {showLineInfoPanel ? (
         <div className='dialog'>
           <LineInfoPanel
-            stations={appStates.outlinedTimetableData._stations}
+            stations={getStationMap(appStates.outlinedTimetableData._stations)}
             timetableData={appStates.outlinedTimetableData}
             railwayLines={appStates.railwayLines}
             selectedRailwayLineId={appStates.selectedRailwayLineId}
@@ -518,6 +519,8 @@ export function TrackEditorComponent({
             type='file'
             accept='.json'
             onChange={async (event) => {
+              // TODO
+              // @ts-ignore
               const buf = await loadUtf8File(event);
               if (buf == null) {
                 return;

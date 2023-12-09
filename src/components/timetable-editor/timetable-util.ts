@@ -118,7 +118,7 @@ function showStops(stops: DeepReadonly<RailwayLineStop[]>) {
 
 // 路線から初期のダイヤを作成する
 export function getInitialTimetable(
-  stations: Map<string, StationLike>,
+  stations: DeepReadonly<Map<string, StationLike>>,
   railwayLine: DeepReadonly<RailwayLine>
 ): [OutlinedTimetable, Train[]] {
   const baseTime = 10 * 60 * 60;

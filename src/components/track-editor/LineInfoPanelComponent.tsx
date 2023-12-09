@@ -1,3 +1,4 @@
+import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
 import { RailwayLine } from '../../mapEditorModel';
 import { StationLike } from '../../model';
@@ -13,7 +14,7 @@ export function LineInfoPanel({
   setSelectedRailwayLineId,
 }: {
   railwayLines: RailwayLine[];
-  stations: Map<string, StationLike>;
+  stations: DeepReadonly<Map<string, StationLike>>;
   timetableData: OutlinedTimetableData;
   setRailwayLines: (railwayLines: RailwayLine[]) => void;
   selectedRailwayLineId: string | null;

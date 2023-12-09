@@ -13,6 +13,7 @@ import { Depot, DepotLine, Platform, PlatformLike, Point, Station, Switch, Track
 import { OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { getMidPoint, isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad, TerrainType } from '../extendedMapModel';
+import { getStationMap } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
@@ -306,7 +307,7 @@ function createExtendedMapCell(mapCell: ExtendedCell, constructType: ConstructTy
 }
 
 export function onmousedown(
-  e: MouseEvent,
+  e: React.MouseEvent,
   appStates: AppStates,
   selectedTrain: StoredTrain | null,
   numberOfPlatforms: number,
@@ -383,7 +384,7 @@ export function onmousedown(
       if (result) {
         const [newTracks, _, newStation] = result;
         appStates.tracks.push(...newTracks);
-        appStates.mapState.stations.set(newStation.stationId, newStation);
+        appStates.mapState.stations.push(newStation);
         appStates.outlinedTimetableData._stations = appStates.mapState.stations;
         stationDbg.set(newStation.stationId, newStation);
       }
@@ -424,7 +425,7 @@ export function onmousedown(
 }
 
 export function onmousemove(
-  e: MouseEvent,
+  e: React.MouseEvent,
   appStates: AppStates,
   mouseStartCell: null | Cell,
   mouseStartPoint: Point | null,
@@ -499,7 +500,8 @@ function deleteVariousThings(
     if (result !== true && 'error' in result) {
       setToast(result.error);
     } else {
-      appStates.mapState.stations.delete(station.stationId);
+      assert(appStates.mapState.stations.indexOf(station) !== -1);
+      appStates.mapState.stations.splice(appStates.mapState.stations.indexOf(station), 1);
       appStates.outlinedTimetableData._stations = appStates.mapState.stations;
       appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
       validateAppState(appStates);
@@ -534,7 +536,7 @@ function deleteVariousThings(
 }
 
 export function onmouseup(
-  e: MouseEvent,
+  e: React.MouseEvent,
   appStates: AppStates,
   mouseStartCell: null | Cell,
   mouseDragMode: MouseDragMode | null,
@@ -593,10 +595,8 @@ export function onmouseup(
         // 選択終了
         if (appStates.mapState.currentRailwayLine !== null) {
           appStates.railwayLines.push(appStates.mapState.currentRailwayLine);
-          const [timetable, newTrains] = getInitialTimetable(
-            appStates.mapState.stations,
-            appStates.mapState.currentRailwayLine
-          );
+          const stationMap = getStationMap(appStates.mapState.stations);
+          const [timetable, newTrains] = getInitialTimetable(stationMap, appStates.mapState.currentRailwayLine);
           OutlinedTimetableFunc.addTimetable(appStates.outlinedTimetableData, timetable, newTrains);
           appStates.mapState.currentRailwayLine = null;
         }
@@ -633,7 +633,7 @@ export function onmouseup(
   setMouseDragMode(null);
 }
 
-export function onwheel(e: WheelEvent, appStates: AppStates, update: () => void) {
+export function onwheel(e: React.WheelEvent, appStates: AppStates, update: () => void) {
   e.preventDefault();
 
   const scaleBy = 1.05;

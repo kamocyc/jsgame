@@ -113,7 +113,7 @@ export function getAdjacentStations(
 }
 
 export function createAgentPath(
-  stations: Map<string, StationLike>,
+  stations: StationLike[],
   agent: Agent,
   gameMap: GameMap,
   currentTime: number,
@@ -416,7 +416,7 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManagerProps {
   extendedMap: ExtendedGameMap;
-  stations: Map<string, StationLike>;
+  stations: StationLike[];
   gameMap: GameMap;
   outlinedTimetableData: OutlinedTimetableData;
   placedTrains: PlacedTrain[];

@@ -4,12 +4,13 @@ import { useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { assert, nn, upto } from '../../common';
 import { StationLike } from '../../model';
-import { DiagramProps, hitStrokeWidth } from './drawer-util';
+import { hitStrokeWidth } from './drawer-util';
 import {
   gridColor,
   isStationExpandedAtom,
   stageStateAtom,
   stationPositionsAtom,
+  stationsAtom,
   virtualCanvasWidth,
 } from './konva-util';
 import { getPlatformPositions } from './station-view-konva';
@@ -167,18 +168,16 @@ export const StationLineKonva = forwardRef(function StationLineKonva(props: Stat
   );
 });
 
-export type StationLineCollectionKonvaProps = DeepReadonly<{
-  diagramProps: DiagramProps;
-}>;
+export type StationLineCollectionKonvaProps = DeepReadonly<{}>;
 export const StationLineCollectionKonva = forwardRef(function StationLineCollectionKonva(
   props: StationLineCollectionKonvaProps,
   ref: any
 ) {
-  const stations = props.diagramProps.stations;
+  const stations = useRecoilValue(stationsAtom);
 
   return (
     <>
-      {[...stations.values()].map((station) => {
+      {stations.map((station) => {
         return <StationLineKonva key={station.stationId} station={station} />;
       })}
     </>

@@ -162,7 +162,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
         };
   const railwayLines = obj['railwayLines'] ?? [];
 
-  const trainMove = createTrainMove(timetable);
+  const trainMove = createTrainMove();
   const tracks = mapData.flatMap((row) =>
     row.map((cell) => cell.lineType?.tracks ?? []).reduce((a, b) => a.concat(b), [])
   );
@@ -302,11 +302,10 @@ export function TrackEditorComponent({
       );
       appStates.mapState.trainMove.tick({
         globalTimeManager: appStates.globalTimeManager,
-        railwayLines: appStates.railwayLines,
-        storedTrains: appStates.storedTrains,
         moneyManager: appStates.mapState.moneyManager,
         tracks: appStates.tracks,
         trains: appStates.outlinedTimetableData._trains,
+        timetable: appStates.detailedTimetable,
       });
       addAgents(appStates);
       appStates.mapState.agentManager.tick({
@@ -581,7 +580,8 @@ export function TrackEditorComponent({
           stopInterval();
           appStates.mapState.trainMove.resetTrainMove(
             appStates.globalTimeManager,
-            appStates.outlinedTimetableData._trains
+            appStates.outlinedTimetableData._trains,
+            appStates.detailedTimetable
           );
           startTop(100);
         }}

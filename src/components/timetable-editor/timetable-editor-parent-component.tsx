@@ -142,7 +142,7 @@ export function TimetableEditorParentComponent({
             // console.log('timetable');
             // console.log(timetable);
 
-            const trainMove = createTrainMove(timetableAndOperations);
+            const trainMove = createTrainMove();
             setAppStates((appStates) => ({
               ...appStates,
               trainMove: trainMove,

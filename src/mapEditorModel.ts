@@ -4,7 +4,8 @@ import { AgentManagerBase } from './components/track-editor/agentManager';
 import { GlobalTimeManager } from './components/track-editor/globalTimeManager';
 import { MapManager } from './components/track-editor/mapManager';
 import { MoneyManager } from './components/track-editor/moneyManager';
-import { ITrainMove, StoredTrain } from './components/track-editor/trainMoveBase';
+import { StoredTrain } from './components/track-editor/trainMoveBase';
+import { TrainTimetableMove } from './components/track-editor/trainTimetableMove';
 import { DetailedTimetable, PlatformLike, Point, StationLike, Switch, Track } from './model';
 import { HistoryManager, OutlinedTimetableData } from './outlinedTimetableData';
 
@@ -166,7 +167,7 @@ export interface MapState {
   readonly extendedMap: ExtendedGameMap;
   readonly agentManager: AgentManagerBase;
   currentRailwayLine: RailwayLine | null;
-  readonly trainMove: ITrainMove;
+  readonly trainMove: TrainTimetableMove;
   readonly moneyManager: MoneyManager;
   readonly mapManager: MapManager;
 }

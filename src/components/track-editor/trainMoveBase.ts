@@ -4,7 +4,6 @@ import { ArrivalAndDepartureStatus, DetailedTimetable, Operation, Point, Track, 
 import { getDistance, getMidPoint, getRadian } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
 import { MoneyManager } from './moneyManager.js';
-import { TrainRailwayMove, TrainRailwayMoveProps } from './trainRailwayMove.js';
 import { TrainTimetableMove } from './trainTimetableMove.js';
 
 // 継承させるので名称はPlacedTrainに合わせた（それでいいのかは不明）
@@ -30,26 +29,10 @@ export interface PlacedTrain extends StoredTrain {
   justDepartedPlatformId: string | null;
 }
 
-export type TrainMoveCommonProps = TrainMoveProps & TrainRailwayMoveProps;
-
-export interface ITrainMove {
-  tick(props: TrainMoveCommonProps): void;
-  getPlacedTrains(): PlacedTrain[];
-  resetTrainMove(globalTimeManager: GlobalTimeManager, trains: DeepReadonly<Map<string, Train>>): void;
-  getTrainMoveType(): 'TrainMove' | 'TrainRailwayMove';
-}
-
 const trainMoveType: 'Railway' | 'Timetable' = 'Timetable';
 
-export function createTrainMove(detailedTimetable: DetailedTimetable | null) {
-  if (trainMoveType === 'Railway') {
-    return new TrainRailwayMove();
-  } else {
-    if (detailedTimetable === null) {
-      throw new Error('detailedTimetable === null');
-    }
-    return new TrainTimetableMove(detailedTimetable!);
-  }
+export function createTrainMove() {
+  return new TrainTimetableMove();
 }
 
 export function getStopPosition(_train: PlacedTrain, stationTrack: Track): Point | undefined {
@@ -106,4 +89,5 @@ export interface TrainMoveProps {
   moneyManager: MoneyManager;
   tracks: Track[];
   trains: Map<string, Train>;
+  timetable: DetailedTimetable;
 }

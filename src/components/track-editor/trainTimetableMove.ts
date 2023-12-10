@@ -12,7 +12,6 @@ import {
 } from '../../trackUtil.js';
 import { GlobalTimeManager } from './globalTimeManager.js';
 import {
-  ITrainMove,
   PlacedTrain,
   TrainMoveProps,
   getFirstTimeOfTrain,
@@ -34,29 +33,24 @@ function getNextTrain(operation: Operation, currentTrainId: string): string | nu
   return operation.trainIds[index + 1];
 }
 
-export class TrainTimetableMove implements ITrainMove {
+export class TrainTimetableMove {
   placedTrains: PlacedTrain[] = [];
-  timetable: DetailedTimetable;
   readonly maxStationWaitTime = Number.MAX_VALUE;
-
-  constructor(timetable: DetailedTimetable) {
-    this.timetable = timetable;
-  }
 
   getPlacedTrains(): PlacedTrain[] {
     return this.placedTrains;
   }
 
-  getTrainMoveType() {
-    return 'TrainMove' as const;
-  }
-
-  resetTrainMove(globalTimeManager: GlobalTimeManager, trains: DeepReadonly<Map<string, Train>>): void {
+  resetTrainMove(
+    globalTimeManager: GlobalTimeManager,
+    trains: DeepReadonly<Map<string, Train>>,
+    timetable: DetailedTimetable
+  ): void {
     this.placedTrains = [];
-    globalTimeManager.resetGlobalTime(getMinTimetableTime(trains, this.timetable));
+    globalTimeManager.resetGlobalTime(getMinTimetableTime(trains, timetable));
   }
 
-  private getNextTrack(track: Track, placedTrain: PlacedTrain): Track {
+  private getNextTrack(track: Track, placedTrain: PlacedTrain, timetable: DetailedTimetable): Track {
     const currentSwitch = track.nextSwitch;
     const nextTracks = currentSwitch.switchPatterns.filter(([t, _]) => t.trackId === track.trackId).map(([_, t]) => t);
     if (nextTracks.length === 0) {
@@ -67,7 +61,7 @@ export class TrainTimetableMove implements ITrainMove {
       return nextTracks[0];
     }
 
-    const ttItem = this.timetable.switchTimetableMap.get(currentSwitch.switchId);
+    const ttItem = timetable.switchTimetableMap.get(currentSwitch.switchId);
     assert(ttItem !== undefined, '時刻情報が設定されていない');
 
     const branchDirection = ttItem.getBranchDirection(placedTrain.trainId);
@@ -104,7 +98,7 @@ export class TrainTimetableMove implements ITrainMove {
   }
 
   private waitInStation(placedTrain: PlacedTrain, props: TrainMoveProps): boolean {
-    const platformTimetable = this.timetable.platformTimetableMap.get(placedTrain.track.track.platform!.platformId);
+    const platformTimetable = props.timetable.platformTimetableMap.get(placedTrain.track.track.platform!.platformId);
     assert(platformTimetable !== undefined, 'platformTimetable !== undefined');
     const ttItem = platformTimetable.getPlatformTTItem(placedTrain.trainId);
     if (ttItem.departureTime === null) {
@@ -119,7 +113,7 @@ export class TrainTimetableMove implements ITrainMove {
       // }
       // assert(platformTimetable.isLastTTItem(ttItem));
 
-      const operation = this.timetable.operations.find((o) => o.operationId === placedTrain.operationId);
+      const operation = props.timetable.operations.find((o) => o.operationId === placedTrain.operationId);
       assert(operation !== undefined, 'operation !== undefined');
       const nextTrainId = getNextTrain(operation, placedTrain.trainId);
       if (nextTrainId === null) {
@@ -150,7 +144,7 @@ export class TrainTimetableMove implements ITrainMove {
   }
 
   private getDiaTimes(placedTrain: PlacedTrain, props: TrainMoveProps): DeepReadonly<DiaTime[]> {
-    const trainId = this.timetable.operations
+    const trainId = props.timetable.operations
       .find((o) => o.operationId === placedTrain.operationId)
       ?.trainIds.find((trainId) => trainId === placedTrain.trainId);
     const diaTimes = trainId !== undefined ? props.trains.get(trainId)?.diaTimes : undefined;
@@ -230,7 +224,7 @@ export class TrainTimetableMove implements ITrainMove {
         placedTrain.stationStatus = 'Running';
         placedTrain.justDepartedPlatformId = null;
 
-        const nextTrack = this.getNextTrack(placedTrain.track, placedTrain);
+        const nextTrack = this.getNextTrack(placedTrain.track, placedTrain, props.timetable);
 
         // trackの終点から行き過ぎた距離を求める
         const distance = getDistance(placedTrain.track.end, placedTrain.position);
@@ -254,7 +248,7 @@ export class TrainTimetableMove implements ITrainMove {
     const placedTrains = [...this.placedTrains]; // 一応中で破壊的にremoveするので、コピーを作る
 
     // 初期位置に列車を配置
-    for (const operation of this.timetable.operations) {
+    for (const operation of props.timetable.operations) {
       const firstTrainId = fst_(operation.trainIds);
       const firstTrain = nn(props.trains.get(firstTrainId));
       const firstDiaTime = firstTrain.diaTimes[0];

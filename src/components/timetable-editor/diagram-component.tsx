@@ -11,6 +11,7 @@ import {
   canvasHeight,
   isStationExpandedAtom,
   mouseState,
+  selectedTrainIdsAtom,
   stageStateAtom,
   stationCanvasWidthAtom,
   stationIdsAtom,
@@ -25,11 +26,12 @@ export function KonvaCanvas(
 ) {
   const [, setIsStationExpanded] = useRecoilState(isStationExpandedAtom);
   const [stations, setStationsAtom] = useRecoilState(stationsAtom);
-  const [selectedTrainIds, setSelectedTrainIds] = useRecoilState(stationIdsAtom);
+  const [stationIds, setStationIds] = useRecoilState(stationIdsAtom);
   const stageState = useRecoilValue(stageStateAtom);
   const stageY = stageState.y;
   const [trains, setTrains] = useRecoilState(allTrainsMapAtom);
   const stationCanvasWidth = useRecoilValue(stationCanvasWidthAtom);
+  const [selectedTrainIds, setSelectedTrainIds] = useRecoilState(selectedTrainIdsAtom);
 
   const minTime = Math.min(
     ...(
@@ -48,7 +50,7 @@ export function KonvaCanvas(
 
   useEffect(() => {
     setStationsAtom(props.stations);
-    setSelectedTrainIds(props.stationIds);
+    setStationIds(props.stationIds);
     setIsStationExpanded(new Map<string, boolean>(stations.map((s) => [s.stationId, false])));
   }, [props.stations]);
 

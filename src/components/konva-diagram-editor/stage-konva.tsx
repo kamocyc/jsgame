@@ -5,14 +5,18 @@ import { useEffect, useRef, useState } from 'react';
 import { Layer, Stage } from 'react-konva';
 import { SetterOrUpdater, useRecoilState, useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
-import { assert, nn } from '../../common';
-import { DiaTime, PlatformLike, Point, StationLike, Train, generateId, getDefaultConnectionType } from '../../model';
+import { nn } from '../../common';
+import { PlatformLike, Point, StationLike, Train, generateId, getDefaultConnectionType } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { Polygon, sat } from '../../sat';
 import { fillMissingTimes } from '../timetable-editor/timetable-util';
 import { DragRectKonva, DragRectKonvaProps } from './drag-rect-konva';
 import { DiagramProps } from './drawer-util';
-import { DrawingTrainLineKonva } from './drawing-train-line-konva';
+import {
+  DrawingTrainLineKonva,
+  getDiaTimeFromDrawingTrainLine,
+  getDirectionOfDrawingTrainLine,
+} from './drawing-train-line-konva';
 import {
   DrawingTrainLine,
   RectState,
@@ -456,28 +460,7 @@ function commitDrawingLine(
   diagramProps: DeepReadonly<DiagramProps>
 ): void {
   if (drawingLineTimes.length >= 2) {
-    // 1番目のstationのindexと2番目のstationのindexを比較し、inbound / outboundを判定する
-    const firstStationIndex = stations.findIndex((station) => station.stationId === drawingLineTimes[0].stationId);
-    const secondStationIndex = stations.findIndex((station) => station.stationId === drawingLineTimes[1].stationId);
-    const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
-    const railwayLine = diagramProps.railwayLine;
-
-    const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime, index) => {
-      const platformId = drawingLineTime.platformId;
-      const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
-      assert(stop != null);
-      const diaTime: DiaTime = {
-        stationId: drawingLineTime.stationId,
-        departureTime: index < drawingLineTimes.length - 1 ? drawingLineTime.time : null,
-        arrivalTime: index > 0 ? drawingLineTime.time : null,
-        diaTimeId: generateId(),
-        isPassing: false,
-        platformId: platformId,
-        isInService: true,
-        trackId: stop.platformTrack.trackId,
-      };
-      return diaTime;
-    });
+    const diaTimes = getDiaTimeFromDrawingTrainLine(drawingLineTimes, diagramProps);
 
     const newTrain: Train = {
       trainId: generateId(),
@@ -490,6 +473,8 @@ function commitDrawingLine(
     };
 
     fillMissingTimes(newTrain, stations);
+
+    const direction = getDirectionOfDrawingTrainLine(drawingLineTimes, stations);
 
     diagramProps.crudTrain.addTrain(newTrain, direction);
   }
@@ -773,7 +758,7 @@ export function MainViewKonva(props: MainViewKonvaProps, ref: any) {
       <Layer>
         <TrainCollectionKonva mouseEventManager={mouseEventManager} diagramProps={diagramProps} />
         <OperationCollectionKonva diagramProps={diagramProps} />
-        <DrawingTrainLineKonva />
+        <DrawingTrainLineKonva diagramProps={diagramProps} />
         <DragRectKonva
           isDragging={dragRectState.isDragging}
           dragStartX={dragRectState.dragStartX}

@@ -3,7 +3,7 @@ import { atom, selector, selectorFamily, useRecoilValue } from 'recoil';
 import { DeepReadonly, assert } from 'ts-essentials';
 import { nn } from '../../common';
 import { OperationError } from '../../mapEditorModel';
-import { AppClipboard, DiaTime, StationLike, TimetableDirection, Train } from '../../model';
+import { AppClipboard, StationLike, TimetableDirection, Train } from '../../model';
 import { getStationMap } from '../timetable-editor/common-component';
 import { StationPosition } from './drawer-util';
 import { MouseEventManager } from './mouse-event-manager';
@@ -38,6 +38,13 @@ export function useViewStateValues(): DeepReadonly<ViewState> {
   };
 }
 
+export type DiaTimePartial = DeepReadonly<{
+  stationId: string;
+  platformId: string | null;
+  arrivalTime: number | null;
+  departureTime: number | null;
+}>;
+
 export function createPositionDiaTimeMap(
   stationMap: DeepReadonly<Map<string, StationLike>>,
   {
@@ -49,10 +56,10 @@ export function createPositionDiaTimeMap(
     stationPositions: StationPosition[];
     isStationExpanded: Map<string, boolean>;
   }>,
-  diaTimes: DeepReadonly<DiaTime[]>,
+  diaTimes: DeepReadonly<DiaTimePartial[]>,
   direction: TimetableDirection
-): { diaTime: DiaTime; type: 'arrivalTime' | 'departureTime'; x: number; y: number }[] {
-  const create = (diaTime: DiaTime, type: 'arrivalTime' | 'departureTime', x: number, y: number) => ({
+): { diaTime: DiaTimePartial; type: 'arrivalTime' | 'departureTime'; x: number; y: number }[] {
+  const create = (diaTime: DiaTimePartial, type: 'arrivalTime' | 'departureTime', x: number, y: number) => ({
     diaTime,
     type,
     x,

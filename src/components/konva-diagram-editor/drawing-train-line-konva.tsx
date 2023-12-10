@@ -1,14 +1,15 @@
-import { forwardRef } from 'react';
 import { Line } from 'react-konva';
 import { useRecoilValue } from 'recoil';
 import { assert, nn } from '../../common';
 import {
-  drawingLineTimesAtom,
+  drawingTrainLineAtom,
   getPositionFromTime,
+  isStationExpandedAtom,
   secondWidthAtom,
+  stationMapSelector,
   stationPositionsAtom,
-  tempDrawingLineTimeAtom,
 } from './konva-util';
+import { getPlatformPositions } from './station-view-konva';
 
 // export class DrawingTrainLineKonva {
 //   private drawingTrainLine: Konva.Line;
@@ -116,25 +117,38 @@ import {
 
 export type DrawingTrainLineKonvaProps = {};
 
-export const DrawingTrainLineKonva = forwardRef(function DrawingTrainLineKonvaProps(props: DrawingTrainLineKonvaProps) {
-  const drawingLineTimes = useRecoilValue(drawingLineTimesAtom);
-  // const isDrawing = useRecoilValue(isDrawingAtom);
+export function DrawingTrainLineKonva(props: DrawingTrainLineKonvaProps) {
+  const drawingTrainLine = useRecoilValue(drawingTrainLineAtom);
+  const { isDrawing, drawingLineTimes, tempDrawingLineTime } = drawingTrainLine;
   const secondWidth = useRecoilValue(secondWidthAtom);
-  const stationPositions = useRecoilValue(stationPositionsAtom);
-  const tempDrawingLineTime = useRecoilValue(tempDrawingLineTimeAtom);
+  const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
+  const stationMap = useRecoilValue(stationMapSelector);
+  const isStationExpandedMap = useRecoilValue(isStationExpandedAtom);
 
   const points = drawingLineTimes
     .concat(tempDrawingLineTime !== null ? [tempDrawingLineTime] : [])
-    .map(({ station, time }) => {
-      const stationPosition = nn(stationPositions.find((s) => s.stationId === station.stationId)).diagramPosition;
+    .map(({ stationId, platformId, time }) => {
+      const isStationExpanded = isStationExpandedMap.get(stationId) ?? false;
+      const stationPosition = nn(stationPositions.find((s) => s.stationId === stationId)).diagramPosition;
       assert(stationPosition != null);
-      return [getPositionFromTime(time, secondWidth), stationPosition];
+      if (isStationExpanded) {
+        const station = nn(stationMap.get(stationId));
+        const platforms = station.platforms;
+        const [platformPositions] = getPlatformPositions(platforms);
+        const platformIndex = platforms.findIndex((p) => p.platformId === platformId);
+        assert(platformIndex !== -1);
+        return [getPositionFromTime(time, secondWidth), stationPosition + platformPositions[platformIndex]];
+      } else {
+        return [getPositionFromTime(time, secondWidth), stationPosition];
+      }
     })
     .flat();
 
-  return (
+  return isDrawing ? (
     <>
-      <Line points={points} />
+      <Line stroke={'red'} strokeWidth={2} listening={false} points={points} />
     </>
+  ) : (
+    <></>
   );
-});
+}

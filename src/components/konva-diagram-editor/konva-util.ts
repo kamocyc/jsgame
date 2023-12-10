@@ -9,8 +9,7 @@ import { StationPosition } from './drawer-util';
 import { MouseEventManager } from './mouse-event-manager';
 import { getPlatformPositions } from './station-view-konva';
 
-export const canvasHeight = 600;
-export const virtualCanvasHeight = 2000;
+export const canvasHeight = 400;
 export const virtualCanvasWidth = 10000;
 
 // 青系統の薄めの色
@@ -30,7 +29,7 @@ export function getPointerPosition(stage: Konva.Stage) {
 
 export function useViewStateValues(): DeepReadonly<ViewState> {
   const secondWidth = useRecoilValue(secondWidthAtom);
-  const stationPositions = useRecoilValue(stationPositionsAtom);
+  const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
   const isStationExpanded = useRecoilValue(isStationExpandedAtom);
   return {
     secondWidth,
@@ -187,7 +186,9 @@ export const stationMapSelector = selector<DeepReadonly<Map<string, StationLike>
   },
 });
 
-export const stationPositionsAtom = selector<DeepReadonly<StationPosition[]>>({
+export const stationPositionsAtom = selector<
+  DeepReadonly<{ stationPositions: StationPosition[]; lastPosition: number }>
+>({
   key: 'stationPositionsAtom',
   get: ({ get }) => {
     const stationIds = get(stationIdsAtom);
@@ -206,7 +207,7 @@ export const stationPositionsAtom = selector<DeepReadonly<StationPosition[]>>({
       }
     }
 
-    return stationPositions;
+    return { stationPositions, lastPosition: position };
   },
 });
 export const selectedTrainIdsAtom = atom<DeepReadonly<string[]>>({
@@ -245,13 +246,19 @@ export const errorsAtom = atom<DeepReadonly<OperationError[]>>({
   key: 'errorsAtom',
   default: [],
 });
-export const drawingLineTimesAtom = atom<DeepReadonly<{ station: StationLike; time: number }[]>>({
-  key: 'drawingLineTimesAtom',
-  default: [],
-});
-export const tempDrawingLineTimeAtom = atom<DeepReadonly<{ station: StationLike; time: number } | null>>({
-  key: 'tempDrawingLineTimeAtom',
-  default: null,
+
+export type DrawingTrainLine = DeepReadonly<{
+  drawingLineTimes: { stationId: string; platformId: string; time: number }[];
+  tempDrawingLineTime: { stationId: string; platformId: string; time: number } | null;
+  isDrawing: boolean;
+}>;
+export const drawingTrainLineAtom = atom<DrawingTrainLine>({
+  key: 'drawingTrainLineAtom',
+  default: {
+    drawingLineTimes: [],
+    tempDrawingLineTime: null,
+    isDrawing: false,
+  },
 });
 
 export interface DiagramStageState {
@@ -298,6 +305,18 @@ export const trainSelectorFamily = selectorFamily<DeepReadonly<Train>, string>({
       return train;
     },
 });
+
+export const virtualCanvasHeightSelector = selector<number>({
+  key: 'virtualCanvasHeightSelector',
+  get: ({ get }) => {
+    const lastPosition = get(stationPositionsAtom).lastPosition;
+    return lastPosition;
+  },
+});
+
+export function getPositionToTime(position: number, secondWidth: number): number {
+  return Math.round(position / secondWidth);
+}
 
 export const mouseState = {
   isMouseDown: false,

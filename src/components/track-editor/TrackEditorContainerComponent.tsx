@@ -98,7 +98,7 @@ export function CanvasComponent({
             }}
           />
         ) : (
-          <> </>
+          <></>
         )}
       </div>
     </>

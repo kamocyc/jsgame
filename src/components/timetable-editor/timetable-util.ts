@@ -189,7 +189,7 @@ export function getInitialTimetable(
 }
 
 // 足りない駅の時刻を補完する
-export function fillMissingTimes(train: Train, stations: StationLike[]): void {
+export function fillMissingTimes(train: Train, stations: DeepReadonly<StationLike[]>): void {
   for (const station of stations) {
     const diaTime = train.diaTimes.find((diaTime) => diaTime.stationId === station.stationId);
     if (diaTime === undefined) {

@@ -253,7 +253,7 @@ export const StationKonva = forwardRef<Konva.Text | null, Props>(function Statio
 ) {
   const fontSize = 16;
   const stageState = useRecoilValue(stageStateAtom);
-  const stationPositions = useRecoilValue(stationPositionsAtom);
+  const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
   const scale = stageState.scale;
   const stationPosition = nn(stationPositions.find((p) => p.stationId === station.stationId)).diagramPosition * scale;
   const [platformPositions, lastLinePosition] = getPlatformPositions(station.platforms);
@@ -310,7 +310,7 @@ export type StationViewKonvaProps = DeepReadonly<{}>;
 
 export function StationViewKonva({}: StationViewKonvaProps) {
   const stationKonvaRef = useRef<(Konva.Text | null)[]>([]);
-  const stationPositions = useRecoilValue(stationPositionsAtom);
+  const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
   const [isStationExpanded, setIsStationExpanded] = useRecoilState(isStationExpandedAtom);
   const stationMap = useRecoilValue(stationMapSelector);
   const stationCanvasWidth = useRecoilValue(stationCanvasWidthAtom);

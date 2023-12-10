@@ -1,4 +1,4 @@
-import { Fragment, forwardRef } from 'react';
+import { Fragment } from 'react';
 import { Group, Line, Text } from 'react-konva';
 import { useRecoilValue } from 'recoil';
 import { whileLoop } from '../../common';
@@ -18,6 +18,7 @@ function TimeGridMinuteLineKonva(props: { secondWidth: number; layerHeight: numb
       ].map((j) => {
         return (
           <Line
+            id={`grid-line-time-grid-${offset}-${i}-${j}`}
             key={j}
             points={[
               (offset + i * 60 * 10 + j * 2 * 60) * secondWidth,
@@ -28,6 +29,7 @@ function TimeGridMinuteLineKonva(props: { secondWidth: number; layerHeight: numb
             stroke={gridColor + '88'}
             strokeWidth={1}
             dash={[2, 2]}
+            listening={false}
           />
         );
       })}
@@ -39,10 +41,7 @@ export type TimeGridKonvaProps = {
   layerHeight: number;
 };
 
-export const TimeGridKonva = forwardRef(function TimeGridKonva(
-  props: TimeGridKonvaProps
-  // ref: React.Ref<TimeGridKonva>
-) {
+export function TimeGridKonva(props: TimeGridKonvaProps) {
   const { layerHeight } = props;
   const stageState = useRecoilValue(stageStateAtom);
   const scale = stageState.scale;
@@ -62,17 +61,21 @@ export const TimeGridKonva = forwardRef(function TimeGridKonva(
         return (
           <Fragment key={offset}>
             <Text
+              id={`grid-line-time-grid-text-${offset}`}
               x={offset * secondWidth + 2}
               y={0}
               text={hour.toString()}
               fontSize={20 / scale}
               fontFamily='Calibri'
               fill={gridColor}
+              listening={false}
             />
             <Line
+              id={`grid-line-time-grid-${offset}`}
               points={[offset * secondWidth, 0, offset * secondWidth, layerHeight]}
               stroke={gridColor}
               strokeWidth={1}
+              listening={false}
             />
             <TimeGridMinuteLineKonva i={0} secondWidth={secondWidth} layerHeight={layerHeight} offset={offset} />
             {offset < 24 * 60 * 60 ? (
@@ -87,6 +90,7 @@ export const TimeGridKonva = forwardRef(function TimeGridKonva(
                   return (
                     <Fragment key={i}>
                       <Line
+                        id={`grid-line-time-grid-${offset}-${i}`}
                         points={[
                           (offset + i * 60 * 10) * secondWidth,
                           0,
@@ -95,6 +99,7 @@ export const TimeGridKonva = forwardRef(function TimeGridKonva(
                         ]}
                         stroke={gridColor + '88'}
                         strokeWidth={1}
+                        listening={false}
                       />
                       <TimeGridMinuteLineKonva
                         i={i}
@@ -114,4 +119,4 @@ export const TimeGridKonva = forwardRef(function TimeGridKonva(
       })}
     </Group>
   );
-});
+}

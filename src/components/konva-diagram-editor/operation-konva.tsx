@@ -1,4 +1,3 @@
-import { forwardRef } from 'react';
 import { Line } from 'react-konva';
 import { useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
@@ -71,13 +70,14 @@ export type OperationKonvaProps = DeepReadonly<{
   operation: Operation;
 }>;
 
-export const OperationKonva = forwardRef(function OperationKonva(props: OperationKonvaProps, ref: any) {
+export function OperationKonva(props: OperationKonvaProps) {
   const { diagramProps, operation } = props;
   const viewStateValues = useViewStateValues();
   const trains = useRecoilValue(allTrainsMapAtom);
   const stationMap = useRecoilValue(stationMapSelector);
 
   let prevTrainId = operation.trainIds[0];
+  assert(prevTrainId !== undefined);
 
   return (
     <>
@@ -89,7 +89,9 @@ export const OperationKonva = forwardRef(function OperationKonva(props: Operatio
         ),
       ].map((trainIndex) => {
         let currTrainId = operation.trainIds[trainIndex]!;
-        assert(prevTrainId !== undefined);
+        assert(currTrainId !== undefined);
+
+        if (trains.get(currTrainId) === undefined) return <></>;
 
         const direction = getDirection(diagramProps.timetable, currTrainId);
 
@@ -128,16 +130,13 @@ export const OperationKonva = forwardRef(function OperationKonva(props: Operatio
       })}
     </>
   );
-});
+}
 
 export type OperationCollectionKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;
 }>;
 
-export const OperationCollectionKonva = forwardRef(function OperationCollectionKonva(
-  props: OperationCollectionKonvaProps,
-  ref: any
-) {
+export function OperationCollectionKonva(props: OperationCollectionKonvaProps, ref: any) {
   const { diagramProps } = props;
   return (
     <>
@@ -146,4 +145,4 @@ export const OperationCollectionKonva = forwardRef(function OperationCollectionK
       ))}
     </>
   );
-});
+}

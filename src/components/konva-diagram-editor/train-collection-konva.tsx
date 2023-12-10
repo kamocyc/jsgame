@@ -1,4 +1,4 @@
-import { Fragment, forwardRef } from 'react';
+import { Fragment } from 'react';
 import { Group, Line, Rect, Text } from 'react-konva';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { DeepReadonly, assert } from 'ts-essentials';
@@ -23,59 +23,6 @@ import { getPlatformUnderCursor } from './selection-group-manager';
 import { getPlatformPositions } from './station-view-konva';
 
 // export class TrainCollectionKonva_Fucntions {
-//   commitDrawingLine(drawingLineTimes: { station: StationLike; time: number }[]): Train | null {
-//     if (drawingLineTimes.length >= 2) {
-//       // 1番目のstationのindexと2番目のstationのindexを比較し、inbound / outboundを判定する
-//       const firstStationIndex = this.context.diagramProps.stations.findIndex(
-//         (station) => station.stationId === drawingLineTimes[0].station.stationId
-//       );
-//       const secondStationIndex = this.context.diagramProps.stations.findIndex(
-//         (station) => station.stationId === drawingLineTimes[1].station.stationId
-//       );
-//       const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
-//       const trains =
-//         direction === 'Inbound' ? this.context.diagramProps.inboundTrains : this.context.diagramProps.outboundTrains;
-
-//       const firstOrLast = getFirstOrLast(direction, this.context.diagramProps.timetable.inboundIsFirstHalf);
-//       const railwayLine = this.context.diagramProps.railwayLine;
-
-//       const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime, index) => {
-//         const platform = getRailwayPlatform(railwayLine, drawingLineTime.station.stationId, firstOrLast);
-//         const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platform.platformId);
-//         assert(stop != null);
-//         return {
-//           station: drawingLineTime.station,
-//           departureTime: index < drawingLineTimes.length - 1 ? drawingLineTime.time : null,
-//           arrivalTime: index > 0 ? drawingLineTime.time : null,
-//           diaTimeId: generateId(),
-//           isPassing: false,
-//           platform: platform,
-//           isInService: true,
-//           railwayLine: railwayLine,
-//           trackId: stop.platformTrack.trackId,
-//         };
-//       });
-
-//       const newTrain: Train = {
-//         trainId: generateId(),
-//         trainName: '',
-//         trainType: undefined,
-//         diaTimes: diaTimes,
-//         trainCode: '',
-//         firstStationOperation: getDefaultConnectionType(),
-//         lastStationOperation: getDefaultConnectionType(),
-//       };
-
-//       fillMissingTimes(newTrain, this.context.diagramProps.stations);
-
-//       this.context.diagramProps.crudTrain.addTrain(newTrain, direction);
-//       this.updateShape();
-
-//       return trains[trains.length - 1];
-//     }
-
-//     return null;
-//   }
 
 //   private getOverlappedTrainLines(rect: RectState) {
 //     const overlappedTrainLines = [...this.trainKonvas.entries()]
@@ -131,7 +78,7 @@ export type TrainKonvaProps = DeepReadonly<{
   mouseEventManager: MouseEventManager;
 }>;
 
-export const TrainKonva = forwardRef(function TrainKonva(props: TrainKonvaProps, ref: any) {
+export function TrainKonva(props: TrainKonvaProps) {
   const { train, diagramProps, mouseEventManager } = props;
   const secondWidth = useRecoilValue(secondWidthAtom);
   const selectedTrainIds = useRecoilValue(selectedTrainIdsAtom);
@@ -332,7 +279,7 @@ export const TrainKonva = forwardRef(function TrainKonva(props: TrainKonvaProps,
       )}
     </>
   );
-});
+}
 
 export type TrainCollectionKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;
@@ -492,10 +439,7 @@ export function getDragStartTimes(
   return dragStartTrainTimes;
 }
 
-export const TrainCollectionKonva = forwardRef(function TrainCollectionKonva(
-  props: TrainCollectionKonvaProps,
-  ref: any
-) {
+export function TrainCollectionKonva(props: TrainCollectionKonvaProps) {
   const { diagramProps, mouseEventManager } = props;
   const secondWidth = useRecoilValue(secondWidthAtom);
   const viewState = useViewStateValues();
@@ -561,4 +505,4 @@ export const TrainCollectionKonva = forwardRef(function TrainCollectionKonva(
       ))}
     </Group>
   );
-});
+}

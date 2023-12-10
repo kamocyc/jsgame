@@ -1,29 +1,40 @@
+import { produce } from 'immer';
 import Konva from 'konva';
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { Shape } from 'konva/lib/Shape';
+import { useEffect, useRef, useState } from 'react';
 import { Layer, Stage } from 'react-konva';
-import { useRecoilState, useRecoilValue } from 'recoil';
+import { SetterOrUpdater, useRecoilState, useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
-import { Point, StationLike, Train } from '../../model';
+import { assert, nn } from '../../common';
+import { DiaTime, PlatformLike, Point, StationLike, Train, generateId, getDefaultConnectionType } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { Polygon, sat } from '../../sat';
+import { fillMissingTimes } from '../timetable-editor/timetable-util';
 import { DragRectKonva, DragRectKonvaProps } from './drag-rect-konva';
 import { DiagramProps } from './drawer-util';
+import { DrawingTrainLineKonva } from './drawing-train-line-konva';
 import {
+  DrawingTrainLine,
   RectState,
   ViewState,
   allTrainsMapAtom,
   createPositionDiaTimeMap,
+  drawingTrainLineAtom,
   getMouseEventManager,
   getPointerPosition,
+  getPositionToTime,
   secondWidthAtom,
   selectedTrainIdsAtom,
   stageStateAtom,
+  stationCanvasWidthAtom,
   stationMapSelector,
+  stationsAtom,
   useViewStateValues,
-  virtualCanvasHeight,
+  virtualCanvasHeightSelector,
   virtualCanvasWidth,
 } from './konva-util';
 import { OperationCollectionKonva } from './operation-konva';
+import { getPlatformUnderCursor } from './selection-group-manager';
 import { StationLineCollectionKonva } from './station-line-konva';
 import { TimeGridKonva } from './time-grid-konva';
 import { TrainCollectionKonva } from './train-collection-konva';
@@ -39,33 +50,6 @@ interface StagePosition {
 export interface OutlinedTimetableHistoryItemContext {
   timetable: OutlinedTimetable;
 }
-
-// // やることは、オブジェクトへの反映。ただし、undo / redoのために、undo / redo用の関数を返す必要がある。
-
-// function setHookToCrudTrain(crudTrain: CrudTrain, hook: () => void): CrudTrain {
-//   return {
-//     addTrains: (trains: AddingNewTrain[]) => {
-//       const result = crudTrain.addTrains(trains);
-//       hook();
-//       return result;
-//     },
-//     addTrain: (train: Train, direction: 'Inbound' | 'Outbound') => {
-//       const result = crudTrain.addTrain(train, direction);
-//       hook();
-//       return result;
-//     },
-//     updateTrain: (historyItem: HistoryItem) => {
-//       const result = crudTrain.updateTrain(historyItem);
-//       hook();
-//       return result;
-//     },
-//     deleteTrains: (trainIds: string[]) => {
-//       const result = crudTrain.deleteTrains(trainIds);
-//       hook();
-//       return result;
-//     },
-//   };
-// }
 
 // export class StageKonva_ {
 //   private readonly stage: Konva.Stage;
@@ -384,16 +368,6 @@ export interface OutlinedTimetableHistoryItemContext {
 //   minTIme: number;
 // }>;
 
-// export const StageKonva = forwardRef(function StageKonva(props: StageKonvaProps, ref: any) {
-//   const { minTIme } = props;
-
-//   return (
-//     <>
-//       <TrainCollectionKonva__ />
-//     </>
-//   );
-// });
-
 function areOverlapped(linePoints: number[], rect: RectState) {
   // rectの頂点の配列
   const width = rect.width !== 0 ? rect.width : 0.001;
@@ -469,7 +443,59 @@ export type MainViewKonvaProps = DeepReadonly<{
   minTime: number;
 }>;
 
-export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKonvaProps, ref: any) {
+function getStageTarget(target: Konva.Stage | Shape<Konva.ShapeConfig>) {
+  if ((target instanceof Konva.Text || target instanceof Konva.Line) && target.id().substring(0, 10) === 'grid-line-') {
+    target = nn(target.getStage());
+  }
+  return target;
+}
+
+function commitDrawingLine(
+  drawingLineTimes: DeepReadonly<{ stationId: string; platformId: string; time: number }[]>,
+  stations: DeepReadonly<StationLike[]>,
+  diagramProps: DeepReadonly<DiagramProps>
+): void {
+  if (drawingLineTimes.length >= 2) {
+    // 1番目のstationのindexと2番目のstationのindexを比較し、inbound / outboundを判定する
+    const firstStationIndex = stations.findIndex((station) => station.stationId === drawingLineTimes[0].stationId);
+    const secondStationIndex = stations.findIndex((station) => station.stationId === drawingLineTimes[1].stationId);
+    const direction = firstStationIndex < secondStationIndex ? 'Inbound' : 'Outbound';
+    const railwayLine = diagramProps.railwayLine;
+
+    const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime, index) => {
+      const platformId = drawingLineTime.platformId;
+      const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
+      assert(stop != null);
+      const diaTime: DiaTime = {
+        stationId: drawingLineTime.stationId,
+        departureTime: index < drawingLineTimes.length - 1 ? drawingLineTime.time : null,
+        arrivalTime: index > 0 ? drawingLineTime.time : null,
+        diaTimeId: generateId(),
+        isPassing: false,
+        platformId: platformId,
+        isInService: true,
+        trackId: stop.platformTrack.trackId,
+      };
+      return diaTime;
+    });
+
+    const newTrain: Train = {
+      trainId: generateId(),
+      trainName: '',
+      trainType: undefined,
+      diaTimes: diaTimes,
+      trainCode: '',
+      firstStationOperation: getDefaultConnectionType(),
+      lastStationOperation: getDefaultConnectionType(),
+    };
+
+    fillMissingTimes(newTrain, stations);
+
+    diagramProps.crudTrain.addTrain(newTrain, direction);
+  }
+}
+
+export function MainViewKonva(props: MainViewKonvaProps, ref: any) {
   const { diagramProps } = props;
 
   const [stageState, setStageState] = useRecoilState(stageStateAtom);
@@ -489,10 +515,14 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
   const [dragStartPoint, setDragStartPoint] = useState<Point | null>(null);
   const [dragStartPointWithOffset, setDragStartPointWithOffset] = useState<Point | null>(null);
   const stationMap = useRecoilValue(stationMapSelector);
+  const stationCanvasWidth = useRecoilValue(stationCanvasWidthAtom);
+  const virtualCanvasHeight = useRecoilValue(virtualCanvasHeightSelector);
+  const [drawingLineTimes, setDrawingLineTimes] = useRecoilState(drawingTrainLineAtom);
+  const stations = useRecoilValue(stationsAtom);
 
   useEffect(() => {
     const fitStageIntoParentContainer = () => {
-      const clientWidth = document.documentElement.clientWidth - 230; /* この値はなんとかして設定する */
+      const clientWidth = document.documentElement.clientWidth - stationCanvasWidth - 40;
       setStageState((state) => ({ ...state, width: clientWidth }));
     };
 
@@ -521,11 +551,66 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
   }, [stageRef.current]);
 
   mouseEventManager.registerClickHandler('mainStage', (e, target) => {
+    target = getStageTarget(target);
+
     if (target instanceof Konva.Stage) {
       if (e.evt.button === 0) {
         if (selectedTrainIds.length > 0) {
           setSelectedTrainIds([]);
         }
+
+        if (drawingLineTimes.isDrawing) {
+          const mousePosition = getPointerPosition(target);
+          const newTime = getPositionToTime(mousePosition.x, secondWidth);
+          const stationOrPlatform = getPlatformUnderCursor(mousePosition.y, stationMap, viewState);
+          if (stationOrPlatform !== null) {
+            handleDrawingTrainLine(stationOrPlatform, newTime, setDrawingLineTimes, stationMap);
+          }
+        }
+      }
+    }
+  });
+
+  mouseEventManager.registerDblClickHandler('mainStage', (e, target) => {
+    target = getStageTarget(target);
+
+    if (target instanceof Konva.Stage) {
+      console.log('mousemove', { target });
+      if (drawingLineTimes.isDrawing) {
+        {
+          const mousePosition = getPointerPosition(target);
+          const newTime = getPositionToTime(mousePosition.x, secondWidth);
+          const stationOrPlatform = getPlatformUnderCursor(mousePosition.y, stationMap, viewState);
+          if (stationOrPlatform !== null) {
+            handleDrawingTrainLine(stationOrPlatform, newTime, setDrawingLineTimes, stationMap);
+          }
+        }
+
+        commitDrawingLine(drawingLineTimes.drawingLineTimes, stations, diagramProps);
+
+        setDrawingLineTimes({ isDrawing: false, drawingLineTimes: [], tempDrawingLineTime: null });
+      } else {
+        const mousePosition = getPointerPosition(target);
+        const newTime = getPositionToTime(mousePosition.x, secondWidth);
+        const stationOrPlatform = getPlatformUnderCursor(mousePosition.y, stationMap, viewState);
+        if (stationOrPlatform !== null) {
+          handleDrawingTrainLine(stationOrPlatform, newTime, setDrawingLineTimes, stationMap);
+        }
+      }
+    }
+  });
+
+  mouseEventManager.registerMousemoveHandler('mainStage', (e, target) => {
+    target = getStageTarget(target);
+
+    if (target instanceof Konva.Stage && drawingLineTimes.isDrawing) {
+      const mousePosition = getPointerPosition(target);
+      const newTime = getPositionToTime(mousePosition.x, secondWidth);
+      const stationOrPlatform = getPlatformUnderCursor(mousePosition.y, stationMap, viewState);
+      if (stationOrPlatform !== null) {
+        setTemporaryTime(stationOrPlatform, newTime, setDrawingLineTimes, stationMap);
+      } else if (drawingLineTimes.tempDrawingLineTime !== null) {
+        setDrawingLineTimes((prev) => ({ ...prev, tempDrawingLineTime: null }));
       }
     }
   });
@@ -534,8 +619,8 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
     if (e.evt.button === 2) {
       if (stageRef.current !== null) {
         setDragStartStagePosition({ x: stageRef.current.x(), y: stageRef.current!.y() });
-        const stage = stageRef.current.getPointerPosition()!;
-        setDragStartPoint({ x: stage.x / stageState.scale, y: stage.y / stageState.scale });
+        const stagePointer = stageRef.current.getPointerPosition()!;
+        setDragStartPoint({ x: stagePointer.x, y: stagePointer.y });
       }
     } else if (target instanceof Konva.Stage) {
       if (e.evt.button === 0) {
@@ -546,8 +631,9 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
 
   mouseEventManager.registerDragMoveHandler('mainStage', (e, target) => {
     if (dragStartStagePosition !== null && stageRef.current !== null) {
-      const stage = stageRef.current.getPointerPosition()!;
-      const dragPoint = { x: stage.x / stageState.scale, y: stage.y / stageState.scale };
+      // ステージのドラッグ
+      const stagePointer = stageRef.current.getPointerPosition()!;
+      const dragPoint = { x: stagePointer.x, y: stagePointer.y };
 
       setStageState((prev) => {
         const newStagePosition = { ...prev };
@@ -559,6 +645,7 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
         return adjustStagePosition(newStagePosition);
       });
     } else if (target instanceof Konva.Stage) {
+      // 範囲選択
       if (dragStartPointWithOffset !== null) {
         const dragEndPoint = getPointerPosition(target);
 
@@ -624,6 +711,9 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
     if (stageBottom < containerHeight) {
       stage.y = containerHeight - virtualCanvasHeight * scale;
     }
+    if (stage.y > 0) {
+      stage.y = 0;
+    }
 
     return stage;
   };
@@ -631,7 +721,7 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
   const onWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
 
-    const scaleBy = 1.05;
+    const scaleBy = 1.1;
     const pointerPosition = e.target.getStage()?.getPointerPosition();
     if (pointerPosition == null) return;
 
@@ -683,6 +773,7 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
       <Layer>
         <TrainCollectionKonva mouseEventManager={mouseEventManager} diagramProps={diagramProps} />
         <OperationCollectionKonva diagramProps={diagramProps} />
+        <DrawingTrainLineKonva />
         <DragRectKonva
           isDragging={dragRectState.isDragging}
           dragStartX={dragRectState.dragStartX}
@@ -693,4 +784,132 @@ export const MainViewKonva = forwardRef(function MainViewKonva(props: MainViewKo
       </Layer>
     </Stage>
   );
-});
+}
+
+function getStationIdAndPlatformId(
+  stationOrPlatform: { platform: PlatformLike; stationId: null } | { platform: null; stationId: string },
+  stationMap: DeepReadonly<Map<string, StationLike>>
+): { stationId: string; platformId: string } {
+  let stationId: string;
+  let platformId: string;
+  if (stationOrPlatform.stationId !== null) {
+    stationId = stationOrPlatform.stationId;
+    platformId = getDefaultPlatform(stationId, stationMap);
+  } else {
+    stationId = stationOrPlatform.platform.stationId;
+    platformId = stationOrPlatform.platform.platformId;
+  }
+
+  return { stationId, platformId };
+}
+
+function setTemporaryTime(
+  stationOrPlatform: { platform: PlatformLike; stationId: null } | { platform: null; stationId: string },
+  newTime: number,
+  setDrawingLineTimes: SetterOrUpdater<DrawingTrainLine>,
+  stationMap: DeepReadonly<Map<string, StationLike>>
+): void {
+  setDrawingLineTimes((prev) => {
+    return produce(prev, (next) => {
+      if (!prev.isDrawing) return next;
+
+      const { stationId, platformId } = getStationIdAndPlatformId(stationOrPlatform, stationMap);
+
+      if (!canAddNewTime(next, stationId, platformId, newTime)) {
+        return next;
+      }
+
+      next.tempDrawingLineTime = {
+        stationId,
+        platformId,
+        time: newTime,
+      };
+      return next;
+    });
+  });
+}
+
+function handleDrawingTrainLine(
+  stationOrPlatform: { platform: PlatformLike; stationId: null } | { platform: null; stationId: string },
+  newTime: number,
+  setDrawingLineTimes: SetterOrUpdater<DrawingTrainLine>,
+  stationMap: DeepReadonly<Map<string, StationLike>>
+): void {
+  setDrawingLineTimes((prev) => {
+    return produce(prev, (next) => {
+      const { stationId, platformId } = getStationIdAndPlatformId(stationOrPlatform, stationMap);
+      if (!canAddNewTime(next, stationId, platformId, newTime)) return next;
+
+      if (!next.isDrawing) {
+        // 新規に列車を作る
+        next.drawingLineTimes = [
+          {
+            stationId,
+            platformId,
+            time: newTime,
+          },
+        ];
+        next.isDrawing = true;
+      } else {
+        next.drawingLineTimes.push({
+          stationId: stationId,
+          platformId: platformId,
+          time: newTime,
+        });
+      }
+
+      return next;
+    });
+  });
+}
+
+function canAddNewTime(next: DrawingTrainLine, stationId: string, platformId: string, newTime: number): boolean {
+  // 整合性チェック
+  const isStationValid = () => {
+    if (next.drawingLineTimes.length === 0) return true;
+
+    const lastDrawingLineTime = next.drawingLineTimes[next.drawingLineTimes.length - 1];
+    if (lastDrawingLineTime.stationId === stationId && lastDrawingLineTime.platformId === platformId) {
+      // 直前と同じ駅を選択している
+      if (next.drawingLineTimes.length === 1) return true; // 発車時刻として追加
+
+      const lastLastDrawingLineTime = next.drawingLineTimes[next.drawingLineTimes.length - 2];
+      if (lastDrawingLineTime.stationId !== lastLastDrawingLineTime.stationId) return true; // 発車時刻として追加
+
+      return false;
+    }
+
+    if (next.drawingLineTimes.some((drawingLineTime) => drawingLineTime.stationId === stationId)) {
+      // その他で既に同じ駅が追加されている
+      return false;
+    }
+
+    return true;
+  };
+
+  if (!isStationValid()) return false;
+
+  if (next.drawingLineTimes.length >= 2) {
+    const lastTime = next.drawingLineTimes[next.drawingLineTimes.length - 1].time;
+
+    if (next.drawingLineTimes[1].time < next.drawingLineTimes[0].time) {
+      // 時間が少なくなる方向に線を引いている
+      if (newTime > lastTime) {
+        // 既に線に追加されている駅の時刻よりも遅い時刻を追加しようとしている
+        return false;
+      }
+    } else {
+      if (lastTime > newTime) {
+        // 既に線に追加されている駅の時刻よりも早い時刻を追加しようとしている
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function getDefaultPlatform(stationId: string, stationMap: DeepReadonly<Map<string, StationLike>>): string {
+  const station = nn(stationMap.get(stationId));
+  return station.platforms[0].platformId;
+}

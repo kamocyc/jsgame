@@ -1,18 +1,10 @@
-import { forwardRef } from 'react';
 import { Group, Line } from 'react-konva';
 import { useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { assert, nn, upto } from '../../common';
 import { StationLike } from '../../model';
 import { hitStrokeWidth } from './drawer-util';
-import {
-  gridColor,
-  isStationExpandedAtom,
-  stageStateAtom,
-  stationPositionsAtom,
-  stationsAtom,
-  virtualCanvasWidth,
-} from './konva-util';
+import { gridColor, isStationExpandedAtom, stationPositionsAtom, stationsAtom, virtualCanvasWidth } from './konva-util';
 import { getPlatformPositions } from './station-view-konva';
 
 // export class StationLineKonva {
@@ -115,14 +107,10 @@ import { getPlatformPositions } from './station-view-konva';
 export type StationPlatformLineKonvaProps = DeepReadonly<{
   station: StationLike;
 }>;
-export const StationPlatformLineKonva = forwardRef(function StationPlatformLineKonva(
-  props: StationPlatformLineKonvaProps,
-  ref: any
-) {
+export function StationPlatformLineKonva(props: StationPlatformLineKonvaProps) {
   const { station } = props;
-  const stageState = useRecoilValue(stageStateAtom);
-  const stationPositions = useRecoilValue(stationPositionsAtom);
-  const platforms = props.station.platforms;
+  const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
+  const platforms = station.platforms;
   const [platformPositions, lastLinePosition] = getPlatformPositions(platforms);
   const stationPosition = nn(stationPositions.find((p) => p.stationId === station.stationId)).diagramPosition;
 
@@ -132,6 +120,7 @@ export const StationPlatformLineKonva = forwardRef(function StationPlatformLineK
         const platformPosition = platformPositions[platformIndex];
         return (
           <Line
+            id={`grid-line-station-platform-${station.stationId}-${platformIndex}`}
             key={platformIndex}
             points={[0, platformPosition, virtualCanvasWidth, platformPosition]}
             stroke={gridColor}
@@ -142,22 +131,23 @@ export const StationPlatformLineKonva = forwardRef(function StationPlatformLineK
       <Line points={[0, lastLinePosition, virtualCanvasWidth, lastLinePosition]} stroke={gridColor} strokeWidth={1} />
     </Group>
   );
-});
+}
 
 export type StationLineKonvaProps = DeepReadonly<{
   station: StationLike;
 }>;
-export const StationLineKonva = forwardRef(function StationLineKonva(props: StationLineKonvaProps, ref: any) {
+export function StationLineKonva(props: StationLineKonvaProps) {
   const station = props.station;
   const isStationExpandedMap = useRecoilValue(isStationExpandedAtom);
   const isStationExpanded = isStationExpandedMap.get(station.stationId) ?? false;
-  const stationPositions = useRecoilValue(stationPositionsAtom);
+  const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
   const diagramPosition = stationPositions.find((x) => x.stationId === station.stationId)?.diagramPosition;
   assert(diagramPosition != null);
 
   return (
     <>
       <Line
+        id={`grid-line-station-line-${station.stationId}`}
         points={[0, diagramPosition, virtualCanvasWidth, diagramPosition]}
         stroke={gridColor}
         strokeWidth={1}
@@ -166,13 +156,10 @@ export const StationLineKonva = forwardRef(function StationLineKonva(props: Stat
       {isStationExpanded ? <>{<StationPlatformLineKonva station={station} />}</> : <></>}
     </>
   );
-});
+}
 
 export type StationLineCollectionKonvaProps = DeepReadonly<{}>;
-export const StationLineCollectionKonva = forwardRef(function StationLineCollectionKonva(
-  props: StationLineCollectionKonvaProps,
-  ref: any
-) {
+export function StationLineCollectionKonva(props: StationLineCollectionKonvaProps) {
   const stations = useRecoilValue(stationsAtom);
 
   return (
@@ -182,4 +169,4 @@ export const StationLineCollectionKonva = forwardRef(function StationLineCollect
       })}
     </>
   );
-});
+}

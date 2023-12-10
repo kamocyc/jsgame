@@ -19,11 +19,15 @@ export class MouseEventManager {
   private mousedownStartShape: Shape<ShapeConfig> | Stage | null = null;
   private mousedownStartButton: number | null = null;
   private didDragStartCalled: boolean = false;
+
   private clickHandlerMap: Map<string, HandlerType> = new Map();
+  private mousemoveHandlerMap: Map<string, HandlerType> = new Map();
+  private dblClickHandlerMap: Map<string, HandlerType> = new Map();
   private dragStartHandlerMap: Map<string, DragStartHandlerType> = new Map();
   private dragStartDataMap: Map<string, unknown> = new Map();
   private dragMoveHandlerMap: Map<string, DragHandlerType> = new Map();
   private dragEndHandlerMap: Map<string, DragHandlerType> = new Map();
+
   private lastDragMoveTime: number = 0;
   private stage: Konva.Stage | null = null;
 
@@ -54,9 +58,17 @@ export class MouseEventManager {
     stage.off('mousedown');
     stage.off('mousemove');
     stage.off('mouseup');
+    stage.off('dblclick');
   }
 
   private setEventHandlers(stage: Konva.Stage) {
+    stage.on('dblclick', (e) => {
+      const handler = this.getHandler(this.dblClickHandlerMap, e.target);
+      if (handler != null) {
+        handler[0](e, e.target);
+      }
+    });
+
     stage.on('mousedown', (e) => {
       this.mousedownStartPoint = getPointerPosition(stage);
       this.mousedownStartShape = e.target;
@@ -86,6 +98,15 @@ export class MouseEventManager {
     stage.on('mouseup', mouseupHandler);
 
     stage.on('mousemove', (e) => {
+      {
+        // mousemove handler
+        // 別に組み込みのmousemoveイベントでもいいが、統一性のためにここでやる
+        const handler = this.getHandler(this.mousemoveHandlerMap, e.target);
+        if (handler != null) {
+          handler[0](e, e.target);
+        }
+      }
+
       if (this.mousedownStartPoint === null || this.mousedownStartShape === null) return;
 
       if (!this.didDragStartCalled && this.isClick(this.mousedownStartPoint!, getPointerPosition(stage))) {
@@ -134,6 +155,10 @@ export class MouseEventManager {
 
   deleteDestroyedShapes() {
     for (const [shapeId, _] of this.clickHandlerMap.entries()) this.deleteDestroyedShape(shapeId, this.clickHandlerMap);
+    for (const [shapeId, _] of this.mousemoveHandlerMap.entries())
+      this.deleteDestroyedShape(shapeId, this.mousemoveHandlerMap);
+    for (const [shapeId, _] of this.dblClickHandlerMap.entries())
+      this.deleteDestroyedShape(shapeId, this.dblClickHandlerMap);
     for (const [shapeId, _] of this.dragStartHandlerMap.entries())
       this.deleteDestroyedShape(shapeId, this.dragStartHandlerMap);
     for (const [shapeId, _] of this.dragMoveHandlerMap.entries())
@@ -148,6 +173,12 @@ export class MouseEventManager {
 
   registerClickHandler(shapeId: string, handler: HandlerType) {
     this.clickHandlerMap.set(shapeId, handler);
+  }
+  registerMousemoveHandler(shapeId: string, handler: HandlerType) {
+    this.mousemoveHandlerMap.set(shapeId, handler);
+  }
+  registerDblClickHandler(shapeId: string, handler: HandlerType) {
+    this.dblClickHandlerMap.set(shapeId, handler);
   }
   registerDragStartHandler(shapeId: string, handler: DragStartHandlerType) {
     this.dragStartHandlerMap.set(shapeId, handler);

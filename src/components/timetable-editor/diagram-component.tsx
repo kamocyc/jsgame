@@ -113,8 +113,8 @@ export function KonvaCanvas(
           <MainViewKonva
             diagramProps={props}
             minTime={minTime}
-            clientHeight={1000 /*dummy*/}
-            clientWidth={canvasHeight}
+            clientHeight={canvasHeight}
+            clientWidth={1000 /*dummy*/}
           />
         </>
       )}

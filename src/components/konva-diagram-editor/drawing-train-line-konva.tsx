@@ -10,7 +10,6 @@ import {
 } from './konva-util';
 
 import { DeepReadonly } from 'ts-essentials';
-import { assert } from '../../common';
 import { DiaTime, StationLike, generateId } from '../../model';
 
 export function getDiaTimeFromDrawingTrainLine(
@@ -21,8 +20,7 @@ export function getDiaTimeFromDrawingTrainLine(
 
   const diaTimes: DiaTime[] = drawingLineTimes.map((drawingLineTime, index) => {
     const platformId = drawingLineTime.platformId;
-    const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
-    assert(stop != null);
+    const stopForTrackId = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
     const diaTime: DiaTime = {
       stationId: drawingLineTime.stationId,
       departureTime: index < drawingLineTimes.length - 1 ? drawingLineTime.time : null,
@@ -31,7 +29,7 @@ export function getDiaTimeFromDrawingTrainLine(
       isPassing: false,
       platformId: platformId,
       isInService: true,
-      trackId: stop.platformTrack.trackId,
+      trackId: stopForTrackId?.platformTrack.trackId ?? null,
     };
     return diaTime;
   });

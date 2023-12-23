@@ -111,7 +111,67 @@ export function checkStationTrackOccupation(
   }
 
   const operations = createOperations(trains, platformTimesMap);
+
+  // 詳細ダイヤ変換時にエラーになる点をチェックしたい。まずは、時刻がnull
+  const detailedTimetableErrors = checkDetailedTimetable(trains);
+  errors.push(...detailedTimetableErrors);
   return { errors, operations };
+}
+
+function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[] {
+  const errors: OperationError[] = [];
+  for (const train of trains) {
+    let index = 0;
+    for (const diaTime of train.diaTimes) {
+      // 条件は見直したいところ
+      if (diaTime.arrivalTime === null && index !== 0) {
+        errors.push({
+          type: 'NullArrivalTime',
+          trainId: train.trainId,
+          diaTimeId: diaTime.diaTimeId,
+          arrivalOrDeparture: 'arrivalTime',
+          platformId: diaTime.platformId,
+          stationId: diaTime.stationId,
+        });
+      }
+      if (diaTime.departureTime === null && index !== train.diaTimes.length - 1) {
+        errors.push({
+          type: 'NullDepartureTime',
+          trainId: train.trainId,
+          diaTimeId: diaTime.diaTimeId,
+          arrivalOrDeparture: 'departureTime',
+          platformId: diaTime.platformId,
+          stationId: diaTime.stationId,
+        });
+      }
+      if (diaTime.arrivalTime !== null || diaTime.departureTime !== null) {
+        if (diaTime.platformId === null) {
+          errors.push({
+            type: 'NullPlatform',
+            trainId: train.trainId,
+            diaTimeId: diaTime.diaTimeId,
+            arrivalOrDeparture: null,
+            platformId: null,
+            stationId: diaTime.stationId,
+          });
+        }
+        if (diaTime.trackId === null) {
+          errors.push({
+            type: 'NullTrack',
+            trainId: train.trainId,
+            diaTimeId: diaTime.diaTimeId,
+            arrivalOrDeparture: null,
+            platformId: diaTime.platformId,
+            stationId: diaTime.stationId,
+          });
+        }
+      }
+
+      index++;
+    }
+  }
+
+  return errors;
 }
 
 type OperationSimple = DeepReadonly<{

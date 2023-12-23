@@ -129,6 +129,13 @@ export function createMapContext(mapWidth: number, mapHeight: number): MapContex
   };
 }
 
+// 将来的にはrailwayLineStopはこれの配列にしたい
+// export interface StopPlatform {
+//   platform: PlatformLike;
+//   track: Track;
+//   paths: Track[] | null;
+// }
+
 export interface RailwayLineStop {
   stopId: string;
   platform: PlatformLike;

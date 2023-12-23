@@ -143,8 +143,16 @@ export function TrainKonva(props: TrainKonvaProps) {
         const station = nn(stationMap.get(diaTime.stationId));
 
         const warningPosition =
-          error != null && error.stationId != null && error.arrivalOrDeparture != null && time !== null
-            ? getTextLabelPosition(train, diaTime, station, time, error?.stationId, scale, error.arrivalOrDeparture)
+          error != null && error.stationId != null && time !== null
+            ? getTextLabelPosition(
+                train,
+                diaTime,
+                station,
+                time,
+                error?.stationId,
+                scale,
+                error.arrivalOrDeparture ?? 'arrivalTime'
+              )
             : null;
 
         if (warningPosition !== null) {

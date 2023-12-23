@@ -1,5 +1,6 @@
 import { DeepReadonly } from 'ts-essentials';
 import { assert, nn } from '../../common';
+import { RailwayLine } from '../../mapEditorModel';
 import {
   DetailedTimetable,
   Operation,
@@ -203,6 +204,16 @@ function isPlatformsIsNotNull(timetable: OutlinedTimetableData) {
     alert('番線が設定されていない箇所があります');
     return false;
   }
+
+  const nullTracks = [...timetable._trains.values()].filter((t) =>
+    t.diaTimes.some((d) => (d.arrivalTime != null || d.departureTime != null) && d.trackId === null)
+  );
+
+  if (nullTracks.length > 0) {
+    alert('線路が設定されていない箇所があります');
+    return false;
+  }
+
   return true;
 }
 
@@ -225,10 +236,30 @@ function toTimetableMap(switchTTItems: SwitchTTItem[]) {
 export function toDetailedTimetable(
   allPlatforms: PlatformLike[],
   timetableData: OutlinedTimetableData,
-  tracks: Track[]
+  tracks: Track[],
+  railwayLines: RailwayLine[]
 ): DetailedTimetable | null {
   if (!isPlatformsIsNotNull(timetableData)) {
     return null;
+  }
+
+  //
+  for (const train of timetableData._trains.values()) {
+    for (const diaTime of train.diaTimes) {
+      if (diaTime.trackId === null || diaTime.platformId === null) continue;
+
+      const platformTracks = tracks.filter((t) => t.track.platform?.platformId === diaTime.platformId);
+
+      if (!platformTracks.some((t) => t.trackId === diaTime.trackId)) {
+        console.warn('不正なtrackIdなので、雑に自動設定');
+        const railwayLine: RailwayLine = railwayLines.find(
+          (r) => r.railwayLineId === timetableData._timetables[0].railwayLineId
+        )!;
+        diaTime.trackId = railwayLine.stops.find(
+          (s) => s.platform.platformId === diaTime.platformId
+        )!.platformTrack.trackId;
+      }
+    }
   }
 
   // TODO: 経路的に駅を経由しないといけないのに時刻が入っていないのはおかしいのでエラーにすべきなはず。。でも処理がややこしい。。。

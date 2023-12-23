@@ -18,7 +18,8 @@ import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
 import { drawEditor } from './trackEditorDrawer';
-import { ITrainMove, StoredTrain } from './trainMoveBase';
+import { StoredTrain } from './trainMoveBase';
+import { TrainTimetableMove } from './trainTimetableMove';
 
 export type MouseDragMode = 'Create' | 'Delete' | 'MoveMap' | 'SetPlatform' | 'Road';
 
@@ -81,7 +82,7 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
 
 // 種度づえ連射を置くのはアレだが、後で取り入れるか？
 function placeTrain(
-  trainMove: ITrainMove,
+  trainMove: TrainTimetableMove,
   mapTotalHeight: number,
   cell: Cell,
   mousePoint: Point,

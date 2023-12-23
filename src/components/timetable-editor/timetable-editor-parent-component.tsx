@@ -132,7 +132,8 @@ export function TimetableEditorParentComponent({
             const timetableAndOperations = toDetailedTimetable(
               platforms as PlatformLike[],
               appStates.outlinedTimetableData,
-              appStates.tracks
+              appStates.tracks,
+              appStates.railwayLines
             );
 
             if (timetableAndOperations === null) {

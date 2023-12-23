@@ -188,7 +188,7 @@ export class TrainTimetableMove {
 
     const r = getRadian(train.track, { begin: train.position, end: stopPosition });
     if (Math.abs(r) > Math.PI / 2) {
-      return false;
+      return false; // 進行方向から見て、stopPositionを過ぎている
     }
 
     return stopPosition;

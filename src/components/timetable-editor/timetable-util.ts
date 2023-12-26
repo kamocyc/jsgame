@@ -58,9 +58,6 @@ export function createNewStation(stationName: string): Station {
     stationId: generateId(),
     stationName: stationName,
     platforms: newPlatforms,
-    // defaultInboundPlatformId: newPlatforms[0].platformId,
-    // defaultOutboundPlatformId: newPlatforms[1].platformId,
-    // distance: DefaultStationDistance,
   };
   newPlatforms[0].stationId = newStation.stationId;
   newPlatforms[1].stationId = newStation.stationId;

@@ -14,12 +14,12 @@ export function getRailwayPlatform(
   railwayLine: DeepReadonly<RailwayLine>,
   stationId: string,
   firstHalfOrLastHalf: 'First' | 'Last'
-): string {
+): string | null {
   const { preStops, postStops } = splitStops(railwayLine.stops, nn(railwayLine.returnStopId));
 
   const stops = firstHalfOrLastHalf === 'First' ? preStops : postStops;
   const stop = stops.find((stop) => stop.platform.stationId === stationId);
-  assert(stop !== undefined);
+  if (stop === undefined) return null;
 
   return stop.platform.platformId;
 }

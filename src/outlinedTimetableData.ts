@@ -188,10 +188,10 @@ export const OutlinedTimetableFunc = {
     this.setTrains(that._trains, newOutboundTrains);
     timetable.outboundTrainIds.push(...newOutboundTrains.map((t) => t.trainId));
   },
-  updateOperations(that_: OutlinedTimetableData, stations: StationLike[]) {
+  updateOperations(that_: OutlinedTimetableData, stations: DeepReadonly<StationLike[]>) {
     const that = that_ as OutlinedTimetableData;
     const errors: OperationError[] = [];
-    const stationMap = new Map<string, StationLike>(stations.map((s) => [s.stationId, s]));
+    const stationMap = new Map<string, DeepReadonly<StationLike>>(stations.map((s) => [s.stationId, s]));
     for (const timetable of that._timetables) {
       const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(that, id));
       const platforms = timetable.stationIds.map((stationId) => nn(stationMap.get(stationId)).platforms).flat();

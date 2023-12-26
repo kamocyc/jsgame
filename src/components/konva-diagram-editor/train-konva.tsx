@@ -129,7 +129,7 @@ export function TrainKonva(props: TrainKonvaProps) {
   return (
     <>
       <Line points={points} stroke={strokeColor} strokeWidth={1} hitStrokeWidth={10} name='trainLine' id={id} />
-      {errors.map((error) => {
+      {errors.map((error, i) => {
         const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === error.diaTimeId);
         if (diaTime === undefined) return <></>;
 
@@ -157,10 +157,16 @@ export function TrainKonva(props: TrainKonvaProps) {
 
         if (warningPosition !== null) {
           return (
-            <WarningKonva x={warningPosition.x + 40 / scale} y={warningPosition.y} message={error.type} scale={scale} />
+            <WarningKonva
+              key={i}
+              x={warningPosition.x + 40 / scale}
+              y={warningPosition.y}
+              message={error.type}
+              scale={scale}
+            />
           );
         } else {
-          return <></>;
+          return <Fragment key={i}></Fragment>;
         }
       })}
       {isSelected ? (

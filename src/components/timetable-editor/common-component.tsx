@@ -346,5 +346,9 @@ export function SplitViewComponent({ splitViews }: { splitViews: SplitView[] }) 
 }
 
 export type SetTimetable = (
-  f: (draftTimetable: OutlinedTimetable, trainData: { trains: Train[]; otherDirectionTrains: Train[] }) => void
+  f: (
+    draftTimetable: OutlinedTimetable,
+    trainData: { trains: Train[]; otherDirectionTrains: Train[] },
+    stationMap: Map<string, DeepReadonly<StationLike>> | null
+  ) => void
 ) => void;

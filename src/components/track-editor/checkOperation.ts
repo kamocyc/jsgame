@@ -155,16 +155,16 @@ function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[]
             stationId: diaTime.stationId,
           });
         }
-        if (diaTime.trackId === null) {
-          errors.push({
-            type: 'NullTrack',
-            trainId: train.trainId,
-            diaTimeId: diaTime.diaTimeId,
-            arrivalOrDeparture: null,
-            platformId: diaTime.platformId,
-            stationId: diaTime.stationId,
-          });
-        }
+        // if (diaTime.trackId === null) {
+        //   errors.push({
+        //     type: 'NullTrack',
+        //     trainId: train.trainId,
+        //     diaTimeId: diaTime.diaTimeId,
+        //     arrivalOrDeparture: null,
+        //     platformId: diaTime.platformId,
+        //     stationId: diaTime.stationId,
+        //   });
+        // }
       }
 
       index++;

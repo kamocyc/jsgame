@@ -15,7 +15,7 @@ import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
 // import { SetTimetable, StationListComponent } from './station-component';
 import { RecoilRoot } from 'recoil';
-import { StationListComponent } from './station-component';
+import { StationListComponent } from './station-list-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
 import { getInitialTimetable } from './timetable-util';
@@ -374,7 +374,7 @@ export function TimetableEditorComponent({
                       setTimetableData((draftTimetableData) => {
                         const [draftTimetable, inboundTrains, outboundTrains] =
                           getInboundAndOutboundTrains(draftTimetableData);
-                        f(draftTimetable, { trains: inboundTrains, otherDirectionTrains: outboundTrains });
+                        f(draftTimetable, { trains: inboundTrains, otherDirectionTrains: outboundTrains }, null);
                         return undefined;
                       });
                     }}
@@ -403,7 +403,7 @@ export function TimetableEditorComponent({
                       setTimetableData((draftTimetableData) => {
                         const [draftTimetable, inboundTrains, outboundTrains] =
                           getInboundAndOutboundTrains(draftTimetableData);
-                        f(draftTimetable, { trains: outboundTrains, otherDirectionTrains: inboundTrains });
+                        f(draftTimetable, { trains: outboundTrains, otherDirectionTrains: inboundTrains }, null);
                         return undefined;
                       });
                     }}

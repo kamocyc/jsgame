@@ -1,16 +1,7 @@
 import { useState } from 'react';
 import { DeepReadonly, assert } from 'ts-essentials';
 import { StateUpdater, nn } from '../../common';
-import {
-  ContextData,
-  PlatformLike,
-  SettingData,
-  Station,
-  StationLike,
-  TimetableDirection,
-  Train,
-  generateId,
-} from '../../model';
+import { ContextData, PlatformLike, SettingData, Station, StationLike, Train, generateId } from '../../model';
 import { ContextMenuComponent, EditableTextComponent, SetTimetable } from './common-component';
 import { createNewStation } from './timetable-util';
 
@@ -20,14 +11,14 @@ function StationComponent({
   setStation,
 }: DeepReadonly<{
   stationId: string;
-  stations: DeepReadonly<StationLike[]>;
+  stations: Map<string, StationLike>;
   setStation: (station: DeepReadonly<StationLike>) => void;
 }>) {
   return (
     <EditableTextComponent
-      value={nn(stations.find((s) => s.stationId === stationId)).stationName}
+      value={nn(stations.get(stationId)).stationName}
       onChange={(value) => {
-        const station = nn(stations.find((s) => s.stationId === stationId));
+        const station = nn(stations.get(stationId));
         setStation({ ...station, stationName: value });
         return false;
       }}
@@ -41,24 +32,18 @@ function StationContextMenuComponent({
   contextData,
   setContextData,
   stationIds,
-  setStations,
   setTimetable,
-  trains,
-  otherDirectionTrains,
   selectedStationId,
   showStationDetail,
-  timetableDirection,
-}: DeepReadonly<{
+}: // timetableDirection,
+DeepReadonly<{
   contextData: ContextData;
   setContextData: StateUpdater<ContextData>;
   stationIds: string[];
-  setStations: (stations: StationLike[]) => void;
   setTimetable: SetTimetable;
-  trains: readonly Train[];
-  otherDirectionTrains: readonly Train[];
   selectedStationId: string | null;
   showStationDetail: (diaStation: DeepReadonly<string>) => void;
-  timetableDirection: 'Inbound' | 'Outbound';
+  // timetableDirection: 'Inbound' | 'Outbound';
 }>) {
   return (
     <ContextMenuComponent
@@ -106,11 +91,14 @@ function StationContextMenuComponent({
               return;
             }
 
-            setTimetable((draftTimetable, trainData) => {
-              const newStation = createNewStation('-');
-              draftTimetable.stationIds.splice(index, 0, newStation);
+            const newStation = createNewStation('-');
 
-              createNewStationAndUpdate(trainData, newStation, timetableDirection);
+            setTimetable((draftTimetable, trainData, stationMap) => {
+              draftTimetable.stationIds.splice(index, 0, newStation.stationId);
+
+              createNewStationAndUpdate(trainData, newStation);
+
+              nn(stationMap).set(newStation.stationId, newStation);
             });
             setContextData({ ...contextData, visible: false });
           },
@@ -120,23 +108,17 @@ function StationContextMenuComponent({
   );
 }
 
-export function StationListComponent({
+export function StationEditListComponent({
   stationIds,
-  setStations,
   setTimetable,
   stations,
-  trains,
-  otherDirectionTrains,
-  timetableDirection,
+  // timetableDirection,
   setSettingData,
 }: DeepReadonly<{
   stationIds: string[];
-  stations: DeepReadonly<StationLike[]>;
-  setStations: (stations: StationLike[]) => void;
+  stations: Map<string, StationLike>;
   setTimetable: SetTimetable;
-  trains: readonly Train[];
-  otherDirectionTrains: readonly Train[];
-  timetableDirection: 'Inbound' | 'Outbound';
+  // timetableDirection: 'Inbound' | 'Outbound';
   setSettingData: (settingData: DeepReadonly<SettingData>) => void;
 }>) {
   const [contextData, setContextData] = useState<ContextData>({
@@ -153,19 +135,22 @@ export function StationListComponent({
     });
   };
 
+  const setStation = (station: DeepReadonly<StationLike>) => {
+    setTimetable((_, __, stations) => {
+      nn(stations).set(station.stationId, station);
+    });
+  };
+
   return (
     <div>
       <StationContextMenuComponent
         contextData={contextData}
         setContextData={setContextData}
         stationIds={stationIds}
-        setStations={setStations}
-        trains={trains}
         setTimetable={setTimetable}
-        otherDirectionTrains={otherDirectionTrains}
         selectedStationId={selectedStationId}
         showStationDetail={showStationDetail}
-        timetableDirection={timetableDirection}
+        // timetableDirection={timetableDirection}
       />
       <div
         onContextMenu={(e) => {
@@ -193,19 +178,22 @@ export function StationListComponent({
             style={{ height: 24 * 3 + 'px', borderStyle: 'solid', borderWidth: '1px', paddingRight: '3px' }}
             id={'dia-station-block-' + stationId}
           >
-            <StationComponent stationId={stationId} stations={stations} setDiaStation={setDiaStation} />
+            <StationComponent stationId={stationId} stations={stations} setStation={setStation} />
           </div>
         ))}
       </div>
       <div>
         <button
           onClick={() => {
-            (stationUpdater) => {
-              const newStation = createNewStation('-');
-              stations.push(newStation);
-              createNewStationAndUpdate(trains, newStation, timetableDirection);
-              setStations([...stations]);
-            };
+            const newStation = createNewStation('-');
+
+            setTimetable((draftTimetable, trainData, stationMap) => {
+              draftTimetable.stationIds.push(newStation.stationId);
+
+              createNewStationAndUpdate(trainData, newStation /* timetableDirection */);
+
+              nn(stationMap).set(newStation.stationId, newStation);
+            });
           }}
         >
           駅を追加
@@ -215,14 +203,17 @@ export function StationListComponent({
   );
 }
 
-function getDefaultPlatform(station: StationLike, timetableDirection: TimetableDirection): PlatformLike {
+function getDefaultPlatform(
+  station: StationLike
+  //, timetableDirection: TimetableDirection
+): PlatformLike {
   return station.platforms[0];
 }
 
 function createNewStationAndUpdate(
   trainData: { trains: Train[]; otherDirectionTrains: Train[] },
-  newStation: StationLike,
-  timetableDirection: TimetableDirection
+  newStation: StationLike
+  // timetableDirection: TimetableDirection
 ) {
   trainData.trains.forEach((train) => {
     train.diaTimes.push({
@@ -231,7 +222,7 @@ function createNewStationAndUpdate(
       departureTime: null,
       isPassing: false,
       stationId: newStation.stationId,
-      platformId: getDefaultPlatform(newStation, timetableDirection).platformId,
+      platformId: getDefaultPlatform(newStation).platformId,
       isInService: true,
       trackId: null,
     });
@@ -244,7 +235,7 @@ function createNewStationAndUpdate(
       departureTime: null,
       isPassing: false,
       stationId: newStation.stationId,
-      platformId: getDefaultPlatform(newStation, timetableDirection).platformId,
+      platformId: getDefaultPlatform(newStation).platformId,
       isInService: true,
       trackId: null,
     });

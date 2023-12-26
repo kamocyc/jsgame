@@ -1,5 +1,6 @@
 import { produce } from 'immer';
 import { useEffect, useState } from 'react';
+import { DeepReadonly } from 'ts-essentials';
 import { StateUpdater } from '../../common';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
@@ -37,7 +38,7 @@ export function TimetableEditorParentComponent({
   setToast,
 }: {
   appStates: Omit<AppStates, 'mapState'>;
-  stations: StationLike[];
+  stations: DeepReadonly<StationLike[]>;
   defaultSelectedRailwayLineId: string | null;
   applyDetailedTimetable: () => void;
   setAppStates: StateUpdater<Omit<AppStates, 'mapState'>>;

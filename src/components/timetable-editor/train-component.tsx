@@ -475,7 +475,6 @@ export function TrainListComponent({
                   getFirstOrLast(timetableDirection, timetable.inboundIsFirstHalf)
                 );
                 const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
-                assert(stop != null);
                 return {
                   diaTimeId: generateId(),
                   arrivalTime: null,
@@ -484,7 +483,7 @@ export function TrainListComponent({
                   stationId: station.stationId,
                   platformId: platformId,
                   isInService: true,
-                  trackId: stop.platformTrack.trackId,
+                  trackId: stop?.platformTrack?.trackId ?? null,
                 };
               }),
               trainCode: newTrainCode,

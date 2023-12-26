@@ -214,7 +214,8 @@ export function createAgentPath(
     nearestStation.station,
     currentTime,
     destinationNearestStation.station,
-    timetableData
+    timetableData,
+    stations
   )[1];
   if (stationPath === null) {
     return [];
@@ -351,11 +352,11 @@ export function searchPath(
   initialPosition: StationLike,
   startTime: number,
   destination: StationLike,
-  timetableData: OutlinedTimetableData
+  timetableData: OutlinedTimetableData,
+  stations: StationLike[]
 ): readonly [readonly [StationLike, number][], StationPath | null] {
   const previous: { [key: string]: [StationLike, DiaTime] } = {};
 
-  const stations = timetableData._stations;
   // 駅ノードの初期化（未確定のノードのみ）
   let stationNodes = stations.map((station) => ({
     station: station,

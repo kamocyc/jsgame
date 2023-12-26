@@ -1,17 +1,9 @@
 import { RefObject, useEffect, useRef, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { StateUpdater, parseTime, toStringFromSeconds } from '../../common';
-import { ContextData, StationLike, Track, Train, getDefaultTime } from '../../model';
+import { ContextData, StationLike, Train, getDefaultTime } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
 import './timetable-editor.css';
-
-export class MapInfo {
-  constructor(private readonly tracks: Track[]) {}
-
-  getTrackOfPlatform(platformId: string): DeepReadonly<Track> | undefined {
-    return this.tracks.find((track) => track.track.platform?.platformId === platformId);
-  }
-}
 
 export function getStationMap(stations: DeepReadonly<StationLike[]>): DeepReadonly<Map<string, StationLike>> {
   return new Map(stations.map((station) => [station.stationId, station]));

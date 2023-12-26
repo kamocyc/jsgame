@@ -469,12 +469,12 @@ export function TrainListComponent({
               trainName: '',
               trainType: undefined,
               diaTimes: stations.map((station) => {
-                const platform = getRailwayPlatform(
+                const platformId = getRailwayPlatform(
                   railwayLine,
                   station.stationId,
                   getFirstOrLast(timetableDirection, timetable.inboundIsFirstHalf)
                 );
-                const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platform.platformId);
+                const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
                 assert(stop != null);
                 return {
                   diaTimeId: generateId(),
@@ -482,7 +482,7 @@ export function TrainListComponent({
                   departureTime: null,
                   isPassing: false,
                   stationId: station.stationId,
-                  platformId: platform.platformId,
+                  platformId: platformId,
                   isInService: true,
                   trackId: stop.platformTrack.trackId,
                 };

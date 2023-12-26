@@ -337,7 +337,7 @@ export function onmousedown(
   // 右クリックでドラッグするときは、マップを移動させる
   if (e.button === 2) {
     if (mapPosition != null) {
-      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+      setMouseStartCell(appStates.mapState.map[mapPosition.x][mapPosition.y]);
     }
     setMouseStartPoint({ x, y });
     setMouseDragMode('MoveMap');
@@ -348,7 +348,7 @@ export function onmousedown(
     if (appStates.mapState.editMode === 'Info') {
       showInfoPanel(
         appStates.mapState.mapContext.mapTotalHeight,
-        appStates.map[mapPosition.x][mapPosition.y],
+        appStates.mapState.map[mapPosition.x][mapPosition.y],
         { x, y },
         setEditorDialogMode,
         setPlatform,
@@ -363,7 +363,7 @@ export function onmousedown(
         placeTrain(
           appStates.mapState.trainMove,
           appStates.mapState.mapContext.mapTotalHeight,
-          appStates.map[mapPosition.x][mapPosition.y],
+          appStates.mapState.map[mapPosition.x][mapPosition.y],
           { x, y },
           selectedTrain
         );
@@ -371,10 +371,10 @@ export function onmousedown(
       }
     } else if (appStates.mapState.editMode === 'SetPlatform') {
       setMouseDragMode('SetPlatform');
-      const newPlatform = createPlatform(appStates.map[mapPosition.x][mapPosition.y]);
+      const newPlatform = createPlatform(appStates.mapState.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.mapState.editMode === 'Station') {
       const result = placeStation(
-        appStates.map,
+        appStates.mapState.map,
         appStates.mapState.extendedMap,
         mapPosition,
         appStates.mapState.mapWidth,
@@ -384,25 +384,24 @@ export function onmousedown(
       );
       if (result) {
         const [newTracks, _, newStation] = result;
-        appStates.tracks.push(...newTracks);
+        appStates.mapState.tracks.push(...newTracks);
         appStates.mapState.stations.push(newStation);
-        appStates.outlinedTimetableData._stations = appStates.mapState.stations;
         stationDbg.set(newStation.stationId, newStation);
       }
     } else if (appStates.mapState.editMode === 'Create') {
       setMouseDragMode('Create');
-      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+      setMouseStartCell(appStates.mapState.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.mapState.editMode === 'Delete') {
       setMouseDragMode('Delete');
-      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+      setMouseStartCell(appStates.mapState.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.mapState.editMode === 'ExtendedMap') {
       createExtendedMapCell(appStates.mapState.extendedMap[mapPosition.x][mapPosition.y], constructType);
     } else if (appStates.mapState.editMode === 'Road') {
       setMouseDragMode('Road');
-      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+      setMouseStartCell(appStates.mapState.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.mapState.editMode === 'DepotCreate') {
       const result = createDepot(
-        appStates.map,
+        appStates.mapState.map,
         appStates.mapState.extendedMap,
         mapPosition,
         appStates.mapState.mapWidth,
@@ -412,11 +411,11 @@ export function onmousedown(
       );
       if (result) {
         const [newTracks, newSwitches, _] = result;
-        appStates.tracks.push(...newTracks);
+        appStates.mapState.tracks.push(...newTracks);
       }
     } else if (appStates.mapState.editMode === 'LineCreate') {
       /* LineCreateは右クリックも使うため、mouseupで処理する */
-      setMouseStartCell(appStates.map[mapPosition.x][mapPosition.y]);
+      setMouseStartCell(appStates.mapState.map[mapPosition.x][mapPosition.y]);
     } else if (appStates.mapState.editMode === 'SetTerrain') {
       setTerrain(appStates.mapState.extendedMap[mapPosition.x][mapPosition.y], terrainType);
     } else {
@@ -468,7 +467,7 @@ export function onmousemove(
     appStates.mapState.mapContext
   );
   if (mapPosition != null) {
-    const mouseMoveCell = appStates.map[mapPosition.x][mapPosition.y];
+    const mouseMoveCell = appStates.mapState.map[mapPosition.x][mapPosition.y];
     drawEditor(appStates, mouseStartCell, mouseMoveCell);
   }
 }
@@ -495,14 +494,15 @@ function deleteVariousThings(
   if (platformId !== null) {
     // 駅の削除
     const station = appStates.mapState.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
-    const result = deleteStation(appStates.map, station);
+    const result = deleteStation(appStates.mapState.map, station);
     if (result !== true && 'error' in result) {
       setToast(result.error);
     } else {
       assert(appStates.mapState.stations.indexOf(station) !== -1);
       appStates.mapState.stations.splice(appStates.mapState.stations.indexOf(station), 1);
-      appStates.outlinedTimetableData._stations = appStates.mapState.stations;
-      appStates.tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat()).flat();
+      appStates.mapState.tracks = appStates.mapState.map
+        .map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat())
+        .flat();
       validateAppState(appStates);
     }
     return;
@@ -510,11 +510,11 @@ function deleteVariousThings(
 
   if (mouseStartCell.lineType !== null || mouseEndCell.lineType !== null) {
     // 線路の削除
-    const result = deleteLine(appStates.map, mouseStartCell, mouseEndCell);
+    const result = deleteLine(appStates.mapState.map, mouseStartCell, mouseEndCell);
     if ('error' in result) {
       setToast(result.error);
     } else {
-      appStates.tracks = getAllTracks(appStates.map);
+      appStates.mapState.tracks = getAllTracks(appStates.mapState.map);
       validateAppState(appStates);
     }
     return;
@@ -567,17 +567,17 @@ export function onmouseup(
     appStates.mapState.mapContext
   );
   if (mapPosition != null) {
-    const mouseEndCell = appStates.map[mapPosition.x][mapPosition.y];
+    const mouseEndCell = appStates.mapState.map[mapPosition.x][mapPosition.y];
 
     if (mouseDragMode === 'Create') {
-      const result = createLine(appStates.map, mouseStartCell, mouseEndCell, appStates.mapState.extendedMap);
+      const result = createLine(appStates.mapState.map, mouseStartCell, mouseEndCell, appStates.mapState.extendedMap);
       // console.warn(result?.error);
       if ('error' in result) {
         setToast(result.error);
       } else {
         const [tracks, _] = result;
         appStates.mapState.moneyManager.addMoney(-tracks.length * 10000);
-        appStates.tracks = getAllTracks(appStates.map);
+        appStates.mapState.tracks = getAllTracks(appStates.mapState.map);
         validateAppState(appStates);
       }
     } else if (mouseDragMode === 'Delete') {
@@ -602,7 +602,7 @@ export function onmouseup(
       } else {
         const trackAndPlatform = getPlatformOfCell(
           appStates.mapState.mapContext.mapTotalHeight,
-          appStates.map[mapPosition.x][mapPosition.y],
+          appStates.mapState.map[mapPosition.x][mapPosition.y],
           { x, y }
         );
         if (trackAndPlatform === null) {
@@ -611,7 +611,7 @@ export function onmouseup(
           const error = addPlatformToLine(
             trackAndPlatform[0],
             trackAndPlatform[1],
-            appStates.map[mapPosition.x][mapPosition.y],
+            appStates.mapState.map[mapPosition.x][mapPosition.y],
             appStates
           );
           if (error !== null) {

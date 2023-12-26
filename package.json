@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "start-client": "vite",
+    "start-server": "node src/server/index.js",
+    "dev": "npm-run-all2 --parallel start-client start-server",
     "tsc": "tsc",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -24,7 +26,8 @@
     "ts-essentials": "^9.4.1",
     "typescript": "^5.3.2",
     "vite": "^4.5.0",
-    "vitest": "^0.31.4"
+    "vitest": "^0.31.4",
+    "npm-run-all2": "^6.1.1"
   },
   "dependencies": {
     "@datastructures-js/priority-queue": "^6.3.0",

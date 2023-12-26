@@ -14,14 +14,14 @@ export function getRailwayPlatform(
   railwayLine: DeepReadonly<RailwayLine>,
   stationId: string,
   firstHalfOrLastHalf: 'First' | 'Last'
-) {
-  const { preStops, postStops } = splitStops(railwayLine.stops, railwayLine.returnStopId);
+): string {
+  const { preStops, postStops } = splitStops(railwayLine.stops, nn(railwayLine.returnStopId));
 
   const stops = firstHalfOrLastHalf === 'First' ? preStops : postStops;
   const stop = stops.find((stop) => stop.platform.stationId === stationId);
   assert(stop !== undefined);
 
-  return stop.platform;
+  return stop.platform.platformId;
 }
 
 // export function getDefaultPlatform(station: DeepReadonly<StationLike>, direction: TimetableDirection): PlatformLike {
@@ -99,14 +99,14 @@ function createTrain(
       stationOperationType: 'InOut',
       stationId: diaTimes[0].stationId,
       platformId: nn(diaTimes[0].platformId),
-      trackId: firstStop.platformTrack.trackId,
+      trackId: firstStop.platformTrack?.trackId,
       operationTime: nn(diaTimes[0].departureTime),
     },
     lastStationOperation: {
       stationOperationType: 'InOut',
       stationId: diaTimes[diaTimes.length - 1].stationId,
       platformId: nn(diaTimes[diaTimes.length - 1].platformId),
-      trackId: lastStop.platformTrack.trackId,
+      trackId: lastStop.platformTrack?.trackId,
       operationTime: nn(diaTimes[diaTimes.length - 1].arrivalTime) + 60,
     },
   };
@@ -131,12 +131,12 @@ export function getInitialTimetable(
       isPassing: false,
       stationId: stop.platform.stationId,
       platformId: stop.platform.platformId,
-      trackId: stop.platformTrack.trackId,
+      trackId: stop.platformTrack?.trackId,
       isInService: true,
     };
   }
 
-  const { preStops, postStops } = splitStops(railwayLine.stops, railwayLine.returnStopId);
+  const { preStops, postStops } = splitStops(railwayLine.stops, nn(railwayLine.returnStopId));
 
   console.log({ stops: showStops(railwayLine.stops), preStops: showStops(preStops), postStops: showStops(postStops) });
 
@@ -148,8 +148,12 @@ export function getInitialTimetable(
     inboundDiaTimes = preStops.map((stop, index) => {
       const newDiaTime = createDiaTime(stop, index, preStops.length);
       const platformPaths = preStops[index]?.platformPaths;
-      if (index !== preStops.length - 1 && platformPaths != null) {
-        currentTime += platformPaths.length * 0.5 * 60;
+      if (index !== preStops.length - 1) {
+        if (platformPaths != null) {
+          currentTime += platformPaths.length * 0.5 * 60;
+        } else {
+          currentTime += 180;
+        }
       }
       return newDiaTime;
     });
@@ -159,8 +163,12 @@ export function getInitialTimetable(
     outboundDiaTimes = postStops.map((stop, index) => {
       const newDiaTime = createDiaTime(stop, index, postStops.length);
       const platformPaths = postStops[index + 1]?.platformPaths;
-      if (index !== postStops.length - 1 && platformPaths != null) {
-        currentTime += platformPaths.length * 0.5 * 60;
+      if (index !== postStops.length - 1) {
+        if (platformPaths != null) {
+          currentTime += platformPaths.length * 0.5 * 60;
+        } else {
+          currentTime += 180;
+        }
       }
       return newDiaTime;
     });

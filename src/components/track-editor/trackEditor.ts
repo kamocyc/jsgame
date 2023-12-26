@@ -925,7 +925,7 @@ function updateSwitchByDeletingTrack(Switch: Switch, trackToBeDeleted: Track): v
 
 // TODO: 他も実装したい
 export function validateAppState(appStates: AppStates) {
-  const tracks = appStates.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? [])).flat(2);
+  const tracks = appStates.mapState.map.map((row) => row.map((cell) => cell.lineType?.tracks ?? [])).flat(2);
   const tracksInSwitches = tracks
     .map((track) =>
       track.nextSwitch.beginTracks

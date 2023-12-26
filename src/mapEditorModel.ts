@@ -151,7 +151,7 @@ export interface RailwayLine {
   /**
    * 折り返しのStop
    */
-  returnStopId: string;
+  returnStopId: string | null;
 }
 
 export type OperationError = {
@@ -177,19 +177,20 @@ export interface MapState {
   readonly trainMove: TrainTimetableMove;
   readonly moneyManager: MoneyManager;
   readonly mapManager: MapManager;
+
+  readonly detailedTimetable: DetailedTimetable;
+  storedTrains: StoredTrain[];
+  readonly map: GameMap;
+  tracks: Track[];
+
+  readonly globalTimeManager: GlobalTimeManager;
 }
 
 export interface AppStates {
-  readonly globalTimeManager: GlobalTimeManager;
-  readonly detailedTimetable: DetailedTimetable;
-  outlinedTimetableData: OutlinedTimetableData;
   readonly historyManager: HistoryManager;
   readonly railwayLines: RailwayLine[];
+  outlinedTimetableData: OutlinedTimetableData;
   readonly selectedRailwayLineId: string | null;
-  storedTrains: StoredTrain[];
-
-  readonly map: GameMap;
-  tracks: Track[];
   readonly mapState: MapState;
 }
 

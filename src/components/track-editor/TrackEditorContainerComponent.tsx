@@ -86,15 +86,15 @@ export function CanvasComponent({
       <div>
         {appStates.mapState.editMode === 'PlaceTrain' ? (
           <StoreTrainInfoPanel
-            storedTrains={appStates.storedTrains}
+            storedTrains={appStates.mapState.storedTrains}
             railwayLines={appStates.railwayLines}
             setStoredTrains={(storedTrains) => {
-              appStates.storedTrains = storedTrains;
+              appStates.mapState.storedTrains = storedTrains;
               update();
             }}
             selectedPlacedTrainId={selectedTrain?.placedTrainId ?? null}
             setSelectedPlacedTrainId={(id) => {
-              setSelectedTrain(appStates.storedTrains.find((train) => train.placedTrainId === id) ?? null);
+              setSelectedTrain(appStates.mapState.storedTrains.find((train) => train.placedTrainId === id) ?? null);
             }}
           />
         ) : (

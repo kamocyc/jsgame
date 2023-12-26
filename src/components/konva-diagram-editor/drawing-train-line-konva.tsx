@@ -29,7 +29,7 @@ export function getDiaTimeFromDrawingTrainLine(
       isPassing: false,
       platformId: platformId,
       isInService: true,
-      trackId: stopForTrackId?.platformTrack.trackId ?? null,
+      trackId: stopForTrackId?.platformTrack?.trackId ?? null,
     };
     return diaTime;
   });

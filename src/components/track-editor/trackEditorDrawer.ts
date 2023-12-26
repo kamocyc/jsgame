@@ -816,7 +816,7 @@ function drawAgent(ctx: CanvasRenderingContext2D, mapContext: MapContext, agent:
 }
 
 export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
-  const { tracks, map } = appStates;
+  const { tracks, map } = appStates.mapState;
   const { stations, trainMove, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates.mapState;
 
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;

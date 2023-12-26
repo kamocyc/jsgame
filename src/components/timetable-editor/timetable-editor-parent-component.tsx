@@ -4,12 +4,8 @@ import { StateUpdater } from '../../common';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates, OperationError } from '../../mapEditorModel';
-import { PlatformLike } from '../../model';
+import { StationLike } from '../../model';
 import { OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
-import { createAgentManager } from '../track-editor/agentManager';
-import { toDetailedTimetable } from '../track-editor/timetableConverter';
-import { createTrainMove } from '../track-editor/trainMoveBase';
-import { MapInfo } from './common-component';
 import { TimetableEditorComponent } from './timetable-editor-component';
 
 function saveTimetableDataFile(timetableData: OutlinedTimetableData) {
@@ -34,13 +30,17 @@ function toStringTimeTableData(timetableData: OutlinedTimetableData) {
 
 export function TimetableEditorParentComponent({
   appStates,
+  stations,
   defaultSelectedRailwayLineId,
+  applyDetailedTimetable,
   setAppStates,
   setToast,
 }: {
-  appStates: AppStates;
+  appStates: Omit<AppStates, 'mapState'>;
+  stations: StationLike[];
   defaultSelectedRailwayLineId: string | null;
-  setAppStates: StateUpdater<AppStates>;
+  applyDetailedTimetable: () => void;
+  setAppStates: StateUpdater<Omit<AppStates, 'mapState'>>;
   setToast: (toast: string) => void;
 }) {
   const [selectedRailwayLineId, setSelectedRailwayLineId] = useState<string | null>(defaultSelectedRailwayLineId);
@@ -63,7 +63,7 @@ export function TimetableEditorParentComponent({
       appStates.outlinedTimetableData,
       (d) => {
         timetableDataFunction(d);
-        OutlinedTimetableFunc.updateOperations(d);
+        OutlinedTimetableFunc.updateOperations(d, stations);
       },
       (patches, inversePatches) => {
         appStates.historyManager.push(patches, inversePatches);
@@ -119,37 +119,7 @@ export function TimetableEditorParentComponent({
         </div>
         <button
           onClick={() => {
-            const platforms = appStates.map
-              .map((row) =>
-                row
-                  .filter((cell) => cell.lineType)
-                  .map((cell) => cell.lineType?.tracks)
-                  .flat()
-                  .map((track) => track?.track.platform)
-              )
-              .flat()
-              .filter((p) => p);
-            const timetableAndOperations = toDetailedTimetable(
-              platforms as PlatformLike[],
-              appStates.outlinedTimetableData,
-              appStates.tracks,
-              appStates.railwayLines
-            );
-
-            if (timetableAndOperations === null) {
-              return;
-            }
-
-            // console.log('timetable');
-            // console.log(timetable);
-
-            const trainMove = createTrainMove();
-            setAppStates((appStates) => ({
-              ...appStates,
-              trainMove: trainMove,
-              agentManager: createAgentManager(),
-              detailedTimetable: timetableAndOperations,
-            }));
+            applyDetailedTimetable();
           }}
         >
           ⇑詳細ダイヤに反映
@@ -161,12 +131,6 @@ export function TimetableEditorParentComponent({
           <select
             onChange={(e) => {
               setSelectedRailwayLineId(e.currentTarget.value);
-              const railwayLine = appStates.railwayLines.find(
-                (railwayLine) => railwayLine.railwayLineId === e.currentTarget.value
-              );
-              // if (railwayLine != null) {
-              //   update();
-              // }
             }}
           >
             {appStates.railwayLines.map((railwayLine) => (
@@ -197,10 +161,10 @@ export function TimetableEditorParentComponent({
         {selectedTimetable !== undefined && railwayLine !== undefined ? (
           <TimetableEditorComponent
             railwayLine={railwayLine}
+            stations={stations}
             timetableData={appStates.outlinedTimetableData}
             setTimetableData={setTimetableData}
             timetable={selectedTimetable}
-            mapInfo={new MapInfo(appStates.tracks)}
             setToast={setToast}
             errors={errors}
           />

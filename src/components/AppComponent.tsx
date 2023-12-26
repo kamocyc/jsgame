@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppStates, Cell, GameMap, MapState, createMapContext } from '../mapEditorModel';
-import { DetailedTimetable, Train } from '../model';
+import { DetailedTimetable, PlatformLike, Train } from '../model';
 import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData';
 import { ExtendedCell } from './extendedMapModel';
 import { SplitViewComponent } from './timetable-editor/common-component';
@@ -11,6 +11,7 @@ import { createAgentManager } from './track-editor/agentManager';
 import { GlobalTimeManager } from './track-editor/globalTimeManager';
 import { MapManager } from './track-editor/mapManager';
 import { MoneyManager } from './track-editor/moneyManager';
+import { toDetailedTimetable } from './track-editor/timetableConverter';
 import { createTrainMove } from './track-editor/trainMoveBase';
 
 function initializeMap(mapWidth: number, mapHeight: number): GameMap {
@@ -58,7 +59,6 @@ export function getInitialAppStates(): AppStates {
   const timetableData: OutlinedTimetableData = {
     _errors: [],
     _timetables: [],
-    _stations: [],
     _trains: new Map<string, Train>(),
   };
   const storedTrains = [
@@ -73,7 +73,7 @@ export function getInitialAppStates(): AppStates {
       placedRailwayLineId: null,
     },
   ];
-  const trainMove = createTrainMove(timetable);
+  const trainMove = createTrainMove();
   // const errors = timetableData.updateOperations();
   const mapEditorState: MapState = {
     editMode: 'Create',
@@ -89,15 +89,15 @@ export function getInitialAppStates(): AppStates {
     currentRailwayLine: null,
     moneyManager: new MoneyManager(),
     mapManager: new MapManager(),
-  };
-
-  return {
-    globalTimeManager: new GlobalTimeManager(),
     detailedTimetable: timetable,
-    outlinedTimetableData: timetableData,
     storedTrains: storedTrains,
     map: gameMap,
     tracks: [],
+    globalTimeManager: new GlobalTimeManager(),
+  };
+
+  return {
+    outlinedTimetableData: timetableData,
     railwayLines: [],
     selectedRailwayLineId: null,
     mapState: mapEditorState,
@@ -132,14 +132,67 @@ export function App() {
           },
           {
             splitViewId: 2,
-            component: () => (
-              <TimetableEditorParentComponent
-                appStates={appStates}
-                defaultSelectedRailwayLineId={appStates.selectedRailwayLineId}
-                setAppStates={setAppStates}
-                setToast={setToastMessage}
-              />
-            ),
+            component: () => {
+              return (
+                <TimetableEditorParentComponent
+                  appStates={appStates}
+                  stations={appStates.mapState.stations}
+                  applyDetailedTimetable={() => {
+                    const platforms = appStates.mapState.tracks
+                      .map((track) => track?.track.platform)
+                      .flat()
+                      .filter((p) => p);
+                    const detailedTimetable = toDetailedTimetable(
+                      platforms as PlatformLike[],
+                      appStates.outlinedTimetableData,
+                      appStates.mapState.tracks,
+                      appStates.railwayLines
+                    );
+
+                    if (detailedTimetable === null) {
+                      return;
+                    }
+
+                    // console.log('timetable');
+                    // console.log(timetable);
+
+                    const trainMove = createTrainMove();
+                    const agentManager = createAgentManager();
+
+                    setAppStates((prev) => {
+                      return {
+                        ...prev,
+                        mapState: {
+                          ...prev.mapState,
+                          trainMove: trainMove,
+                          agentManager: agentManager,
+                          detailedTimetable: detailedTimetable,
+                        },
+                      };
+                    });
+                  }}
+                  defaultSelectedRailwayLineId={appStates.selectedRailwayLineId}
+                  setAppStates={(arg) => {
+                    if (typeof arg === 'function') {
+                      setAppStates((prev) => {
+                        return {
+                          ...prev,
+                          ...arg(prev),
+                        };
+                      });
+                    } else {
+                      setAppStates((prev) => {
+                        return {
+                          ...prev,
+                          ...arg,
+                        };
+                      });
+                    }
+                  }}
+                  setToast={setToastMessage}
+                />
+              );
+            },
           },
           // {
           //   splitViewId: 3,

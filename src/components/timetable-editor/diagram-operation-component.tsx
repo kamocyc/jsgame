@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { nn, toStringFromSeconds, upto } from '../../common';
 import { Operation, StationLike, Train } from '../../model';
@@ -66,7 +67,7 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
         <tbody>
           {props.operations.map((operation, i) => {
             return (
-              <>
+              <Fragment key={i}>
                 {/* 列車番号 */}
                 <tr className='operation-row' key={i.toString() + '_01'}>
                   <th rowSpan={3}>{operation.operationCode}</th>
@@ -74,18 +75,18 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                     const trainId = operation.trainIds[i];
                     if (trainId === undefined) {
                       return (
-                        <>
+                        <Fragment key={i}>
                           <td style={{ height: '19.1px' }}></td>
                           <td></td>
-                        </>
+                        </Fragment>
                       );
                     } else {
                       const train = nn(getTrain(props, trainId));
                       return (
-                        <>
+                        <Fragment key={i}>
                           <td>{train.trainCode}</td>
                           <td>{train.trainName}</td>
-                        </>
+                        </Fragment>
                       );
                     }
                   })}
@@ -96,20 +97,20 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                     const trainId = operation.trainIds[i];
                     if (trainId === undefined || getTrain(props, trainId)?.diaTimes.length === 0) {
                       return (
-                        <>
+                        <Fragment key={i}>
                           <td></td>
                           <td></td>
-                        </>
+                        </Fragment>
                       );
                     } else {
                       const train = nn(getTrain(props, trainId));
                       const departureTime = train.diaTimes[0].departureTime;
                       const arrivalTime = train.diaTimes[train.diaTimes.length - 1].arrivalTime;
                       return (
-                        <>
-                          <td>{departureTime !== null ? toStringFromSeconds(departureTime) : ''}</td>
-                          <td>{arrivalTime !== null ? toStringFromSeconds(arrivalTime) : ''}</td>
-                        </>
+                        <Fragment key={i}>
+                          <td>{departureTime !== null ? toStringFromSeconds(departureTime) : null}</td>
+                          <td>{arrivalTime !== null ? toStringFromSeconds(arrivalTime) : null}</td>
+                        </Fragment>
                       );
                     }
                   })}
@@ -120,25 +121,25 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                     const trainId = operation.trainIds[i];
                     if (trainId === undefined || getTrain(props, trainId)?.diaTimes.length === 0) {
                       return (
-                        <>
+                        <Fragment key={i}>
                           <td></td>
                           <td></td>
-                        </>
+                        </Fragment>
                       );
                     } else {
                       const train = nn(getTrain(props, trainId));
                       return (
-                        <>
+                        <Fragment key={i}>
                           <td>{nn(props.stationMap.get(train.diaTimes[0].stationId)).stationName}</td>
                           <td>
                             {nn(props.stationMap.get(train.diaTimes[train.diaTimes.length - 1].stationId)).stationName}
                           </td>
-                        </>
+                        </Fragment>
                       );
                     }
                   })}
                 </tr>
-              </>
+              </Fragment>
             );
           })}
         </tbody>

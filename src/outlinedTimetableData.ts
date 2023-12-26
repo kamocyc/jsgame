@@ -144,7 +144,6 @@ export function repeatTrains_(trains: Train[]): Train[] {
 
 // Timetableを含む全てのデータ
 export interface OutlinedTimetableData {
-  _stations: StationLike[];
   _trains: Map<string, Train>;
   _timetables: OutlinedTimetable[];
   _errors: OperationError[];
@@ -189,10 +188,10 @@ export const OutlinedTimetableFunc = {
     this.setTrains(that._trains, newOutboundTrains);
     timetable.outboundTrainIds.push(...newOutboundTrains.map((t) => t.trainId));
   },
-  updateOperations(that_: OutlinedTimetableData) {
+  updateOperations(that_: OutlinedTimetableData, stations: StationLike[]) {
     const that = that_ as OutlinedTimetableData;
     const errors: OperationError[] = [];
-    const stationMap = new Map<string, StationLike>(that._stations.map((s) => [s.stationId, s]));
+    const stationMap = new Map<string, StationLike>(stations.map((s) => [s.stationId, s]));
     for (const timetable of that._timetables) {
       const trains = timetable.inboundTrainIds.concat(timetable.outboundTrainIds).map((id) => this.getTrain(that, id));
       const platforms = timetable.stationIds.map((stationId) => nn(stationMap.get(stationId)).platforms).flat();
@@ -271,7 +270,7 @@ export const OutlinedTimetableFunc = {
     updater(train);
   },
 
-  reverseTimetableDirection(that: OutlinedTimetableData, timetableId: string) {
+  reverseTimetableDirection(that: OutlinedTimetableData, timetableId: string, stations: DeepReadonly<StationLike[]>) {
     const timetable = that._timetables.find((t) => t.timetableId === timetableId);
     assert(timetable !== undefined);
 
@@ -295,7 +294,7 @@ export const OutlinedTimetableFunc = {
 
     const trains = outboundTrains.concat(inboundTrains);
 
-    const stationMap = new Map<string, StationLike>(that._stations.map((s) => [s.stationId, s]));
+    const stationMap = new Map<string, DeepReadonly<StationLike>>(stations.map((s) => [s.stationId, s]));
     timetable.inboundTrainIds = inboundTrains.map((train) => train.trainId);
     timetable.outboundTrainIds = outboundTrains.map((train) => train.trainId);
     timetable.stationIds = timetable.stationIds.slice().reverse();

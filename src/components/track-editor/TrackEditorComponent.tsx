@@ -89,9 +89,9 @@ function toStringEditorData(appStates: AppStates) {
   //   return;
   // }
   const obj: SaveData = {
-    map: appStates.map,
-    storedTrains: appStates.storedTrains,
-    timetable: appStates.detailedTimetable,
+    map: appStates.mapState.map,
+    storedTrains: appStates.mapState.storedTrains,
+    timetable: appStates.mapState.detailedTimetable,
     timetableData: OutlinedTimetableFunc.toDataToSave(appStates.outlinedTimetableData),
     extendedMap: appStates.mapState.extendedMap,
     placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
@@ -152,13 +152,11 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
           _trains: new Map<string, Train>((timetableDataRaw.trains as Train[]).map((train) => [train.trainId, train])),
           _timetables: timetableDataRaw.timetables as OutlinedTimetable[],
           _errors: [],
-          _stations: stations,
         }
       : {
           _trains: new Map(),
           _timetables: [],
           _errors: [],
-          _stations: [],
         };
   const railwayLines = obj['railwayLines'] ?? [];
 
@@ -171,13 +169,13 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
 
   setAppStates((appStates) =>
     merge(appStates, {
-      map: mapData,
-      tracks: tracks,
-      storedTrains: storedTrains,
-      detailedTimetable: timetable,
       outlinedTimetableData: timetableData,
       railwayLines: railwayLines,
       mapState: merge(appStates.mapState, {
+        map: mapData,
+        tracks: tracks,
+        storedTrains: storedTrains,
+        detailedTimetable: timetable,
         extendedMap: extendedMap,
         trainMove: trainMove,
         stations: stations,
@@ -221,12 +219,12 @@ function addAgents(appStates: AppStates) {
       {
         extendedMap: appStates.mapState.extendedMap,
         stations: appStates.mapState.stations,
-        gameMap: appStates.map,
+        gameMap: appStates.mapState.map,
         placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
         outlinedTimetableData: appStates.outlinedTimetableData,
         moneyManager: appStates.mapState.moneyManager,
-        globalTimeManager: appStates.globalTimeManager,
+        globalTimeManager: appStates.mapState.globalTimeManager,
       }
     );
     // if (Math.random() < 0.1) {
@@ -293,7 +291,7 @@ export function TrackEditorComponent({
 
   function startTop(interval: number) {
     const intervalId = setInterval(() => {
-      appStates.globalTimeManager.tick();
+      appStates.mapState.globalTimeManager.tick();
       const updated = appStates.mapState.mapManager.tick(
         appStates.mapState.extendedMap,
         appStates.railwayLines,
@@ -301,24 +299,24 @@ export function TrackEditorComponent({
         appStates.mapState.shouldAutoGrow
       );
       appStates.mapState.trainMove.tick({
-        globalTimeManager: appStates.globalTimeManager,
+        globalTimeManager: appStates.mapState.globalTimeManager,
         moneyManager: appStates.mapState.moneyManager,
-        tracks: appStates.tracks,
+        tracks: appStates.mapState.tracks,
         trains: appStates.outlinedTimetableData._trains,
-        timetable: appStates.detailedTimetable,
+        timetable: appStates.mapState.detailedTimetable,
       });
       addAgents(appStates);
       appStates.mapState.agentManager.tick({
         extendedMap: appStates.mapState.extendedMap,
         stations: appStates.mapState.stations,
-        gameMap: appStates.map,
+        gameMap: appStates.mapState.map,
         placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
         outlinedTimetableData: appStates.outlinedTimetableData,
         moneyManager: appStates.mapState.moneyManager,
-        globalTimeManager: appStates.globalTimeManager,
+        globalTimeManager: appStates.mapState.globalTimeManager,
       });
-      setPositionPercentage(appStates.globalTimeManager.globalTime / (24 * 60 * 60));
+      setPositionPercentage(appStates.mapState.globalTimeManager.globalTime / (24 * 60 * 60));
       drawEditor(appStates);
       if (updated) {
         update();
@@ -341,7 +339,7 @@ export function TrackEditorComponent({
       {showLineInfoPanel ? (
         <div className='dialog'>
           <LineInfoPanel
-            stations={getStationMap(appStates.outlinedTimetableData._stations)}
+            stations={getStationMap(appStates.mapState.stations)}
             timetableData={appStates.outlinedTimetableData}
             railwayLines={appStates.railwayLines}
             selectedRailwayLineId={appStates.selectedRailwayLineId}
@@ -579,9 +577,9 @@ export function TrackEditorComponent({
         onClick={() => {
           stopInterval();
           appStates.mapState.trainMove.resetTrainMove(
-            appStates.globalTimeManager,
+            appStates.mapState.globalTimeManager,
             appStates.outlinedTimetableData._trains,
-            appStates.detailedTimetable
+            appStates.mapState.detailedTimetable
           );
           startTop(100);
         }}
@@ -597,7 +595,9 @@ export function TrackEditorComponent({
       >
         ▸▸▸
       </button>
-      <div style={{ display: 'inline-block', margin: '3px' }}>{appStates.globalTimeManager.toStringGlobalTime()}</div>
+      <div style={{ display: 'inline-block', margin: '3px' }}>
+        {appStates.mapState.globalTimeManager.toStringGlobalTime()}
+      </div>
       <div>¥{appStates.mapState.moneyManager.toStringMoney()}</div>
       <br />
 
@@ -605,7 +605,7 @@ export function TrackEditorComponent({
         positionPercentage={positionPercentage}
         width={600}
         setPositionPercentage={(p) => {
-          appStates.globalTimeManager.resetGlobalTime(24 * 60 * 60 * p);
+          appStates.mapState.globalTimeManager.resetGlobalTime(24 * 60 * 60 * p);
           setPositionPercentage(p);
         }}
       />

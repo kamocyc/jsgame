@@ -40,24 +40,6 @@ export function getPlatformIdAndTrackId(
   };
 }
 
-// export function getDefaultPlatform(station: DeepReadonly<StationLike>, direction: TimetableDirection): PlatformLike {
-//   if (station.stationType === 'Station') {
-//     const result =
-//       direction === 'Outbound'
-//         ? station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultOutboundPlatformId)
-//         : station.platforms.find((diaPlatform) => diaPlatform.platformId === station.defaultInboundPlatformId);
-//     if (result == null) {
-//       throw new Error('default platform not found');
-//     }
-//     return { ...result } as PlatformLike;
-//   } else if (station.stationType === 'Depot') {
-//     assert(station.platforms.length > 0);
-//     const result = station.platforms[0];
-//     return { ...result } as PlatformLike;
-//   }
-//   assert(false);
-// }
-
 export function createNewStation(stationName: string): Station {
   const newPlatforms = [
     {

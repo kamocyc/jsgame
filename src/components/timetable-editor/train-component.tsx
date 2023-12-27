@@ -471,7 +471,7 @@ export function TrainListComponent({
               trainType: undefined,
               diaTimes: stations.map((station) => {
                 const { platformId, trackId } =
-                  railwayLine !== null
+                  railwayLine !== null && railwayLine.railwayLineId !== '__DUMMY__'
                     ? getPlatformIdAndTrackId(
                         railwayLine,
                         station.stationId,

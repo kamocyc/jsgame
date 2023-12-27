@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RecoilRoot } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
 import { importOutdiaFile } from '../../file';
@@ -13,8 +14,6 @@ import {
 import { SetTimetable, SettingColumnComponent, TabComponent, getStationMap, reverseArray } from './common-component';
 import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
-// import { SetTimetable, StationListComponent } from './station-component';
-import { RecoilRoot } from 'recoil';
 import { StationListComponent } from './station-list-component';
 import { StationTimetablePageComponent } from './timetable-component';
 import './timetable-editor.css';
@@ -128,16 +127,6 @@ export type TimetableEditorComponentProps = DeepReadonly<{
   errors: OperationError[];
 }>;
 
-// const getTrainsWithDirections: (
-//   timetable: OutlinedTimetable,
-//   timetableData: OutlinedTimetableData
-// ) => [readonly Train[], readonly Train[]] = (timetable: OutlinedTimetable, timetableData: OutlinedTimetableData) => {
-//   return [
-//     timetable.inboundTrainIds.map((trainId) => OutlinedTimetableFunc.getTrain(timetableData, trainId)),
-//     timetable.outboundTrainIds.map((trainId) => OutlinedTimetableFunc.getTrain(timetableData, trainId)),
-//   ];
-// };
-
 export function TimetableEditorComponent({
   timetableData,
   timetable,
@@ -154,32 +143,6 @@ export function TimetableEditorComponent({
   const [settingData, setSettingData] = useState<DeepReadonly<SettingData> | null>(null);
 
   const [resetSeed, setResetSeed] = useState(1);
-  const reset = () => {
-    setResetSeed(Math.random());
-  };
-
-  // function mergeTimetable(diagram: [OutlinedTimetable, Train[]]) {
-  //   const [outlinedTimetable, trains] = diagram;
-
-  //   // 存在しないstationがある
-  //   if (
-  //     outlinedTimetable.stationIds.some(
-  //       (station) => !timetable.stationIds.some((station2) => station.stationId === station2.stationId)
-  //     )
-  //   ) {
-  //     return {
-  //       error: '存在しない駅があります',
-  //     };
-  //   }
-
-  //   timetable.inboundTrainIds = outlinedTimetable.inboundTrainIds;
-  //   timetable.outboundTrainIds = outlinedTimetable.outboundTrainIds;
-  //   timetable.operations = outlinedTimetable.operations;
-  //   timetable.trainTypes = outlinedTimetable.trainTypes;
-  //   timetableData.getTrains().push(...trains); // なんか重複するのもできそうな気がするが... とりあえず問題になったら考え
-
-  //   return true;
-  // }
 
   const [inboundTrains, outboundTrains] = [
     timetable.inboundTrainIds.map((trainId) => nn(timetableData._trains.get(trainId))),
@@ -193,35 +156,6 @@ export function TimetableEditorComponent({
       return OutlinedTimetableFunc.updateTimetable(draftTimetableData, timetable.timetableId, timetableFunction);
     });
   };
-
-  // const setStations = (stations: StationLike[]) => {
-
-  //   setTimetableData((draftTimetableData) => {
-  //     return OutlinedTimetableFunc.updateTimetable(draftTimetableData, timetable.timetableId, (draftTimetable) => {);
-  //   });
-
-  //   setTimetable((draftTimetable) => {
-  //     draftTimetable.stationIds = stations;
-  //   });
-  // };
-
-  // const setStation = (stationId: string) => (f: (station: Station) => void) => {
-  //   setTimetable((draftTimetable) => {
-  //     const station = draftTimetable.stationIds.find((stationId_) => stationId_ === stationId);
-  //     assert(station !== undefined, 'stationIdが見つかりません');
-  //     assert(station.stationType === 'Station', 'stationTypeがStationではありません');
-  //     f(station);
-  //   });
-  // };
-
-  // const setDepot = (stationId: string) => (f: (station: Depot) => void) => {
-  //   setTimetable((draftTimetable) => {
-  //     const station = draftTimetable.stationIds.find((stationId_) => stationId_ === stationId);
-  //     assert(station !== undefined, 'stationIdが見つかりません');
-  //     assert(station.stationType === 'Depot', 'stationTypeがDepotではありません');
-  //     f(station);
-  //   });
-  // };
 
   const setTrainTypes = (trainTypes: TrainType[]) => {
     setTimetable((draftTimetable) => {
@@ -481,19 +415,7 @@ export function TimetableEditorComponent({
           <SettingColumnComponent setSettingData={setSettingData} width='250px'>
             {settingData.settingType === 'StationSetting' ? (
               <></>
-            ) : // TODO: あとで実装
-            // settingData.stationId.stationType === 'Station' ? (
-            //   <StationDetailComponent
-            //     diaStation={settingData.stationId}
-            //     setStation={setStation(settingData.stationId.stationId)}
-            //   />
-            // ) : (
-            //   <DepotDetailComponent
-            //     depot={settingData.stationId}
-            //     setDepot={setDepot(settingData.stationId.stationId)}
-            //   />
-            // )
-            settingData.settingType === 'StationOperationSetting' ? (
+            ) : settingData.settingType === 'StationOperationSetting' ? (
               // <StationOperationSettingComponent
               //   timetable={timetable}
               //   firstOrLast={settingData.firstOrLast}

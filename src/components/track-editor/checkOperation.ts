@@ -121,50 +121,66 @@ export function checkStationTrackOccupation(
 function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[] {
   const errors: OperationError[] = [];
   for (const train of trains) {
+    const minIndex = Math.min(
+      ...train.diaTimes
+        .map((diaTime, i) => [diaTime, i] as const)
+        .filter(([diaTime, _]) => diaTime.arrivalTime !== null || diaTime.departureTime !== null)
+        .map(([_, i]) => i)
+    );
+    const maxIndex = Math.max(
+      ...train.diaTimes
+        .map((diaTime, i) => [diaTime, i] as const)
+        .filter(([diaTime, _]) => diaTime.arrivalTime !== null || diaTime.departureTime !== null)
+        .map(([_, i]) => i)
+    );
+
     let index = 0;
+
     for (const diaTime of train.diaTimes) {
-      // 条件は見直したいところ
-      if (diaTime.arrivalTime === null && index !== 0) {
-        errors.push({
-          type: 'NullArrivalTime',
-          trainId: train.trainId,
-          diaTimeId: diaTime.diaTimeId,
-          arrivalOrDeparture: 'arrivalTime',
-          platformId: diaTime.platformId,
-          stationId: diaTime.stationId,
-        });
-      }
-      if (diaTime.departureTime === null && index !== train.diaTimes.length - 1) {
-        errors.push({
-          type: 'NullDepartureTime',
-          trainId: train.trainId,
-          diaTimeId: diaTime.diaTimeId,
-          arrivalOrDeparture: 'departureTime',
-          platformId: diaTime.platformId,
-          stationId: diaTime.stationId,
-        });
-      }
-      if (diaTime.arrivalTime !== null || diaTime.departureTime !== null) {
-        if (diaTime.platformId === null) {
+      if (index >= minIndex && index <= maxIndex) {
+        // 条件は見直したいところ
+        if (diaTime.arrivalTime === null && index !== minIndex) {
           errors.push({
-            type: 'NullPlatform',
+            type: 'NullArrivalTime',
             trainId: train.trainId,
             diaTimeId: diaTime.diaTimeId,
-            arrivalOrDeparture: null,
-            platformId: null,
+            arrivalOrDeparture: 'arrivalTime',
+            platformId: diaTime.platformId,
             stationId: diaTime.stationId,
           });
         }
-        // if (diaTime.trackId === null) {
-        //   errors.push({
-        //     type: 'NullTrack',
-        //     trainId: train.trainId,
-        //     diaTimeId: diaTime.diaTimeId,
-        //     arrivalOrDeparture: null,
-        //     platformId: diaTime.platformId,
-        //     stationId: diaTime.stationId,
-        //   });
-        // }
+        if (diaTime.departureTime === null && index !== maxIndex) {
+          errors.push({
+            type: 'NullDepartureTime',
+            trainId: train.trainId,
+            diaTimeId: diaTime.diaTimeId,
+            arrivalOrDeparture: 'departureTime',
+            platformId: diaTime.platformId,
+            stationId: diaTime.stationId,
+          });
+        }
+        if (diaTime.arrivalTime !== null || diaTime.departureTime !== null) {
+          if (diaTime.platformId === null) {
+            errors.push({
+              type: 'NullPlatform',
+              trainId: train.trainId,
+              diaTimeId: diaTime.diaTimeId,
+              arrivalOrDeparture: null,
+              platformId: null,
+              stationId: diaTime.stationId,
+            });
+          }
+          // if (diaTime.trackId === null) {
+          //   errors.push({
+          //     type: 'NullTrack',
+          //     trainId: train.trainId,
+          //     diaTimeId: diaTime.diaTimeId,
+          //     arrivalOrDeparture: null,
+          //     platformId: diaTime.platformId,
+          //     stationId: diaTime.stationId,
+          //   });
+          // }
+        }
       }
 
       index++;

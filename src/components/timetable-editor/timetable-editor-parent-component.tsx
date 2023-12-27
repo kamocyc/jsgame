@@ -105,6 +105,7 @@ export function TimetableEditorParentComponent({
               return {
                 _trains: mapToObject(outlinedTimetableData._trains),
                 _timetables: outlinedTimetableData._timetables,
+                _error: outlinedTimetableData._errors,
               };
             }
             const data = {

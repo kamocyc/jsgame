@@ -188,7 +188,7 @@ export const OutlinedTimetableFunc = {
     this.setTrains(that._trains, newOutboundTrains);
     timetable.outboundTrainIds.push(...newOutboundTrains.map((t) => t.trainId));
   },
-  updateOperations(that_: OutlinedTimetableData, stations: DeepReadonly<StationLike[]>) {
+  updateOperations(that_: OutlinedTimetableData, stations: DeepReadonly<StationLike[]>): void {
     const that = that_ as OutlinedTimetableData;
     const errors: OperationError[] = [];
     const stationMap = new Map<string, DeepReadonly<StationLike>>(stations.map((s) => [s.stationId, s]));
@@ -200,8 +200,6 @@ export const OutlinedTimetableFunc = {
       timetable.operations = operations;
     }
     that._errors = errors;
-
-    // return errors;
   },
   deleteTrains(that_: OutlinedTimetableData, timetableId: string, trainIds: ReadonlyArray<string>) {
     const that = that_ as OutlinedTimetableData;

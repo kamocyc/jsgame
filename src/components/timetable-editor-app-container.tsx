@@ -2,17 +2,13 @@ import { produce } from 'immer';
 import { useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../common';
-import { AppStates, RailwayLine, RailwayLineStop } from '../mapEditorModel';
+import { AppStates, OperationError, RailwayLine, RailwayLineStop } from '../mapEditorModel';
 import { StationLike, Train } from '../model';
 import { HistoryManager, OutlinedTimetable, OutlinedTimetableData } from '../outlinedTimetableData';
 import { getStationMap } from './timetable-editor/common-component';
-import { StationEditListComponent } from './timetable-editor/station-edit-component';
+import { StationEditorListEntryComponent } from './timetable-editor/station-edit-component';
 import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
 import { getInitialTimetable } from './timetable-editor/timetable-util';
-
-// サーバに置く
-// outlineTimetableData
-// railwayLines
 
 const domain = 'http://localhost:3000';
 
@@ -39,17 +35,18 @@ async function loadDataFromLocalStorage() {
       outlinedTimetableDataToSave: {
         _timetables: OutlinedTimetable[];
         _trains: Train[];
+        _errors: OperationError[];
       };
     };
     const timetableData = data.outlinedTimetableDataToSave;
     const appStates: Omit<AppStates, 'mapState'> = {
       outlinedTimetableData: {
-        _errors: [],
+        _errors: timetableData._errors, // なんか効いていない？
         _timetables: timetableData._timetables,
         _trains: new Map(Object.keys(timetableData._trains).map((k) => [k, timetableData._trains[k as any]])),
       },
       railwayLines: await getRailwayLines(),
-      selectedRailwayLineId: '1',
+      selectedRailwayLineId: '__DUMMY__',
       historyManager: new HistoryManager(),
     };
     return {
@@ -70,8 +67,8 @@ async function getRailwayLines(): Promise<RailwayLine[]> {
       ? railwayLinesWeb
       : [
           {
-            railwayLineId: '1',
-            railwayLineName: '路線１',
+            railwayLineId: '__DUMMY__',
+            railwayLineName: '路線1',
             railwayLineColor: '#000000',
             stops: [
               {
@@ -186,7 +183,7 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
 
   return (
     <>
-      <StationEditListComponent
+      <StationEditorListEntryComponent
         stationIds={stations.map((s) => s.stationId)}
         setTimetable={(timetableUpdater) => {
           const timetable = appStates.outlinedTimetableData._timetables[0];

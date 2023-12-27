@@ -113,7 +113,7 @@ export type TimetableEditorDirectedProps = {
   readonly setSettingData: (settingData: DeepReadonly<SettingData>) => void;
   readonly clipboard: AppClipboard;
   readonly setClipboard: (clipboard: AppClipboard) => void;
-  readonly railwayLine: DeepReadonly<RailwayLine>;
+  readonly railwayLine: DeepReadonly<RailwayLine> | null;
   readonly timetable: DeepReadonly<OutlinedTimetable>;
   readonly errors: DeepReadonly<OperationError[]>;
 };

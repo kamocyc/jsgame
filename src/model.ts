@@ -40,6 +40,8 @@ export interface Station {
   stationId: string;
   stationName: string;
   platforms: Platform[];
+  defaultInboundPlatformId: string | null;
+  defaultOutboundPlatformId: string | null;
 }
 
 export interface Platform {

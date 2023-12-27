@@ -72,7 +72,6 @@ export function TimetableEditorParentComponent({
     );
     appStates.outlinedTimetableData = newTimetableData;
 
-    // TODO: UIに表示する
     setErrors([...newTimetableData._errors]);
   };
 
@@ -93,6 +92,31 @@ export function TimetableEditorParentComponent({
         >
           保存
         </button>
+        <button
+          onClick={() => {
+            function mapToObject<V>(map: Map<string, V>) {
+              return [...map.entries()].reduce((obj, [key, value]) => {
+                // @ts-ignore
+                obj[key] = value;
+                return obj;
+              }, {});
+            }
+            function convertOutlinedTimetableDataToSave(outlinedTimetableData: OutlinedTimetableData) {
+              return {
+                _trains: mapToObject(outlinedTimetableData._trains),
+                _timetables: outlinedTimetableData._timetables,
+              };
+            }
+            const data = {
+              outlinedTimetableDataToSave: convertOutlinedTimetableDataToSave(appStates.outlinedTimetableData),
+              stations: stations,
+            };
+            const jsonData = JSON.stringify(data);
+            localStorage.setItem('timetableEditorStandalone', jsonData);
+          }}
+        >
+          保存（localStorage）
+        </button>
         <div
           style={{
             display: 'inline-block',
@@ -108,8 +132,8 @@ export function TimetableEditorParentComponent({
             accept='.json'
             onChange={async (event) => {
               // TODO
-              // @ts-ignore
-              const diagram = await loadCustomFile(event);
+              const file = (event.target as HTMLInputElement).files![0];
+              const diagram = await loadCustomFile(file);
               if (diagram != null) {
                 appStates.outlinedTimetableData = diagram;
                 appStates.historyManager.clearHistory();

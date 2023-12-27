@@ -1,10 +1,10 @@
 import { produce } from 'immer';
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../common';
 import { AppStates, RailwayLine, RailwayLineStop } from '../mapEditorModel';
 import { StationLike, Train } from '../model';
-import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData';
+import { HistoryManager, OutlinedTimetable, OutlinedTimetableData } from '../outlinedTimetableData';
 import { getStationMap } from './timetable-editor/common-component';
 import { StationEditListComponent } from './timetable-editor/station-edit-component';
 import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
@@ -31,8 +31,66 @@ async function fetchJson<T>(url: string): Promise<T> {
   }
 }
 
-async function loadData() {
+async function loadDataFromLocalStorage() {
+  const jsonData = localStorage.getItem('timetableEditorStandalone');
+  if (jsonData) {
+    const data = JSON.parse(jsonData) as {
+      stations: StationLike[];
+      outlinedTimetableDataToSave: {
+        _timetables: OutlinedTimetable[];
+        _trains: Train[];
+      };
+    };
+    const timetableData = data.outlinedTimetableDataToSave;
+    const appStates: Omit<AppStates, 'mapState'> = {
+      outlinedTimetableData: {
+        _errors: [],
+        _timetables: timetableData._timetables,
+        _trains: new Map(Object.keys(timetableData._trains).map((k) => [k, timetableData._trains[k as any]])),
+      },
+      railwayLines: await getRailwayLines(),
+      selectedRailwayLineId: '1',
+      historyManager: new HistoryManager(),
+    };
+    return {
+      appStates: appStates,
+      stations: data.stations,
+    };
+  } else {
+    const { stations, appStates } = await loadData();
+    return { stations, appStates };
+  }
+}
+
+async function getRailwayLines(): Promise<RailwayLine[]> {
   const railwayLinesWeb = await fetchJson<RailwayLine[] | null>(domain + '/railway_lines.json');
+
+  const railwayLines =
+    railwayLinesWeb !== null && railwayLinesWeb.length > 0
+      ? railwayLinesWeb
+      : [
+          {
+            railwayLineId: '1',
+            railwayLineName: '路線１',
+            railwayLineColor: '#000000',
+            stops: [
+              {
+                stopId: '120',
+                platform: { platformId: '21', stationId: '20' },
+              },
+              {
+                stopId: '122',
+                platform: { platformId: '23', stationId: '22' },
+              },
+            ] as RailwayLineStop[],
+            returnStopId: '122',
+          },
+        ];
+
+  return railwayLines;
+}
+
+async function loadData() {
   const timetableDataWeb = await fetchJson<OutlinedTimetableData | null>(domain + '/timetable_data.json');
   const stationsWeb = await fetchJson<StationLike[] | null>(domain + '/stations.json');
 
@@ -52,6 +110,8 @@ async function loadData() {
                 stationId: '20',
               },
             ],
+            defaultInboundPlatformId: '21',
+            defaultOutboundPlatformId: '21',
           },
           {
             stationId: '22',
@@ -65,41 +125,12 @@ async function loadData() {
                 stationId: '22',
               },
             ],
+            defaultInboundPlatformId: '23',
+            defaultOutboundPlatformId: '23',
           },
         ];
 
-  const stops = stations
-    .map((station) => ({
-      stopId: '1' + station.stationId,
-      platform: {
-        platformId: station.platforms[0].platformId,
-        stationId: station.stationId,
-      },
-    }))
-    .concat(
-      stations
-        .filter((_, i) => i !== 0 && i !== stations.length - 1)
-        .map((station) => ({
-          stopId: '2' + station.stationId,
-          platform: {
-            platformId: station.platforms[0].platformId,
-            stationId: station.stationId,
-          },
-        }))
-    ) as RailwayLineStop[];
-
-  const railwayLines =
-    railwayLinesWeb !== null && railwayLinesWeb.length > 0
-      ? railwayLinesWeb
-      : [
-          {
-            railwayLineId: '1',
-            railwayLineName: '路線１',
-            railwayLineColor: '#000000',
-            stops: stops,
-            returnStopId: stops[stations.length - 1].stopId,
-          },
-        ];
+  const railwayLines = await getRailwayLines();
 
   const timetableData: OutlinedTimetableData =
     timetableDataWeb !== null && timetableDataWeb._timetables.length > 0
@@ -132,18 +163,19 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
     _trains: new Map<string, Train>(),
   };
 
-  const [appStates, setAppStates] = React.useState<Omit<AppStates, 'mapState'>>({
+  const [appStates, setAppStates] = useState<Omit<AppStates, 'mapState'>>({
     outlinedTimetableData: timetableData,
     railwayLines: [],
     selectedRailwayLineId: null,
     historyManager: new HistoryManager(),
   });
-  const [stations, setStations] = React.useState<DeepReadonly<StationLike[]>>([]);
+  const [stations, setStations] = useState<DeepReadonly<StationLike[]>>([]);
 
   useEffect(() => {
     (async () => {
       if (appStates.outlinedTimetableData._timetables.length === 0) {
-        const { stations, appStates } = await loadData();
+        const { stations, appStates } = await loadDataFromLocalStorage();
+        // const { stations, appStates } = await loadData();
         setStations(stations);
         setAppStates(appStates);
       }
@@ -190,7 +222,6 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
           }));
         }}
         stations={stationMap}
-        setSettingData={() => {}}
       />
       <TimetableEditorParentComponent
         appStates={appStates}

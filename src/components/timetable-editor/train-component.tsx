@@ -16,8 +16,9 @@ import {
   getDefaultConnectionType,
 } from '../../model';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent, getStationMap } from './common-component';
+import { getDefaultPlatformId } from './station-edit-component';
 import { TimetableEditorDirectedProps } from './timetable-editor-component';
-import { getFirstOrLast, getRailwayPlatform } from './timetable-util';
+import { getPlatformIdAndTrackId } from './timetable-util';
 import { TooltipComponent } from './tooltip-component';
 
 function TrainContextMenuComponent({
@@ -469,12 +470,16 @@ export function TrainListComponent({
               trainName: '',
               trainType: undefined,
               diaTimes: stations.map((station) => {
-                const platformId = getRailwayPlatform(
-                  railwayLine,
-                  station.stationId,
-                  getFirstOrLast(timetableDirection, timetable.inboundIsFirstHalf)
-                );
-                const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
+                const { platformId, trackId } =
+                  railwayLine !== null
+                    ? getPlatformIdAndTrackId(
+                        railwayLine,
+                        station.stationId,
+                        timetableDirection,
+                        timetable.inboundIsFirstHalf
+                      )
+                    : { platformId: getDefaultPlatformId(station, timetableDirection), trackId: null };
+
                 return {
                   diaTimeId: generateId(),
                   arrivalTime: null,
@@ -483,7 +488,7 @@ export function TrainListComponent({
                   stationId: station.stationId,
                   platformId: platformId,
                   isInService: true,
-                  trackId: stop?.platformTrack?.trackId ?? null,
+                  trackId: trackId,
                 };
               }),
               trainCode: newTrainCode,

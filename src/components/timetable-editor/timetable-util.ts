@@ -14,14 +14,30 @@ export function getRailwayPlatform(
   railwayLine: DeepReadonly<RailwayLine>,
   stationId: string,
   firstHalfOrLastHalf: 'First' | 'Last'
-): string | null {
+): string {
   const { preStops, postStops } = splitStops(railwayLine.stops, nn(railwayLine.returnStopId));
 
   const stops = firstHalfOrLastHalf === 'First' ? preStops : postStops;
   const stop = stops.find((stop) => stop.platform.stationId === stationId);
-  if (stop === undefined) return null;
+  assert(stop !== undefined);
 
   return stop.platform.platformId;
+}
+
+export function getPlatformIdAndTrackId(
+  railwayLine: DeepReadonly<RailwayLine>,
+  stationId: string,
+  timetableDirection: TimetableDirection,
+  inboundIsFirstHalf: boolean
+) {
+  const platformId = getRailwayPlatform(railwayLine, stationId, getFirstOrLast(timetableDirection, inboundIsFirstHalf));
+  const stop = railwayLine.stops.find((stop) => stop.platform.platformId === platformId);
+  assert(stop !== undefined);
+
+  return {
+    platformId: platformId,
+    trackId: stop.platformTrack.trackId,
+  };
 }
 
 // export function getDefaultPlatform(station: DeepReadonly<StationLike>, direction: TimetableDirection): PlatformLike {
@@ -58,6 +74,8 @@ export function createNewStation(stationName: string): Station {
     stationId: generateId(),
     stationName: stationName,
     platforms: newPlatforms,
+    defaultInboundPlatformId: newPlatforms[0].platformId,
+    defaultOutboundPlatformId: newPlatforms[1].platformId,
   };
   newPlatforms[0].stationId = newStation.stationId;
   newPlatforms[1].stationId = newStation.stationId;

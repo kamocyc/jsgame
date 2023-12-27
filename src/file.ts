@@ -44,9 +44,8 @@ export async function importOutdiaFile(event: Event): Promise<null | [OutlinedTi
   });
 }
 
-export async function loadCustomFile(event: Event): Promise<null | OutlinedTimetableData> {
+export async function loadCustomFile(file: File): Promise<null | OutlinedTimetableData> {
   return new Promise((resolve) => {
-    const file = (event.target as HTMLInputElement).files![0];
     const reader = new FileReader();
     let fileType: FileType | null = null;
 

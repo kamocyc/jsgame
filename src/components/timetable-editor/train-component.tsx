@@ -240,7 +240,7 @@ function TrainListItemComponent({
 // }
 
 // 新しい列車番号を生成する（ロジックは適当）
-function getNewTrainCode(trains: DeepReadonly<Train[]>) {
+export function getNewTrainCode(trains: DeepReadonly<Train[]>) {
   const codes = trains.map((train) => train.trainCode);
   const symbolInTrainCode = codes.length === 0 ? 'M' : codes[codes.length - 1].replace(/[^A-Z]/g, '');
   const maxCode =
@@ -250,7 +250,7 @@ function getNewTrainCode(trains: DeepReadonly<Train[]>) {
   const newCode = (parseInt(maxCode) + 2)
     .toString()
     .padStart(codes.length === 0 ? 3 : codes[codes.length - 1].replace(/[^0-9]/g, '').length, '0');
-  return symbolInTrainCode + newCode;
+  return newCode + symbolInTrainCode;
 }
 
 export function TrainListComponent({

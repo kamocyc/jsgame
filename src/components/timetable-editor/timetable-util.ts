@@ -83,14 +83,15 @@ export function getInitialTrainTypes(): TrainType[] {
 function createTrain(
   firstStop: DeepReadonly<RailwayLineStop>,
   lastStop: DeepReadonly<RailwayLineStop>,
-  diaTimes: DiaTime[]
+  diaTimes: DiaTime[],
+  trainCode: string
 ): Train {
   const trainId = generateId();
   return {
     trainId: trainId,
     trainType: undefined,
     trainName: '',
-    trainCode: '001M',
+    trainCode: trainCode,
     diaTimes: diaTimes,
     firstStationOperation: {
       stationOperationType: 'InOut',
@@ -173,8 +174,10 @@ export function getInitialTimetable(
 
   const stationIds = preStops.map((stop) => stop.platform.stationId);
 
-  const inboundTrains: Train[] = [createTrain(preStops[0], preStops[preStops.length - 1], inboundDiaTimes)];
-  const outboundTrains: Train[] = [createTrain(postStops[0], postStops[postStops.length - 1], outboundDiaTimes)];
+  const inboundTrains: Train[] = [createTrain(preStops[0], preStops[preStops.length - 1], inboundDiaTimes, '001M')];
+  const outboundTrains: Train[] = [
+    createTrain(postStops[0], postStops[postStops.length - 1], outboundDiaTimes, '002M'),
+  ];
 
   const trains = inboundTrains.concat(outboundTrains);
 

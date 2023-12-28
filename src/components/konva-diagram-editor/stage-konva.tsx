@@ -10,6 +10,7 @@ import { PlatformLike, Point, StationLike, Train, generateId, getDefaultConnecti
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { Polygon, sat } from '../../sat';
 import { fillMissingTimes } from '../timetable-editor/timetable-util';
+import { getNewTrainCode } from '../timetable-editor/train-component';
 import { DragRectKonva, DragRectKonvaProps } from './drag-rect-konva';
 import { DiagramProps } from './drawer-util';
 import {
@@ -457,24 +458,27 @@ function getStageTarget(target: Konva.Stage | Shape<Konva.ShapeConfig>) {
 function commitDrawingLine(
   drawingLineTimes: DeepReadonly<{ stationId: string; platformId: string; time: number }[]>,
   stations: DeepReadonly<StationLike[]>,
-  diagramProps: DeepReadonly<DiagramProps>
+  diagramProps: DeepReadonly<DiagramProps>,
+  allTrains: DeepReadonly<Map<string, Train>>
 ): void {
   if (drawingLineTimes.length >= 2) {
     const diaTimes = getDiaTimeFromDrawingTrainLine(drawingLineTimes, diagramProps);
+    const direction = getDirectionOfDrawingTrainLine(drawingLineTimes, stations);
+    const trains = (
+      direction === 'Inbound' ? diagramProps.timetable.inboundTrainIds : diagramProps.timetable.outboundTrainIds
+    ).map((trainId) => nn(allTrains.get(trainId)));
 
     const newTrain: Train = {
       trainId: generateId(),
       trainName: '',
       trainType: undefined,
       diaTimes: diaTimes,
-      trainCode: '',
+      trainCode: getNewTrainCode(trains),
       firstStationOperation: getDefaultConnectionType(),
       lastStationOperation: getDefaultConnectionType(),
     };
 
     fillMissingTimes(newTrain, stations);
-
-    const direction = getDirectionOfDrawingTrainLine(drawingLineTimes, stations);
 
     diagramProps.crudTrain.addTrain(newTrain, direction);
   }
@@ -571,7 +575,7 @@ export function MainViewKonva(props: MainViewKonvaProps, ref: any) {
           }
         }
 
-        commitDrawingLine(drawingLineTimes.drawingLineTimes, stations, diagramProps);
+        commitDrawingLine(drawingLineTimes.drawingLineTimes, stations, diagramProps, trains);
 
         setDrawingLineTimes({ isDrawing: false, drawingLineTimes: [], tempDrawingLineTime: null });
       } else {

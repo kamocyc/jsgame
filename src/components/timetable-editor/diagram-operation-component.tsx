@@ -4,6 +4,7 @@ import { nn, toStringFromSeconds, upto } from '../../common';
 import { Operation, StationLike, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
 import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonComponent';
+import { getMinAndMaxDiaTimeIndex } from '../track-editor/checkOperation';
 import './operation-table.css';
 
 export interface DiagramOperationProps {
@@ -128,12 +129,11 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                       );
                     } else {
                       const train = nn(getTrain(props, trainId));
+                      const { minIndex, maxIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
                       return (
                         <Fragment key={i}>
-                          <td>{nn(props.stationMap.get(train.diaTimes[0].stationId)).stationName}</td>
-                          <td>
-                            {nn(props.stationMap.get(train.diaTimes[train.diaTimes.length - 1].stationId)).stationName}
-                          </td>
+                          <td>{nn(props.stationMap.get(train.diaTimes[minIndex].stationId)).stationName}</td>
+                          <td>{nn(props.stationMap.get(train.diaTimes[maxIndex].stationId)).stationName}</td>
                         </Fragment>
                       );
                     }
@@ -180,11 +180,12 @@ export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperatio
           {operation.trainIds.map((trainId, i) => {
             const train = nn(getTrain(props, trainId));
             const direction = getDirection(props.timetable, trainId);
+            const { minIndex, maxIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
             // 上り -> 下り を 左 -> 右 にする
             const [diaTime1, directionText, diaTime2] =
               direction === 'Inbound'
-                ? [train.diaTimes[0], '→', train.diaTimes[train.diaTimes.length - 1]]
-                : [train.diaTimes[train.diaTimes.length - 1], '←', train.diaTimes[0]];
+                ? [train.diaTimes[minIndex], '→', train.diaTimes[maxIndex]]
+                : [train.diaTimes[maxIndex], '←', train.diaTimes[minIndex]];
             const [time1, time2] =
               direction === 'Inbound'
                 ? [diaTime1.departureTime, diaTime2.arrivalTime]

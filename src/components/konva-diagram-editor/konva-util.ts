@@ -5,6 +5,7 @@ import { nn } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import { AppClipboard, StationLike, TimetableDirection, Train } from '../../model';
 import { getStationMap } from '../timetable-editor/common-component';
+import { getMinAndMaxDiaTimeIndex } from '../track-editor/checkOperation';
 import { StationPosition } from './drawer-util';
 import { MouseEventManager } from './mouse-event-manager';
 import { getPlatformPositions } from './station-view-konva';
@@ -66,6 +67,8 @@ export function createPositionDiaTimeMap(
     y,
   });
 
+  const { minIndex, maxIndex } = getMinAndMaxDiaTimeIndex(diaTimes);
+
   const positionDiaTimeMap = diaTimes.flatMap((diaTime, diaTimeIndex) => {
     const stationPosition = stationPositions.find((station) => station.stationId === diaTime.stationId);
     if (!stationPosition) {
@@ -87,7 +90,7 @@ export function createPositionDiaTimeMap(
         const [platformPositions, lastLinePosition] = getPlatformPositions(platforms);
         const platformPosition = platformPositions[platformIndex];
         if (direction === 'Inbound') {
-          if (diaTimeIndex > 0) {
+          if (diaTimeIndex > minIndex) {
             times.push(create(diaTime, 'arrivalTime', nn(arrivalTime ?? departureTime) * secondWidth, stationY));
           }
 
@@ -98,7 +101,7 @@ export function createPositionDiaTimeMap(
             times.push(create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition));
           }
 
-          if (diaTimeIndex < diaTimes.length - 1) {
+          if (diaTimeIndex < maxIndex) {
             times.push(
               create(
                 diaTime,
@@ -109,7 +112,7 @@ export function createPositionDiaTimeMap(
             );
           }
         } else {
-          if (diaTimeIndex > 0) {
+          if (diaTimeIndex > minIndex) {
             times.push(
               create(
                 diaTime,
@@ -128,7 +131,7 @@ export function createPositionDiaTimeMap(
             times.push(create(diaTime, 'departureTime', departureTime * secondWidth, stationY + platformPosition));
           }
 
-          if (diaTimeIndex < diaTimes.length - 1) {
+          if (diaTimeIndex < maxIndex) {
             times.push(create(diaTime, 'departureTime', nn(departureTime ?? arrivalTime) * secondWidth, stationY));
           }
         }

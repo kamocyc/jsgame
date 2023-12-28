@@ -205,7 +205,7 @@ export function fillMissingTimes(train: Train, stations: DeepReadonly<StationLik
         arrivalTime: null,
         departureTime: null,
         isPassing: false,
-        isInService: false,
+        isInService: true,
         trackId: null,
       });
     }

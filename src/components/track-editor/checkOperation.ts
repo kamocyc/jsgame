@@ -2,6 +2,7 @@ import { DeepReadonly } from 'ts-essentials';
 import { assert, nn, toStringFromSeconds } from '../../common';
 import { OperationError } from '../../mapEditorModel';
 import { Operation, PlatformLike, Train, generateId } from '../../model';
+import { DiaTimePartial } from '../konva-diagram-editor/konva-util';
 import { generateOperationCode } from './timetableConverter';
 
 type StationTimeItem = {
@@ -56,53 +57,53 @@ export function checkStationTrackOccupation(
 
   // プラットフォーム -> 出発、到着時刻の一覧をソートする。
   for (const platform of platforms) {
-    const times = nn(platformTimesMap.get(platform.platformId));
-    times.sort((a, b) => a.time - b.time);
+    const platformTimes = nn(platformTimesMap.get(platform.platformId));
+    platformTimes.sort((a, b) => a.time - b.time);
   }
 
   // プラットフォーム -> 出発、到着時刻の一覧を元に、駅の使用状況をチェックする。
   for (const platform of platforms) {
-    const times = nn(platformTimesMap.get(platform.platformId));
+    const platformTimes = nn(platformTimesMap.get(platform.platformId));
 
-    if (times.length <= 1) {
+    if (platformTimes.length <= 1) {
       continue;
     }
 
-    let isOccupied = times[0].arrivalOrDeparture === 'Arrival';
-    for (let index = 1; index < times.length; index++) {
-      if (isOccupied && times[index].arrivalOrDeparture === 'Arrival') {
+    let isOccupied = platformTimes[0].arrivalOrDeparture === 'Arrival';
+    for (let index = 1; index < platformTimes.length; index++) {
+      if (isOccupied && platformTimes[index].arrivalOrDeparture === 'Arrival') {
         console.log({
           // station: platforms.find((p) => p.platformId === platform.platformId)?.station.stationName,
           stationId: platform.stationId,
           platform: platform.platformName,
           platformId: platform.platformId,
-          train: times[index].train,
-          diaTimeId: times[index].diaTimeId,
-          second: times[index].time,
-          time: toStringFromSeconds(times[index].time),
+          train: platformTimes[index].train,
+          diaTimeId: platformTimes[index].diaTimeId,
+          second: platformTimes[index].time,
+          time: toStringFromSeconds(platformTimes[index].time),
         });
         errors.push({
           type: 'DoubleArrival',
           stationId: platform.stationId,
           arrivalOrDeparture: 'arrivalTime',
           platformId: platform.platformId,
-          diaTimeId: times[index].diaTimeId,
-          trainId: times[index].train.trainId,
+          diaTimeId: platformTimes[index].diaTimeId,
+          trainId: platformTimes[index].train.trainId,
         });
       }
 
-      if (!isOccupied && times[index].arrivalOrDeparture === 'Departure') {
+      if (!isOccupied && platformTimes[index].arrivalOrDeparture === 'Departure') {
         errors.push({
           type: 'DoubleDeparture',
           stationId: platform.stationId,
           arrivalOrDeparture: 'departureTime',
           platformId: platform.platformId,
-          diaTimeId: times[index].diaTimeId,
-          trainId: times[index].train.trainId,
+          diaTimeId: platformTimes[index].diaTimeId,
+          trainId: platformTimes[index].train.trainId,
         });
       }
 
-      if (times[index].arrivalOrDeparture === 'Arrival') {
+      if (platformTimes[index].arrivalOrDeparture === 'Arrival') {
         isOccupied = true;
       } else {
         isOccupied = false;
@@ -118,23 +119,30 @@ export function checkStationTrackOccupation(
   return { errors, operations };
 }
 
+export function getMinAndMaxDiaTimeIndex(diaTimes: DeepReadonly<DiaTimePartial[]>): {
+  minIndex: number;
+  maxIndex: number;
+} {
+  const minIndex = Math.min(
+    ...diaTimes
+      .map((diaTime, i) => [diaTime, i] as const)
+      .filter(([diaTime, _]) => diaTime.arrivalTime !== null || diaTime.departureTime !== null)
+      .map(([_, i]) => i)
+  );
+  const maxIndex = Math.max(
+    ...diaTimes
+      .map((diaTime, i) => [diaTime, i] as const)
+      .filter(([diaTime, _]) => diaTime.arrivalTime !== null || diaTime.departureTime !== null)
+      .map(([_, i]) => i)
+  );
+  return { minIndex, maxIndex };
+}
+
 function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[] {
   const errors: OperationError[] = [];
   for (const train of trains) {
-    const minIndex = Math.min(
-      ...train.diaTimes
-        .map((diaTime, i) => [diaTime, i] as const)
-        .filter(([diaTime, _]) => diaTime.arrivalTime !== null || diaTime.departureTime !== null)
-        .map(([_, i]) => i)
-    );
-    const maxIndex = Math.max(
-      ...train.diaTimes
-        .map((diaTime, i) => [diaTime, i] as const)
-        .filter(([diaTime, _]) => diaTime.arrivalTime !== null || diaTime.departureTime !== null)
-        .map(([_, i]) => i)
-    );
-
     let index = 0;
+    const { minIndex, maxIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
 
     for (const diaTime of train.diaTimes) {
       if (index >= minIndex && index <= maxIndex) {
@@ -206,10 +214,12 @@ function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<s
   }
 
   const isFirstDiaTime = (train: DeepReadonly<Train>, diaTimeId: string) => {
-    return train.diaTimes[0].diaTimeId === diaTimeId;
+    const { minIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
+    return train.diaTimes[minIndex].diaTimeId === diaTimeId;
   };
   const isLastDiaTime = (train: DeepReadonly<Train>, diaTimeId: string) => {
-    return train.diaTimes[train.diaTimes.length - 1].diaTimeId === diaTimeId;
+    const { maxIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
+    return train.diaTimes[maxIndex].diaTimeId === diaTimeId;
   };
 
   const mergeOperations = (prevTrainId: string, currTrainId: string) => {
@@ -232,27 +242,27 @@ function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<s
   };
 
   for (const platformId of platformIds) {
-    const times = nn(platformTimesMap.get(platformId));
+    const platformTimes = nn(platformTimesMap.get(platformId));
 
-    if (times.length <= 1) {
+    if (platformTimes.length <= 1) {
       continue;
     }
 
     // 接続する列車のoperationをマージする。
-    let prevTrain = times[0].train;
-    for (let index = 1; index < times.length; index++) {
-      if (prevTrain.trainId !== times[index].train.trainId) {
+    let prevTrain = platformTimes[0].train;
+    for (let index = 1; index < platformTimes.length; index++) {
+      if (prevTrain.trainId !== platformTimes[index].train.trainId) {
         if (
-          times[index - 1].arrivalOrDeparture === 'Arrival' &&
-          times[index].arrivalOrDeparture === 'Departure' &&
-          isLastDiaTime(prevTrain, times[index - 1].diaTimeId) &&
-          isFirstDiaTime(times[index].train, times[index].diaTimeId)
+          platformTimes[index - 1].arrivalOrDeparture === 'Arrival' &&
+          platformTimes[index].arrivalOrDeparture === 'Departure' &&
+          isLastDiaTime(prevTrain, platformTimes[index - 1].diaTimeId) &&
+          isFirstDiaTime(platformTimes[index].train, platformTimes[index].diaTimeId)
         ) {
-          mergeOperations(prevTrain.trainId, times[index].train.trainId);
+          mergeOperations(prevTrain.trainId, platformTimes[index].train.trainId);
         }
       }
 
-      prevTrain = times[index].train;
+      prevTrain = platformTimes[index].train;
     }
   }
 

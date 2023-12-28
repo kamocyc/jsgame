@@ -1,10 +1,9 @@
 import { produce } from 'immer';
 import { useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
-import { StateUpdater } from '../../common';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
-import { AppStates, OperationError } from '../../mapEditorModel';
+import { AppStates } from '../../mapEditorModel';
 import { StationLike } from '../../model';
 import { OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { TimetableEditorComponent } from './timetable-editor-component';
@@ -41,11 +40,10 @@ export function TimetableEditorParentComponent({
   stations: DeepReadonly<StationLike[]>;
   defaultSelectedRailwayLineId: string | null;
   applyDetailedTimetable: () => void;
-  setAppStates: StateUpdater<Omit<AppStates, 'mapState'>>;
+  setAppStates: (f: (data: Omit<AppStates, 'mapState'>) => Omit<AppStates, 'mapState'>) => void;
   setToast: (toast: string) => void;
 }) {
   const [selectedRailwayLineId, setSelectedRailwayLineId] = useState<string | null>(defaultSelectedRailwayLineId);
-  const [errors, setErrors] = useState<OperationError[]>([]);
 
   useEffect(() => {
     if (selectedRailwayLineId == null && appStates.railwayLines[0] !== undefined) {
@@ -54,8 +52,16 @@ export function TimetableEditorParentComponent({
   });
 
   const selectedTimetable = appStates.outlinedTimetableData._timetables.find(
-    (timetable) => timetable.railwayLineId === selectedRailwayLineId
+    (timetable) =>
+      timetable.railwayLineId === selectedRailwayLineId ||
+      (defaultSelectedRailwayLineId === '__DUMMY__' && timetable.railwayLineId === defaultSelectedRailwayLineId)
   );
+
+  const update = () => {
+    setAppStates((appStates) => ({
+      ...appStates,
+    }));
+  };
 
   const setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => void) => void = (
     timetableDataFunction: (oldTimetableData: OutlinedTimetableData) => void
@@ -72,15 +78,14 @@ export function TimetableEditorParentComponent({
     );
     appStates.outlinedTimetableData = newTimetableData;
 
-    setErrors([...newTimetableData._errors]);
+    update();
   };
 
-  const railwayLine = appStates.railwayLines.find((railwayLine) => railwayLine.railwayLineId === selectedRailwayLineId);
-  const update = () => {
-    setAppStates((appStates) => ({
-      ...appStates,
-    }));
-  };
+  const railwayLine = appStates.railwayLines.find(
+    (railwayLine) =>
+      railwayLine.railwayLineId === selectedRailwayLineId ||
+      (defaultSelectedRailwayLineId === '__DUMMY__' && railwayLine.railwayLineId === defaultSelectedRailwayLineId)
+  );
 
   return (
     <>
@@ -94,14 +99,14 @@ export function TimetableEditorParentComponent({
         </button>
         <button
           onClick={() => {
-            function mapToObject<V>(map: Map<string, V>) {
+            function mapToObject<V>(map: DeepReadonly<Map<string, V>>) {
               return [...map.entries()].reduce((obj, [key, value]) => {
                 // @ts-ignore
                 obj[key] = value;
                 return obj;
               }, {});
             }
-            function convertOutlinedTimetableDataToSave(outlinedTimetableData: OutlinedTimetableData) {
+            function convertOutlinedTimetableDataToSave(outlinedTimetableData: DeepReadonly<OutlinedTimetableData>) {
               return {
                 _trains: mapToObject(outlinedTimetableData._trains),
                 _timetables: outlinedTimetableData._timetables,
@@ -192,7 +197,7 @@ export function TimetableEditorParentComponent({
             setTimetableData={setTimetableData}
             timetable={selectedTimetable}
             setToast={setToast}
-            errors={errors}
+            errors={appStates.outlinedTimetableData._errors}
           />
         ) : (
           <></>

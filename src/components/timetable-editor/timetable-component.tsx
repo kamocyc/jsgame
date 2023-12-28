@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
 import { DiaTime, StationLike, TimetableDirection, Train } from '../../model';
+import { getMinAndMaxDiaTimeIndex } from '../track-editor/checkOperation';
 
 function getStationTimetable(trains: DeepReadonly<Train[]>, stationId: string) {
   const stationTimetable: [DiaTime, string][] = trains
@@ -11,8 +12,8 @@ function getStationTimetable(trains: DeepReadonly<Train[]>, stationId: string) {
         return null;
       }
 
-      // 終着駅の情報はこれだとまずい？
-      const finalStationId = train.diaTimes[train.diaTimes.length - 1].stationId;
+      const { maxIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
+      const finalStationId = train.diaTimes[maxIndex].stationId;
 
       return [stationTimes[0], finalStationId] as [DiaTime, string];
     })

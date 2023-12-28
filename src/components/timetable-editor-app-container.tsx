@@ -2,13 +2,14 @@ import { produce } from 'immer';
 import { useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../common';
-import { AppStates, OperationError, RailwayLine, RailwayLineStop } from '../mapEditorModel';
+import { AppStates, RailwayLine, RailwayLineStop } from '../mapEditorModel';
 import { StationLike, Train } from '../model';
 import { HistoryManager, OutlinedTimetable, OutlinedTimetableData } from '../outlinedTimetableData';
 import { getStationMap } from './timetable-editor/common-component';
 import { StationEditorListEntryComponent } from './timetable-editor/station-edit-component';
 import { TimetableEditorParentComponent } from './timetable-editor/timetable-editor-parent-component';
 import { getInitialTimetable } from './timetable-editor/timetable-util';
+import { checkStationTrackOccupation } from './track-editor/checkOperation';
 
 const domain = 'http://localhost:3000';
 
@@ -35,13 +36,12 @@ async function loadDataFromLocalStorage() {
       outlinedTimetableDataToSave: {
         _timetables: OutlinedTimetable[];
         _trains: Train[];
-        _errors: OperationError[];
       };
     };
     const timetableData = data.outlinedTimetableDataToSave;
     const appStates: Omit<AppStates, 'mapState'> = {
       outlinedTimetableData: {
-        _errors: timetableData._errors, // なんか効いていない？
+        _errors: [],
         _timetables: timetableData._timetables,
         _trains: new Map(Object.keys(timetableData._trains).map((k) => [k, timetableData._trains[k as any]])),
       },
@@ -152,6 +152,11 @@ async function loadData() {
   };
 }
 
+type AppStateBag = {
+  appStates: Omit<AppStates, 'mapState'>;
+  stations: DeepReadonly<StationLike[]>;
+};
+
 // stopsのtrackIdはnullでいい
 export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessage: (message: string) => void }) {
   const timetableData: OutlinedTimetableData = {
@@ -160,21 +165,46 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
     _trains: new Map<string, Train>(),
   };
 
-  const [appStates, setAppStates] = useState<Omit<AppStates, 'mapState'>>({
-    outlinedTimetableData: timetableData,
-    railwayLines: [],
-    selectedRailwayLineId: null,
-    historyManager: new HistoryManager(),
+  // const [appStates, setAppStates] = useState<Omit<AppStates, 'mapState'>>();
+  // const [stations, setStations] = useState<DeepReadonly<StationLike[]>>([]);
+  const [appStateBag, setAppStateBag] = useState<AppStateBag>({
+    appStates: {
+      outlinedTimetableData: timetableData,
+      railwayLines: [],
+      selectedRailwayLineId: null,
+      historyManager: new HistoryManager(),
+    },
+    stations: [],
   });
-  const [stations, setStations] = useState<DeepReadonly<StationLike[]>>([]);
+
+  const { appStates, stations } = appStateBag;
+
+  function setStations(stations: DeepReadonly<StationLike[]>) {
+    setAppStateBag((d) => ({
+      appStates: d.appStates,
+      stations: stations,
+    }));
+  }
+
+  function setAppStates(updater: (appStates: Omit<AppStates, 'mapState'>) => Omit<AppStates, 'mapState'>) {
+    setAppStateBag((d) => ({
+      appStates: updater(d.appStates),
+      stations: d.stations,
+    }));
+  }
 
   useEffect(() => {
     (async () => {
       if (appStates.outlinedTimetableData._timetables.length === 0) {
         const { stations, appStates } = await loadDataFromLocalStorage();
-        // const { stations, appStates } = await loadData();
+        const platforms = stations.map((station) => station.platforms).flat();
+        const { errors } = checkStationTrackOccupation(
+          [...appStates.outlinedTimetableData._trains.entries()].map(([k, v]) => v),
+          platforms
+        );
+        appStates.outlinedTimetableData._errors = errors;
         setStations(stations);
-        setAppStates(appStates);
+        setAppStates((_) => appStates);
       }
     })();
   }, []);

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { assert } from 'ts-essentials';
 import { AppStates, Cell, GameMap, MapState, createMapContext } from '../mapEditorModel';
 import { DetailedTimetable, PlatformLike, Train } from '../model';
 import { HistoryManager, OutlinedTimetableData } from '../outlinedTimetableData';
@@ -181,12 +182,7 @@ export function App() {
                         };
                       });
                     } else {
-                      setAppStates((prev) => {
-                        return {
-                          ...prev,
-                          ...arg,
-                        };
-                      });
+                      assert(false);
                     }
                   }}
                   setToast={setToastMessage}

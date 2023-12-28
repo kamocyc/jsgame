@@ -507,7 +507,7 @@ export function TrainListComponent({
 
 export function WarningMessageComponent({ error }: { error: OperationError | undefined }) {
   return error ? (
-    <TooltipComponent content={error.type}>
+    <TooltipComponent content={error.message}>
       <div
         style={{
           fontSize: '12px',

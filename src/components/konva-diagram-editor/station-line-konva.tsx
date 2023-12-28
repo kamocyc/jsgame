@@ -6,13 +6,14 @@ import { StationLike } from '../../model';
 import { hitStrokeWidth } from './drawer-util';
 import { gridColor, isStationExpandedAtom, stationPositionsAtom, stationsAtom, virtualCanvasWidth } from './konva-util';
 import { getPlatformPositions } from './station-view-konva';
+import { exceptionHandler } from './train-konva';
 
 // 路線追加のイベントハンドラなどやりたい
 
 export type StationPlatformLineKonvaProps = DeepReadonly<{
   station: StationLike;
 }>;
-export function StationPlatformLineKonva(props: StationPlatformLineKonvaProps) {
+export const StationPlatformLineKonva = exceptionHandler((props: StationPlatformLineKonvaProps) => {
   const { station } = props;
   const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
   const platforms = station.platforms;
@@ -36,12 +37,12 @@ export function StationPlatformLineKonva(props: StationPlatformLineKonvaProps) {
       <Line points={[0, lastLinePosition, virtualCanvasWidth, lastLinePosition]} stroke={gridColor} strokeWidth={1} />
     </Group>
   );
-}
+});
 
 export type StationLineKonvaProps = DeepReadonly<{
   station: StationLike;
 }>;
-export function StationLineKonva(props: StationLineKonvaProps) {
+export const StationLineKonva = exceptionHandler((props: StationLineKonvaProps) => {
   const station = props.station;
   const isStationExpandedMap = useRecoilValue(isStationExpandedAtom);
   const isStationExpanded = isStationExpandedMap.get(station.stationId) ?? false;
@@ -61,7 +62,7 @@ export function StationLineKonva(props: StationLineKonvaProps) {
       {isStationExpanded ? <>{<StationPlatformLineKonva station={station} />}</> : <></>}
     </>
   );
-}
+});
 
 export type StationLineCollectionKonvaProps = DeepReadonly<{}>;
 export function StationLineCollectionKonva(props: StationLineCollectionKonvaProps) {

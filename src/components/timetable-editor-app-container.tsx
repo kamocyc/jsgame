@@ -211,74 +211,80 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
 
   const stationMap = getStationMap(stations);
 
-  return (
-    <>
-      <StationEditorListEntryComponent
-        stationIds={stations.map((s) => s.stationId)}
-        setTimetable={(timetableUpdater) => {
-          const timetable = appStates.outlinedTimetableData._timetables[0];
-          const trainsBag = {
-            trains: timetable.inboundTrainIds.map((id) => nn(appStates.outlinedTimetableData._trains.get(id))),
-            otherDirectionTrains: timetable.outboundTrainIds.map((id) =>
-              nn(appStates.outlinedTimetableData._trains.get(id))
-            ),
-          };
-          const newTimetable = produce(
-            {
-              outlinedTimetable: appStates.outlinedTimetableData._timetables[0],
-              trainsBag: trainsBag,
-              stations: stationMap,
-            },
-            (draft) => {
-              timetableUpdater(draft.outlinedTimetable, draft.trainsBag, draft.stations);
-            }
-          );
-          setStations([...newTimetable.stations.entries()].map(([_, station]) => station));
-
-          setAppStates((appStates) => ({
-            ...appStates,
-            outlinedTimetableData: {
-              _errors: appStates.outlinedTimetableData._errors,
-              _trains: new Map(
-                newTimetable.trainsBag.trains
-                  .concat(newTimetable.trainsBag.otherDirectionTrains)
-                  .map((train) => [train.trainId, train])
+  if (
+    appStates.outlinedTimetableData._timetables.length > 0 &&
+    stations.length !== appStates.outlinedTimetableData._timetables[0].stationIds.length
+  ) {
+    return <></>;
+  } else
+    return (
+      <>
+        <StationEditorListEntryComponent
+          stationIds={stations.map((s) => s.stationId)}
+          setTimetable={(timetableUpdater) => {
+            const timetable = appStates.outlinedTimetableData._timetables[0];
+            const trainsBag = {
+              trains: timetable.inboundTrainIds.map((id) => nn(appStates.outlinedTimetableData._trains.get(id))),
+              otherDirectionTrains: timetable.outboundTrainIds.map((id) =>
+                nn(appStates.outlinedTimetableData._trains.get(id))
               ),
-              _timetables: [newTimetable.outlinedTimetable],
-            },
-          }));
-        }}
-        stations={stationMap}
-      />
-      <TimetableEditorParentComponent
-        appStates={appStates}
-        stations={stations}
-        defaultSelectedRailwayLineId={appStates.selectedRailwayLineId}
-        setAppStates={setAppStates}
-        applyDetailedTimetable={async () => {
-          const timetables = await fetch(domain + '/timetable_data.json', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(appStates.outlinedTimetableData),
-            mode: 'cors',
-          }).then((response) => {
-            if (response.ok) {
-              return response.json();
-            } else {
-              throw new Error(response.statusText);
-            }
-          });
+            };
+            const newTimetable = produce(
+              {
+                outlinedTimetable: appStates.outlinedTimetableData._timetables[0],
+                trainsBag: trainsBag,
+                stations: stationMap,
+              },
+              (draft) => {
+                timetableUpdater(draft.outlinedTimetable, draft.trainsBag, draft.stations);
+              }
+            );
+            setStations([...newTimetable.stations.entries()].map(([_, station]) => station));
 
-          if (timetables?.errors?.length && timetables.errors.length > 0) {
-            setToastMessage(timetables.errors[0].message);
-          } else {
-            setToastMessage('保存しました');
-          }
-        }}
-        setToast={setToastMessage}
-      />
-    </>
-  );
+            setAppStates((appStates) => ({
+              ...appStates,
+              outlinedTimetableData: {
+                _errors: appStates.outlinedTimetableData._errors,
+                _trains: new Map(
+                  newTimetable.trainsBag.trains
+                    .concat(newTimetable.trainsBag.otherDirectionTrains)
+                    .map((train) => [train.trainId, train])
+                ),
+                _timetables: [newTimetable.outlinedTimetable],
+              },
+            }));
+          }}
+          stations={stationMap}
+        />
+        <TimetableEditorParentComponent
+          appStates={appStates}
+          stations={stations}
+          defaultSelectedRailwayLineId={appStates.selectedRailwayLineId}
+          setAppStates={setAppStates}
+          applyDetailedTimetable={async () => {
+            const timetables = await fetch(domain + '/timetable_data.json', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(appStates.outlinedTimetableData),
+              mode: 'cors',
+            }).then((response) => {
+              if (response.ok) {
+                return response.json();
+              } else {
+                throw new Error(response.statusText);
+              }
+            });
+
+            if (timetables?.errors?.length && timetables.errors.length > 0) {
+              setToastMessage(timetables.errors[0].message);
+            } else {
+              setToastMessage('保存しました');
+            }
+          }}
+          setToast={setToastMessage}
+        />
+      </>
+    );
 }

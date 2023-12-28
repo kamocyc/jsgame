@@ -84,6 +84,7 @@ export function checkStationTrackOccupation(
         });
         errors.push({
           type: 'DoubleArrival',
+          message: '同じプラットフォームへの到着が連続しています',
           stationId: platform.stationId,
           arrivalOrDeparture: 'arrivalTime',
           platformId: platform.platformId,
@@ -95,6 +96,7 @@ export function checkStationTrackOccupation(
       if (!isOccupied && platformTimes[index].arrivalOrDeparture === 'Departure') {
         errors.push({
           type: 'DoubleDeparture',
+          message: '同じプラットフォームからの出発が連続しています',
           stationId: platform.stationId,
           arrivalOrDeparture: 'departureTime',
           platformId: platform.platformId,
@@ -144,12 +146,57 @@ function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[]
     let index = 0;
     const { minIndex, maxIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
 
+    let previousTime = 0;
     for (const diaTime of train.diaTimes) {
       if (index >= minIndex && index <= maxIndex) {
+        if (diaTime.arrivalTime !== null && diaTime.departureTime !== null) {
+          if (diaTime.arrivalTime > diaTime.departureTime) {
+            errors.push({
+              type: 'ArrivalTimeGreaterThanDepartureTime',
+              message: '到着時刻が出発時刻よりも後になっています。',
+              trainId: train.trainId,
+              diaTimeId: diaTime.diaTimeId,
+              arrivalOrDeparture: null,
+              platformId: diaTime.platformId,
+              stationId: diaTime.stationId,
+            });
+          }
+        }
+        if (diaTime.arrivalTime !== null) {
+          if (diaTime.arrivalTime <= previousTime) {
+            errors.push({
+              type: 'ArrivalTimeLessThanPreviousTime',
+              message: '到着時刻が前駅の時刻よりも前になっています。',
+              trainId: train.trainId,
+              diaTimeId: diaTime.diaTimeId,
+              arrivalOrDeparture: null,
+              platformId: diaTime.platformId,
+              stationId: diaTime.stationId,
+            });
+          }
+        }
+        if (diaTime.departureTime !== null) {
+          if (diaTime.departureTime <= previousTime) {
+            errors.push({
+              type: 'DepartureTimeLessThanPreviousTime',
+              message: '出発時刻が前駅の時刻よりも前になっています。',
+              trainId: train.trainId,
+              diaTimeId: diaTime.diaTimeId,
+              arrivalOrDeparture: null,
+              platformId: diaTime.platformId,
+              stationId: diaTime.stationId,
+            });
+          }
+        }
+
+        if (diaTime.arrivalTime !== null) previousTime = diaTime.arrivalTime;
+        if (diaTime.departureTime !== null) previousTime = diaTime.departureTime;
+
         // 条件は見直したいところ
         if (diaTime.arrivalTime === null && index !== minIndex) {
           errors.push({
             type: 'NullArrivalTime',
+            message: '到着時刻が入力されていません。',
             trainId: train.trainId,
             diaTimeId: diaTime.diaTimeId,
             arrivalOrDeparture: 'arrivalTime',
@@ -160,6 +207,7 @@ function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[]
         if (diaTime.departureTime === null && index !== maxIndex) {
           errors.push({
             type: 'NullDepartureTime',
+            message: '出発時刻が入力されていません。',
             trainId: train.trainId,
             diaTimeId: diaTime.diaTimeId,
             arrivalOrDeparture: 'departureTime',
@@ -171,6 +219,7 @@ function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[]
           if (diaTime.platformId === null) {
             errors.push({
               type: 'NullPlatform',
+              message: 'プラットフォームが入力されていません。',
               trainId: train.trainId,
               diaTimeId: diaTime.diaTimeId,
               arrivalOrDeparture: null,

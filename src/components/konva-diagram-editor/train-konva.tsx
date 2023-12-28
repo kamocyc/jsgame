@@ -34,7 +34,18 @@ export type TrainKonvaProps = DeepReadonly<{
   mouseEventManager: MouseEventManager;
 }>;
 
-export function TrainKonva(props: TrainKonvaProps) {
+export function exceptionHandler<T>(f: (props: T) => JSX.Element): (props: T) => JSX.Element {
+  return (props: T) => {
+    try {
+      return f(props);
+    } catch (e) {
+      console.warn(e);
+      return <></>;
+    }
+  };
+}
+
+export const TrainKonva = exceptionHandler((props: TrainKonvaProps) => {
   const { train, diagramProps, mouseEventManager } = props;
   const secondWidth = useRecoilValue(secondWidthAtom);
   const selectedTrainIds = useRecoilValue(selectedTrainIdsAtom);
@@ -161,7 +172,7 @@ export function TrainKonva(props: TrainKonvaProps) {
               key={i}
               x={warningPosition.x + 40 / scale}
               y={warningPosition.y}
-              message={error.type}
+              message={error.message}
               scale={scale}
             />
           );
@@ -257,4 +268,4 @@ export function TrainKonva(props: TrainKonvaProps) {
       )}
     </>
   );
-}
+});

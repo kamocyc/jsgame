@@ -157,6 +157,7 @@ export interface RailwayLine {
 export type OperationError = {
   type: string;
   trainId: string;
+  message: string;
   diaTimeId: string | null;
   stationId: string | null;
   arrivalOrDeparture: 'arrivalTime' | 'departureTime' | null;

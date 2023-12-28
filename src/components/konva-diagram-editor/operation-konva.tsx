@@ -6,13 +6,14 @@ import { Operation } from '../../model';
 import { getDirection } from '../../outlinedTimetableData';
 import { DiagramProps, hitStrokeWidth } from './drawer-util';
 import { allTrainsMapAtom, createPositionDiaTimeMap, stationMapSelector, useViewStateValues } from './konva-util';
+import { exceptionHandler } from './train-konva';
 
 export type OperationKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;
   operation: Operation;
 }>;
 
-export function OperationKonva(props: OperationKonvaProps) {
+export const OperationKonva = exceptionHandler((props: OperationKonvaProps) => {
   const { diagramProps, operation } = props;
   const viewStateValues = useViewStateValues();
   const trains = useRecoilValue(allTrainsMapAtom);
@@ -72,7 +73,7 @@ export function OperationKonva(props: OperationKonvaProps) {
       })}
     </>
   );
-}
+});
 
 export type OperationCollectionKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;

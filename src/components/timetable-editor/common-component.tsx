@@ -133,7 +133,7 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
     }
 
     const newTime = parseTime(value);
-    if (newTime) {
+    if (newTime !== undefined) {
       setTime(newTime);
       return true;
     }
@@ -175,12 +175,12 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
           if (e.key === 'ArrowUp') {
             const newTime = getNextTime(time);
             setTime(newTime);
-            (e.target as HTMLInputElement).value = toStringFromSeconds(newTime);
+            setInputValue(toStringFromSeconds(newTime));
           }
           if (e.key === 'ArrowDown') {
             const newTime = getPrevTime(time);
             setTime(newTime);
-            (e.target as HTMLInputElement).value = toStringFromSeconds(newTime);
+            setInputValue(toStringFromSeconds(newTime));
           }
         }}
       />

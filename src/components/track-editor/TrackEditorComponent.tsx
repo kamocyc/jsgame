@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
-import { StateUpdater, assert, merge, nn, removeDuplicates } from '../../common';
+import { StateUpdater, assert, mapToObject, merge, nn, removeDuplicates } from '../../common';
 import { JSON_decycle, JSON_retrocycle } from '../../cycle';
 import { loadUtf8File } from '../../file';
 import {
@@ -17,7 +17,6 @@ import { DetailedTimetable, StationLike, Train } from '../../model';
 import { OutlinedTimetable, OutlinedTimetableData, OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { getInitialAppStates } from '../AppComponent';
 import { ConstructType, ExtendedCellConstruct, TerrainType } from '../extendedMapModel';
-import { getStationMap } from '../timetable-editor/common-component';
 import { LineInfoPanel } from './LineInfoPanelComponent';
 import { SeekBarComponent } from './SeekBarComponent';
 import { CanvasComponent } from './TrackEditorContainerComponent';
@@ -81,7 +80,7 @@ type SaveData = {
   extendedMap: ExtendedGameMap;
   placedTrains: PlacedTrain[];
   railwayLines: any[];
-  stations: StationLike[];
+  stations: { [key: string]: StationLike };
 };
 
 function toStringEditorData(appStates: AppStates) {
@@ -96,7 +95,7 @@ function toStringEditorData(appStates: AppStates) {
     extendedMap: appStates.mapState.extendedMap,
     placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
     railwayLines: appStates.railwayLines,
-    stations: appStates.mapState.stations,
+    stations: mapToObject(appStates.mapState.stationMap),
   };
 
   return JSON.stringify(JSON_decycle(obj), null, 2);
@@ -139,9 +138,11 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
     (s1, s2) => s1 === s2
   );
 
-  const stations = obj.stations ?? [];
+  const stations = new Map(Object.entries(obj.stations)) ?? new Map();
 
-  assert(stations.map((station) => station.stationId).every((stationId) => stationIds.includes(stationId)));
+  assert(
+    [...stations.values()].map((station) => station.stationId).every((stationId) => stationIds.includes(stationId))
+  );
   const storedTrains: StoredTrain[] = obj.storedTrains ?? [];
   // const placedTrains: PlacedTrain[] = obj.placedTrains ?? [];
   const timetable = (obj.timetable ?? { stationTTItems: [], switchTTItems: [] }) as DetailedTimetable;
@@ -178,7 +179,7 @@ function loadEditorDataBuf(buf: string, setAppStates: StateUpdater<AppStates>) {
         detailedTimetable: timetable,
         extendedMap: extendedMap,
         trainMove: trainMove,
-        stations: stations,
+        stationMap: stations,
         agentManager: createAgentManager(),
         mapWidth: mapWidth,
         mapHeight: mapHeight,
@@ -218,7 +219,7 @@ function addAgents(appStates: AppStates) {
       construct,
       {
         extendedMap: appStates.mapState.extendedMap,
-        stations: appStates.mapState.stations,
+        stationMap: appStates.mapState.stationMap,
         gameMap: appStates.mapState.map,
         placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
@@ -308,7 +309,7 @@ export function TrackEditorComponent({
       addAgents(appStates);
       appStates.mapState.agentManager.tick({
         extendedMap: appStates.mapState.extendedMap,
-        stations: appStates.mapState.stations,
+        stationMap: appStates.mapState.stationMap,
         gameMap: appStates.mapState.map,
         placedTrains: appStates.mapState.trainMove.getPlacedTrains(),
         railwayLines: appStates.railwayLines,
@@ -339,7 +340,7 @@ export function TrackEditorComponent({
       {showLineInfoPanel ? (
         <div className='dialog'>
           <LineInfoPanel
-            stations={getStationMap(appStates.mapState.stations)}
+            stations={appStates.mapState.stationMap}
             timetableData={appStates.outlinedTimetableData}
             railwayLines={appStates.railwayLines}
             selectedRailwayLineId={appStates.selectedRailwayLineId}

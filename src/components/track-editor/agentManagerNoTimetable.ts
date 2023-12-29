@@ -326,7 +326,7 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManager2Props {
   extendedMap: ExtendedGameMap;
-  stations: StationLike[];
+  stationMap: Map<string, StationLike>;
   gameMap: GameMap;
   railwayLines: RailwayLine[];
   placedTrains: PlacedTrain[];
@@ -365,7 +365,7 @@ export class AgentManagerNoTimetable implements AgentManagerBase {
       agent.destination = destination;
       agent.inDestination = false;
       agent.status = 'Move';
-      agent.path = createAgentPath(props.stations, agent, props.gameMap, props.railwayLines);
+      agent.path = createAgentPath(props.stationMap, agent, props.gameMap, props.railwayLines);
       agent.pathIndex = 0;
       this.agents.push(agent);
       return true;

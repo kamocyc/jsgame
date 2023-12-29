@@ -1,6 +1,7 @@
 import { produce } from 'immer';
 import { useEffect, useState } from 'react';
 import { DeepReadonly } from 'ts-essentials';
+import { mapToObject } from '../../common';
 import { JSON_decycle } from '../../cycle';
 import { loadCustomFile } from '../../file';
 import { AppStates } from '../../mapEditorModel';
@@ -30,14 +31,14 @@ function toStringTimeTableData(timetableData: OutlinedTimetableData) {
 
 export function TimetableEditorParentComponent({
   appStates,
-  stations,
+  stationMap,
   defaultSelectedRailwayLineId,
   applyDetailedTimetable,
   setAppStates,
   setToast,
 }: {
   appStates: Omit<AppStates, 'mapState'>;
-  stations: DeepReadonly<StationLike[]>;
+  stationMap: DeepReadonly<Map<string, StationLike>>;
   defaultSelectedRailwayLineId: string | null;
   applyDetailedTimetable: () => void;
   setAppStates: (f: (data: Omit<AppStates, 'mapState'>) => Omit<AppStates, 'mapState'>) => void;
@@ -70,7 +71,7 @@ export function TimetableEditorParentComponent({
       appStates.outlinedTimetableData,
       (d) => {
         timetableDataFunction(d);
-        OutlinedTimetableFunc.updateOperations(d, stations);
+        OutlinedTimetableFunc.updateOperations(d, stationMap);
       },
       (patches, inversePatches) => {
         appStates.historyManager.push(patches, inversePatches);
@@ -99,13 +100,6 @@ export function TimetableEditorParentComponent({
         </button>
         <button
           onClick={() => {
-            function mapToObject<V>(map: DeepReadonly<Map<string, V>>) {
-              return [...map.entries()].reduce((obj, [key, value]) => {
-                // @ts-ignore
-                obj[key] = value;
-                return obj;
-              }, {});
-            }
             function convertOutlinedTimetableDataToSave(outlinedTimetableData: DeepReadonly<OutlinedTimetableData>) {
               return {
                 _trains: mapToObject(outlinedTimetableData._trains),
@@ -115,7 +109,7 @@ export function TimetableEditorParentComponent({
             }
             const data = {
               outlinedTimetableDataToSave: convertOutlinedTimetableDataToSave(appStates.outlinedTimetableData),
-              stations: stations,
+              stationMap: mapToObject(stationMap),
             };
             const jsonData = JSON.stringify(data);
             localStorage.setItem('timetableEditorStandalone', jsonData);
@@ -192,7 +186,7 @@ export function TimetableEditorParentComponent({
         {selectedTimetable !== undefined && railwayLine !== undefined ? (
           <TimetableEditorComponent
             railwayLine={railwayLine}
-            stations={stations}
+            stationMap={stationMap}
             timetableData={appStates.outlinedTimetableData}
             setTimetableData={setTimetableData}
             timetable={selectedTimetable}

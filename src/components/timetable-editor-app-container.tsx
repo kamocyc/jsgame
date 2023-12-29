@@ -32,7 +32,7 @@ async function loadDataFromLocalStorage() {
   const jsonData = localStorage.getItem('timetableEditorStandalone');
   if (jsonData) {
     const data = JSON.parse(jsonData) as {
-      stations: StationLike[];
+      stationMap: { [key: string]: StationLike };
       outlinedTimetableDataToSave: {
         _timetables: OutlinedTimetable[];
         _trains: Train[];
@@ -51,11 +51,11 @@ async function loadDataFromLocalStorage() {
     };
     return {
       appStates: appStates,
-      stations: data.stations,
+      stationMap: new Map(Object.entries(data.stationMap)),
     };
   } else {
-    const { stations, appStates } = await loadData();
-    return { stations, appStates };
+    const { stationMap, appStates } = await loadData();
+    return { stationMap, appStates };
   }
 }
 
@@ -128,12 +128,13 @@ async function loadData() {
         ];
 
   const railwayLines = await getRailwayLines();
+  const stationMap = getStationMap(stations);
 
   const timetableData: OutlinedTimetableData =
     timetableDataWeb !== null && timetableDataWeb._timetables.length > 0
       ? timetableDataWeb
       : ((): OutlinedTimetableData => {
-          const [outlinedTimetable, trains] = getInitialTimetable(getStationMap(stations), railwayLines[0]);
+          const [outlinedTimetable, trains] = getInitialTimetable(stationMap, railwayLines[0]);
           return {
             _errors: [],
             _timetables: [outlinedTimetable],
@@ -142,7 +143,7 @@ async function loadData() {
         })();
 
   return {
-    stations,
+    stationMap,
     appStates: {
       outlinedTimetableData: timetableData,
       railwayLines: railwayLines,
@@ -154,7 +155,7 @@ async function loadData() {
 
 type AppStateBag = {
   appStates: Omit<AppStates, 'mapState'>;
-  stations: DeepReadonly<StationLike[]>;
+  stationMap: DeepReadonly<Map<string, StationLike>>;
 };
 
 // stopsのtrackIdはnullでいい
@@ -174,53 +175,51 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
       selectedRailwayLineId: null,
       historyManager: new HistoryManager(),
     },
-    stations: [],
+    stationMap: new Map<string, StationLike>(),
   });
 
-  const { appStates, stations } = appStateBag;
+  const { appStates, stationMap } = appStateBag;
 
-  function setStations(stations: DeepReadonly<StationLike[]>) {
+  function setStations(stationMap: DeepReadonly<Map<string, StationLike>>) {
     setAppStateBag((d) => ({
       appStates: d.appStates,
-      stations: stations,
+      stationMap: stationMap,
     }));
   }
 
   function setAppStates(updater: (appStates: Omit<AppStates, 'mapState'>) => Omit<AppStates, 'mapState'>) {
     setAppStateBag((d) => ({
       appStates: updater(d.appStates),
-      stations: d.stations,
+      stationMap: d.stationMap,
     }));
   }
 
   useEffect(() => {
     (async () => {
       if (appStates.outlinedTimetableData._timetables.length === 0) {
-        const { stations, appStates } = await loadDataFromLocalStorage();
-        const platforms = stations.map((station) => station.platforms).flat();
+        const { stationMap, appStates } = await loadDataFromLocalStorage();
+        const platforms = [...stationMap.values()].map((station) => station.platforms).flat();
         const { errors } = checkStationTrackOccupation(
           [...appStates.outlinedTimetableData._trains.entries()].map(([k, v]) => v),
           platforms
         );
         appStates.outlinedTimetableData._errors = errors;
-        setStations(stations);
+        setStations(stationMap);
         setAppStates((_) => appStates);
       }
     })();
   }, []);
 
-  const stationMap = getStationMap(stations);
-
   if (
-    appStates.outlinedTimetableData._timetables.length > 0 &&
-    stations.length !== appStates.outlinedTimetableData._timetables[0].stationIds.length
+    appStates.outlinedTimetableData._timetables.length == 0 ||
+    stationMap.size !== appStates.outlinedTimetableData._timetables[0].stationIds.length
   ) {
     return <></>;
-  } else
+  } else {
     return (
       <>
         <StationEditorListEntryComponent
-          stationIds={stations.map((s) => s.stationId)}
+          stationIds={appStates.outlinedTimetableData._timetables[0].stationIds}
           setTimetable={(timetableUpdater) => {
             const timetable = appStates.outlinedTimetableData._timetables[0];
             const trainsBag = {
@@ -239,7 +238,7 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
                 timetableUpdater(draft.outlinedTimetable, draft.trainsBag, draft.stations);
               }
             );
-            setStations([...newTimetable.stations.entries()].map(([_, station]) => station));
+            setStations(newTimetable.stations);
 
             setAppStates((appStates) => ({
               ...appStates,
@@ -258,7 +257,7 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
         />
         <TimetableEditorParentComponent
           appStates={appStates}
-          stations={stations}
+          stationMap={stationMap}
           defaultSelectedRailwayLineId={appStates.selectedRailwayLineId}
           setAppStates={setAppStates}
           applyDetailedTimetable={async () => {
@@ -287,4 +286,5 @@ export function TimetableEditorAppContainer({ setToastMessage }: { setToastMessa
         />
       </>
     );
+  }
 }

@@ -2,7 +2,7 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": ["source.organizeImports", "source.fixAll.eslint"],
-  "cSpell.words": ["Decycle", "dragmove", "Konva", "Konvas", "lightgray", "Retrocycle"],
+  "cSpell.words": ["Decycle", "dragmove", "immer", "Konva", "Konvas", "lightgray", "Outdia", "Retrocycle"],
   "files.exclude": {
     "**/node_modules": true
   },

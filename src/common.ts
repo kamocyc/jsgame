@@ -49,6 +49,14 @@ export function moduloRoundDown(value: number, mod: number): number {
   }
 }
 
+export function mapToObject<V>(map: DeepReadonly<Map<string, V>>) {
+  return [...map.entries()].reduce((obj, [key, value]) => {
+    // @ts-ignore
+    obj[key] = value;
+    return obj;
+  }, {});
+}
+
 // export function createNewStationWithPlatform({
 //   platformId,
 //   platformName,
@@ -236,6 +244,9 @@ export function parseTime(text: string): number | undefined {
   const hour = parseInt(text.substring(0, 2));
   const minute = parseInt(text.substring(2));
 
+  if (isNaN(hour) || isNaN(minute)) {
+    return undefined;
+  }
   // 1日の範囲害ならundefinedを返す
   if (hour >= 24 || minute >= 60 || hour < 0 || minute < 0) {
     return undefined;

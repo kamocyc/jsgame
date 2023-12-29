@@ -37,6 +37,8 @@ export function TrainListRowHeaderComponent({ stationIds }: { stationIds: DeepRe
 
 export function TimetableEditorTableComponent({
   stationIds,
+  shouldChangeAfterTime,
+  shouldDisplaySecond,
   trains,
   otherDirectionTrains,
   setTimetable,
@@ -81,6 +83,8 @@ export function TimetableEditorTableComponent({
       </div>
       <TrainListComponent
         stations={stations}
+        shouldChangeAfterTime={shouldChangeAfterTime}
+        shouldDisplaySecond={shouldDisplaySecond}
         setTimetable={setTimetable}
         errors={errors}
         stationIds={stationIds}
@@ -102,6 +106,8 @@ export function TimetableEditorTableComponent({
 export type TimetableEditorDirectedProps = {
   readonly stationIds: DeepReadonly<string[]>;
   // readonly setStations: (diaStations: StationLike[]) => void;
+  readonly shouldChangeAfterTime: boolean;
+  readonly shouldDisplaySecond: boolean;
   readonly stations: DeepReadonly<StationLike[]>;
   readonly trains: DeepReadonly<Train[]>;
   readonly otherDirectionTrains: DeepReadonly<readonly Train[]>;
@@ -120,7 +126,7 @@ export type TimetableEditorDirectedProps = {
 export type TimetableEditorComponentProps = DeepReadonly<{
   timetableData: OutlinedTimetableData;
   setTimetableData: (f: (draftTimetableData: OutlinedTimetableData) => void) => void;
-  stations: StationLike[];
+  stationMap: Map<string, StationLike>;
   timetable: OutlinedTimetable;
   railwayLine: RailwayLine;
   setToast: (message: string) => void;
@@ -130,7 +136,7 @@ export type TimetableEditorComponentProps = DeepReadonly<{
 export function TimetableEditorComponent({
   timetableData,
   timetable,
-  stations,
+  stationMap,
   railwayLine,
   setTimetableData,
   errors,
@@ -141,7 +147,8 @@ export function TimetableEditorComponent({
     originalTrainIds: [],
   });
   const [settingData, setSettingData] = useState<DeepReadonly<SettingData> | null>(null);
-
+  const [shouldChangeAfterTime, setShouldChangeAfterTime] = useState(false);
+  const [shouldDisplaySecond, setShouldDisplaySecond] = useState(false);
   const [resetSeed, setResetSeed] = useState(1);
 
   const [inboundTrains, outboundTrains] = [
@@ -215,6 +222,8 @@ export function TimetableEditorComponent({
     return [draftTimetable, inboundTrains, outboundTrains] as const;
   };
 
+  const stations = timetable.stationIds.map((stationId) => nn(stationMap.get(stationId)));
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div>
@@ -252,7 +261,7 @@ export function TimetableEditorComponent({
               return OutlinedTimetableFunc.reverseTimetableDirection(
                 draftTimetableData,
                 timetable.timetableId,
-                stations
+                stationMap
               );
             });
             // reset();
@@ -268,7 +277,7 @@ export function TimetableEditorComponent({
 
             setTimetableData((draftTimetableData) => {
               OutlinedTimetableFunc.clearTimetable(draftTimetableData, timetable.timetableId);
-              const [newTimetable, newTrains] = getInitialTimetable(getStationMap(stations), railwayLine);
+              const [newTimetable, newTrains] = getInitialTimetable(stationMap, railwayLine);
               OutlinedTimetableFunc.addTimetable(draftTimetableData, newTimetable, newTrains);
               return undefined;
             });
@@ -286,6 +295,24 @@ export function TimetableEditorComponent({
         >
           繰り返し
         </button>
+        <label htmlFor='checkbox_shouldChangeAfterTime'>後の時刻を共に移動</label>
+        <input
+          name='checkbox_shouldChangeAfterTime'
+          type='checkbox'
+          checked={shouldChangeAfterTime}
+          onChange={(e) => {
+            setShouldChangeAfterTime(e.target.checked);
+          }}
+        />
+        <label htmlFor='checkbox_shouldDisplaySecond'>秒を表示</label>
+        <input
+          name='checkbox_shouldDisplaySecond'
+          type='checkbox'
+          checked={shouldDisplaySecond}
+          onChange={(e) => {
+            setShouldDisplaySecond(e.target.checked);
+          }}
+        />
       </div>
       <div style={{ display: 'flex' }}>
         <div style={{ flex: '1 1 auto' }}>
@@ -301,6 +328,8 @@ export function TimetableEditorComponent({
                 component: () => (
                   <TimetableEditorTableComponent
                     stations={stations}
+                    shouldChangeAfterTime={shouldChangeAfterTime}
+                    shouldDisplaySecond={shouldDisplaySecond}
                     stationIds={timetable.stationIds}
                     trains={inboundTrains}
                     otherDirectionTrains={outboundTrains}
@@ -330,6 +359,8 @@ export function TimetableEditorComponent({
                 component: () => (
                   <TimetableEditorTableComponent
                     stations={reverseArray(stations)}
+                    shouldChangeAfterTime={shouldChangeAfterTime}
+                    shouldDisplaySecond={shouldDisplaySecond}
                     stationIds={reverseArray(timetable.stationIds)}
                     trains={outboundTrains}
                     otherDirectionTrains={inboundTrains}

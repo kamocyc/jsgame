@@ -536,14 +536,14 @@ function getPlatformAgentNumber(agentManager_: AgentManagerBase, platformId: str
 function drawStations(
   ctx: CanvasRenderingContext2D,
   mapContext: MapContext,
-  stations: StationLike[],
+  stationMap: Map<string, StationLike>,
   tracks: Track[],
   agentManager: AgentManagerBase,
   showInfo: boolean
 ) {
   const fontSize = 14;
 
-  const drawnStationPoints: Map<string, Point[]> = new Map(stations.map((s) => [s.stationId, []]));
+  const drawnStationPoints: Map<string, Point[]> = new Map([...stationMap.keys()].map((s) => [s, []]));
 
   for (const track of tracks) {
     const platform = track.track.platform;
@@ -592,7 +592,7 @@ function drawStations(
         }
       }
 
-      const station = stations.find((station) =>
+      const station = [...stationMap.values()].find((station) =>
         station.platforms.some((platform) => platform.platformId === track.track.platform!.platformId)
       );
       assert(station !== undefined);
@@ -601,7 +601,6 @@ function drawStations(
     }
   }
 
-  const stationMap = new Map(stations.map((s) => [s.stationId, s]));
   // 駅名を描画
   ctx.fillStyle = '#ffcccc';
   for (const [stationId, points] of drawnStationPoints) {
@@ -817,7 +816,7 @@ function drawAgent(ctx: CanvasRenderingContext2D, mapContext: MapContext, agent:
 
 export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = null, mouseEndCell: Cell | null = null) {
   const { tracks, map } = appStates.mapState;
-  const { stations, trainMove, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates.mapState;
+  const { stationMap, trainMove, extendedMap, mapWidth, mapHeight, mapContext, agentManager } = appStates.mapState;
 
   const canvas = document.getElementById('canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -882,7 +881,7 @@ export function drawEditor(appStates: AppStates, mouseStartCell: Cell | null = n
   }
 
   // 駅
-  drawStations(ctx, mapContext, stations, tracks, appStates.mapState.agentManager, appStates.mapState.showInfo);
+  drawStations(ctx, mapContext, stationMap, tracks, appStates.mapState.agentManager, appStates.mapState.showInfo);
 
   // マウスがある場所
   if (mouseStartCell !== null) {

@@ -86,7 +86,7 @@ export function getInitialAppStates(): AppStates {
     shouldAutoGrow: true,
     trainMove: trainMove,
     agentManager: createAgentManager(),
-    stations: [],
+    stationMap: new Map(),
     currentRailwayLine: null,
     moneyManager: new MoneyManager(),
     mapManager: new MapManager(),
@@ -137,7 +137,7 @@ export function App() {
               return (
                 <TimetableEditorParentComponent
                   appStates={appStates}
-                  stations={appStates.mapState.stations}
+                  stationMap={appStates.mapState.stationMap}
                   applyDetailedTimetable={() => {
                     const platforms = appStates.mapState.tracks
                       .map((track) => track?.track.platform)

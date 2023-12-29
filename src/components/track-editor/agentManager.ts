@@ -113,14 +113,14 @@ export function getAdjacentStations(
 }
 
 export function createAgentPath(
-  stations: StationLike[],
+  stationMap: Map<string, StationLike>,
   agent: Agent,
   gameMap: GameMap,
   currentTime: number,
   timetableData: OutlinedTimetableData
 ): AgentPath {
   // 現在地から最も近い駅を探す
-  const [stationPositions, _] = getStationPositions(stations, gameMap);
+  const [stationPositions, _] = getStationPositions(stationMap, gameMap);
 
   function addTopPosition(position: Point): Point {
     return {
@@ -215,7 +215,7 @@ export function createAgentPath(
     currentTime,
     destinationNearestStation.station,
     timetableData,
-    stations
+    stationMap
   )[1];
   if (stationPath === null) {
     return [];
@@ -353,12 +353,12 @@ export function searchPath(
   startTime: number,
   destination: StationLike,
   timetableData: OutlinedTimetableData,
-  stations: StationLike[]
+  stationMap: Map<string, StationLike>
 ): readonly [readonly [StationLike, number][], StationPath | null] {
   const previous: { [key: string]: [StationLike, DiaTime] } = {};
 
   // 駅ノードの初期化（未確定のノードのみ）
-  let stationNodes = stations.map((station) => ({
+  let stationNodes = [...stationMap.values()].map((station) => ({
     station: station,
     distance: station.stationId === initialPosition.stationId ? startTime : Number.MAX_SAFE_INTEGER,
   }));
@@ -417,7 +417,7 @@ function toPoint(cellPoint: CellPoint): Point {
 
 export interface AgentManagerProps {
   extendedMap: ExtendedGameMap;
-  stations: StationLike[];
+  stationMap: Map<string, StationLike>;
   gameMap: GameMap;
   outlinedTimetableData: OutlinedTimetableData;
   placedTrains: PlacedTrain[];
@@ -472,7 +472,7 @@ export class AgentManager implements AgentManagerBase {
       agent.inDestination = false;
       agent.status = 'Move';
       agent.path = createAgentPath(
-        props.stations,
+        props.stationMap,
         agent,
         props.gameMap,
         props.globalTimeManager.globalTime,

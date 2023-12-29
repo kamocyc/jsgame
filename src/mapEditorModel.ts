@@ -171,7 +171,7 @@ export interface MapState {
   readonly mapWidth: number;
   readonly mapHeight: number;
   readonly mapContext: MapContext;
-  readonly stations: StationLike[];
+  readonly stationMap: Map<string, StationLike>;
   readonly extendedMap: ExtendedGameMap;
   readonly agentManager: AgentManagerBase;
   currentRailwayLine: RailwayLine | null;

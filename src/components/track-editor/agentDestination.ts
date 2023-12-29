@@ -130,7 +130,7 @@ const moveProbFuncs: MoveProbFunc = {
 };
 
 interface AgentDestinationProps {
-  stations: StationLike[];
+  stationMap: Map<string, StationLike>;
   extendedMap: ExtendedCell[][];
   gameMap: GameMap;
   globalTimeManager: GlobalTimeManager;
@@ -153,7 +153,7 @@ function getRandomDestination(
   props: AgentDestinationProps,
   destinationType: ConstructType
 ): ExtendedCellConstruct | null {
-  const [stationPositions, platforms] = getStationPositions(props.stations, props.gameMap);
+  const [stationPositions, platforms] = getStationPositions(props.stationMap, props.gameMap);
 
   const candidates = getDestinationCandidates(agentPosition, props).filter(
     (cell) => cell.constructType === destinationType
@@ -208,7 +208,7 @@ export function getAgentDestination(
   return destination;
 }
 
-export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
+export function getStationPositions(stationMap: Map<string, StationLike>, gameMap: GameMap) {
   const platforms = gameMap
     .map((row) =>
       row
@@ -219,7 +219,7 @@ export function getStationPositions(stations: StationLike[], gameMap: GameMap) {
     )
     .flat()
     .filter((track) => track?.track?.platform != null);
-  const stations_ = [...stations.values()].map((station) => {
+  const stations_ = [...stationMap.values()].map((station) => {
     // ホームは横向きになっている。その一番上と下のセルを取得する
     const stationPlatforms = platforms.filter((p) => p.track.platform!.stationId === station.stationId);
     stationPlatforms.sort((a, b) => a.begin.y - b.begin.y);

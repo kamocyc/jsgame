@@ -5,13 +5,13 @@ import { Operation, PlatformLike, Train, generateId } from '../../model';
 import { DiaTimePartial } from '../konva-diagram-editor/konva-util';
 import { generateOperationCode } from './timetableConverter';
 
-type StationTimeItem = {
+type PlatformTimeItem = {
   arrivalOrDeparture: 'Arrival' | 'Departure';
   diaTimeId: string;
   train: Train;
   time: number;
 };
-type StationTimes = DeepReadonly<StationTimeItem>[];
+type PlatformTimes = DeepReadonly<PlatformTimeItem>[];
 
 export function checkStationTrackOccupation(
   trains: DeepReadonly<Train[]>,
@@ -20,7 +20,7 @@ export function checkStationTrackOccupation(
   const errors: OperationError[] = [];
 
   // プラットフォーム -> 出発、到着時刻の一覧を作る。
-  const platformTimesMap = new Map<string, StationTimes>();
+  const platformTimesMap = new Map<string, PlatformTimes>();
   for (const platform of platforms) {
     platformTimesMap.set(platform.platformId, []);
   }
@@ -146,7 +146,7 @@ function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[]
     let index = 0;
     const { minIndex, maxIndex } = getMinAndMaxDiaTimeIndex(train.diaTimes);
 
-    let previousTime = 0;
+    let previousTime = -1;
     for (const diaTime of train.diaTimes) {
       if (index >= minIndex && index <= maxIndex) {
         if (diaTime.arrivalTime !== null && diaTime.departureTime !== null) {
@@ -252,7 +252,7 @@ type OperationSimple = DeepReadonly<{
   trainIds: string[];
 }>;
 
-function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<string, StationTimes>): Operation[] {
+function createOperations(trains: DeepReadonly<Train[]>, platformTimesMap: Map<string, PlatformTimes>): Operation[] {
   const platformIds = platformTimesMap.keys();
   const trainIdToOperationId = new Map<string, string>();
   const operations = new Map<string, OperationSimple>();

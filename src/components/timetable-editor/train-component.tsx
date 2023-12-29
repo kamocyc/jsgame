@@ -257,6 +257,8 @@ export function TrainListComponent({
   trains,
   stations,
   timetableDirection,
+  shouldChangeAfterTime,
+  shouldDisplaySecond,
   crudTrain,
   trainTypes,
   clipboard,

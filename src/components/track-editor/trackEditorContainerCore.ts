@@ -13,7 +13,6 @@ import { Depot, DepotLine, Platform, PlatformLike, Point, Station, Switch, Track
 import { OutlinedTimetableFunc } from '../../outlinedTimetableData';
 import { getMidPoint, isHitLine } from '../../trackUtil';
 import { ConstructType, ExtendedCell, ExtendedCellConstruct, ExtendedCellRoad, TerrainType } from '../extendedMapModel';
-import { getStationMap } from '../timetable-editor/common-component';
 import { getInitialTimetable } from '../timetable-editor/timetable-util';
 import { searchTrackPath } from './timetableConverter';
 import { createLine, deleteLine, deleteStation, getAllTracks, validateAppState } from './trackEditor';
@@ -58,9 +57,8 @@ function createPlatform(cell: Cell): [Platform, Station] | undefined {
       stationId: generateId(),
       stationName: '駅' + generateId(),
       platforms: [],
-      // distance: DefaultStationDistance,
-      // defaultInboundPlatformId: id,
-      // defaultOutboundPlatformId: id,
+      defaultInboundPlatformId: id,
+      defaultOutboundPlatformId: id,
     };
 
     const newPlatform: Platform = {
@@ -385,7 +383,7 @@ export function onmousedown(
       if (result) {
         const [newTracks, _, newStation] = result;
         appStates.mapState.tracks.push(...newTracks);
-        appStates.mapState.stations.push(newStation);
+        appStates.mapState.stationMap.set(newStation.stationId, newStation);
         stationDbg.set(newStation.stationId, newStation);
       }
     } else if (appStates.mapState.editMode === 'Create') {
@@ -493,13 +491,15 @@ function deleteVariousThings(
   const platformId = getPlatformId(mouseStartCell, mouseEndCell);
   if (platformId !== null) {
     // 駅の削除
-    const station = appStates.mapState.stations.filter((s) => s.platforms.some((p) => p.platformId === platformId))[0];
+    const station = [...appStates.mapState.stationMap.values()].filter((s) =>
+      s.platforms.some((p) => p.platformId === platformId)
+    )[0];
     const result = deleteStation(appStates.mapState.map, station);
     if (result !== true && 'error' in result) {
       setToast(result.error);
     } else {
-      assert(appStates.mapState.stations.indexOf(station) !== -1);
-      appStates.mapState.stations.splice(appStates.mapState.stations.indexOf(station), 1);
+      assert(appStates.mapState.stationMap.has(station.stationId));
+      appStates.mapState.stationMap.delete(station.stationId);
       appStates.mapState.tracks = appStates.mapState.map
         .map((row) => row.map((cell) => cell.lineType?.tracks ?? []).flat())
         .flat();
@@ -594,8 +594,10 @@ export function onmouseup(
         // 選択終了
         if (appStates.mapState.currentRailwayLine !== null) {
           appStates.railwayLines.push(appStates.mapState.currentRailwayLine);
-          const stationMap = getStationMap(appStates.mapState.stations);
-          const [timetable, newTrains] = getInitialTimetable(stationMap, appStates.mapState.currentRailwayLine);
+          const [timetable, newTrains] = getInitialTimetable(
+            appStates.mapState.stationMap,
+            appStates.mapState.currentRailwayLine
+          );
           OutlinedTimetableFunc.addTimetable(appStates.outlinedTimetableData, timetable, newTrains);
           appStates.mapState.currentRailwayLine = null;
         }

@@ -80,7 +80,7 @@ export function checkStationTrackOccupation(
           train: platformTimes[index].train,
           diaTimeId: platformTimes[index].diaTimeId,
           second: platformTimes[index].time,
-          time: toStringFromSeconds(platformTimes[index].time),
+          time: toStringFromSeconds(platformTimes[index].time, true),
         });
         errors.push({
           type: 'DoubleArrival',
@@ -163,7 +163,7 @@ function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[]
           }
         }
         if (diaTime.arrivalTime !== null) {
-          if (diaTime.arrivalTime <= previousTime) {
+          if (diaTime.arrivalTime < previousTime) {
             errors.push({
               type: 'ArrivalTimeLessThanPreviousTime',
               message: '到着時刻が前駅の時刻よりも前になっています。',
@@ -176,7 +176,7 @@ function checkDetailedTimetable(trains: DeepReadonly<Train[]>): OperationError[]
           }
         }
         if (diaTime.departureTime !== null) {
-          if (diaTime.departureTime <= previousTime) {
+          if (diaTime.departureTime < previousTime) {
             errors.push({
               type: 'DepartureTimeLessThanPreviousTime',
               message: '出発時刻が前駅の時刻よりも前になっています。',

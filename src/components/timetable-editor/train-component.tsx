@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { StateUpdater, assert, nn, toMap } from '../../common';
 import { OperationError } from '../../mapEditorModel';
@@ -15,6 +16,7 @@ import {
   generateId,
   getDefaultConnectionType,
 } from '../../model';
+import { shouldChangeAfterTimeAtom, shouldDisplaySecondAtom } from '../konva-diagram-editor/konva-util';
 import { ContextMenuComponent, EditableTextComponent, TimeInputComponent, getStationMap } from './common-component';
 import { getDefaultPlatformId } from './station-edit-component';
 import { TimetableEditorDirectedProps } from './timetable-editor-component';
@@ -135,14 +137,19 @@ function TrainListItemComponent({
   diaTime,
   stationMap,
   errors,
+  updateDiaTime,
   updateTrain,
 }: DeepReadonly<{
   diaTime: DiaTime;
   stationMap: Map<string, StationLike>;
   errors: readonly OperationError[];
-  updateTrain: (diaTimeId: string, updater: (diaTime: DiaTime) => void) => void;
+  updateDiaTime: (diaTimeId: string, updater: (diaTime: DiaTime) => void) => void;
+  updateTrain: (updater: (train: Train) => void) => void;
 }>) {
+  const shouldChangeAfterTime = useRecoilValue(shouldChangeAfterTimeAtom);
+  const shouldDisplaySecond = useRecoilValue(shouldDisplaySecondAtom);
   const errorMap = toMap(errors, (error) => error.diaTimeId ?? undefined);
+  const width = shouldDisplaySecond ? 60 : 44;
 
   return (
     <div
@@ -153,7 +160,7 @@ function TrainListItemComponent({
         height: 24 * 3 + 'px',
         borderStyle: 'solid',
         borderWidth: '1px',
-        width: '54px',
+        width: (width + 12).toString() + 'px',
       }}
     >
       <div
@@ -166,13 +173,13 @@ function TrainListItemComponent({
         <div
           style={{
             fontSize: '12px',
-            width: '10px',
+            width: '12px',
             color: diaTime.isPassing ? 'black' : 'lightgray',
             backgroundColor: diaTime.isPassing ? 'lightgreen' : 'white',
             cursor: 'pointer',
           }}
           onClick={() => {
-            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+            updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
               diaTime.isPassing = !diaTime.isPassing;
             });
           }}
@@ -182,13 +189,13 @@ function TrainListItemComponent({
         <div
           style={{
             fontSize: '12px',
-            width: '10px',
+            width: '12px',
             color: !diaTime.isInService ? 'black' : 'lightgray',
             backgroundColor: !diaTime.isInService ? 'lightgreen' : 'white',
             cursor: 'pointer',
           }}
           onClick={() => {
-            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+            updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
               diaTime.isInService = !diaTime.isInService;
             });
           }}
@@ -196,30 +203,76 @@ function TrainListItemComponent({
           回
         </div>
       </div>
-      <div style={{ width: 24 * 3 + 'px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: width.toString() + 'px', display: 'flex', flexDirection: 'column' }}>
         <TimeInputComponent
           time={diaTime.arrivalTime}
+          width={width}
           setTime={(time) => {
-            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
-              diaTime.arrivalTime = time;
-            });
+            if (shouldChangeAfterTime) {
+              updateTrain((train) => {
+                const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
+                assert(diaTimeIndex !== -1);
+                if (time === null || diaTime.arrivalTime === null) {
+                  const diaTime = train.diaTimes[diaTimeIndex];
+                  diaTime.arrivalTime = time;
+                } else {
+                  const timeDiff = time - nn(diaTime.arrivalTime);
+                  for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
+                    const diaTime = train.diaTimes[i];
+                    if (diaTime.arrivalTime !== null) {
+                      diaTime.arrivalTime += timeDiff;
+                    }
+                    if (diaTime.departureTime !== null) {
+                      diaTime.departureTime += timeDiff;
+                    }
+                  }
+                }
+              });
+            } else {
+              updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
+                diaTime.arrivalTime = time;
+              });
+            }
           }}
         />
         <PlatformComponent
           diaPlatformId={diaTime.platformId}
           allDiaPlatforms={nn(stationMap.get(diaTime.stationId)).platforms}
           setDiaPlatform={(platformId) => {
-            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
+            updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
               diaTime.platformId = platformId;
             });
           }}
         />
         <TimeInputComponent
           time={diaTime.departureTime}
+          width={width}
           setTime={(time) => {
-            updateTrain(diaTime.diaTimeId, (diaTime: DiaTime) => {
-              diaTime.departureTime = time;
-            });
+            if (shouldChangeAfterTime) {
+              updateTrain((train) => {
+                const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
+                assert(diaTimeIndex !== -1);
+                if (time === null || diaTime.departureTime === null) {
+                  const diaTime = train.diaTimes[diaTimeIndex];
+                  diaTime.departureTime = time;
+                } else {
+                  const timeDiff = time - nn(diaTime.departureTime);
+                  for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
+                    const diaTime = train.diaTimes[i];
+                    if (diaTime.arrivalTime !== null) {
+                      diaTime.arrivalTime += timeDiff;
+                    }
+                    if (diaTime.departureTime !== null) {
+                      diaTime.departureTime += timeDiff;
+                    }
+                  }
+                }
+              });
+            } else {
+              updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
+                diaTime.departureTime = time;
+              });
+            }
           }}
         />
       </div>
@@ -257,8 +310,6 @@ export function TrainListComponent({
   trains,
   stations,
   timetableDirection,
-  shouldChangeAfterTime,
-  shouldDisplaySecond,
   crudTrain,
   trainTypes,
   clipboard,
@@ -274,7 +325,9 @@ export function TrainListComponent({
     posY: 0,
   });
   const [selectedTrain, setSelectedTrain] = useState<DeepReadonly<Train> | null>(null);
+  const shouldDisplaySecond = useRecoilValue(shouldDisplaySecondAtom);
   const stationMap = getStationMap(stations);
+  const width = shouldDisplaySecond ? 64 : 52;
 
   function getDiaTimesOfStations(
     train: DeepReadonly<Train>,
@@ -339,7 +392,7 @@ export function TrainListComponent({
               error={errors.find((error) => error.trainId === train.trainId && error.diaTimeId === null)}
             />
           </div>
-          <div style={{ height: '24px', width: '56px' }}>
+          <div style={{ height: '24px', width: width.toString() + 'px' }}>
             {/* 列車番号 */}
             <EditableTextComponent
               value={train.trainCode}
@@ -358,7 +411,7 @@ export function TrainListComponent({
               width={null}
             />
           </div>
-          <div style={{ height: '24px', width: '56px' }}>
+          <div style={{ height: '24px', width: width.toString() + 'px' }}>
             {/* 列車名 */}
             <EditableTextComponent
               value={train.trainName ?? ''}
@@ -381,7 +434,7 @@ export function TrainListComponent({
             {/* 列車種別 */}
             <select
               value={train.trainType?.trainTypeId}
-              style={{ height: 22 + 'px', width: '56px' }}
+              style={{ height: 22 + 'px', width: width.toString() + 'px' }}
               onChange={(e) => {
                 if ((e.target as HTMLSelectElement)?.value != null) {
                   crudTrain.updateTrain(train.trainId, (train) => {
@@ -442,12 +495,15 @@ export function TrainListComponent({
                 errors={errors}
                 stationMap={stationMap}
                 diaTime={diaTime}
-                updateTrain={(diaTimeId, updater) => {
+                updateDiaTime={(diaTimeId, updater) => {
                   crudTrain.updateTrain(train.trainId, (train) => {
                     const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
                     assert(diaTime !== undefined);
                     updater(diaTime);
                   });
+                }}
+                updateTrain={(updater) => {
+                  crudTrain.updateTrain(train.trainId, updater);
                 }}
               />
             ))}

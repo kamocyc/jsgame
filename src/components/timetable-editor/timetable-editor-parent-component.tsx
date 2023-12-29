@@ -1,5 +1,6 @@
 import { produce } from 'immer';
 import { useEffect, useState } from 'react';
+import { RecoilRoot } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { mapToObject } from '../../common';
 import { JSON_decycle } from '../../cycle';
@@ -89,7 +90,7 @@ export function TimetableEditorParentComponent({
   );
 
   return (
-    <>
+    <RecoilRoot>
       <>
         <button
           onClick={() => {
@@ -197,7 +198,7 @@ export function TimetableEditorParentComponent({
           <></>
         )}
       </>
-    </>
+    </RecoilRoot>
   );
 }
 

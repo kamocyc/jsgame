@@ -12,6 +12,7 @@ import {
   getPositionFromTime,
   secondWidthAtom,
   selectedTrainIdsAtom,
+  shouldDisplaySecondAtom,
   stageStateAtom,
   stationMapSelector,
   useViewStateValues,
@@ -47,6 +48,7 @@ export function exceptionHandler<T>(f: (props: T) => JSX.Element): (props: T) =>
 
 export const TrainKonva = exceptionHandler((props: TrainKonvaProps) => {
   const { train, diagramProps, mouseEventManager } = props;
+  const shouldDisplaySecond = useRecoilValue(shouldDisplaySecondAtom);
   const secondWidth = useRecoilValue(secondWidthAtom);
   const selectedTrainIds = useRecoilValue(selectedTrainIdsAtom);
   const stageState = useRecoilValue(stageStateAtom);
@@ -199,7 +201,7 @@ export const TrainKonva = exceptionHandler((props: TrainKonvaProps) => {
             const [platformPositions, lastLinePosition] = getPlatformPositions(station.platforms);
             const isStationExpanded = viewState.isStationExpanded.get(diaTime.stationId) ?? false;
 
-            const timeText = toStringFromSeconds(nn(time));
+            const timeText = toStringFromSeconds(nn(time), shouldDisplaySecond);
             const positionX = getPositionFromTime(nn(time), secondWidth);
             const positionY = nn(stationPositions.find((s) => s.stationId === diaTime.stationId)).diagramPosition;
 
@@ -241,7 +243,7 @@ export const TrainKonva = exceptionHandler((props: TrainKonvaProps) => {
                   x={timePosition.x}
                   y={timePosition.y}
                   fontSize={20 / scale}
-                  text={toStringFromSeconds(nn(time))}
+                  text={toStringFromSeconds(nn(time), shouldDisplaySecond)}
                   fill={'black'}
                   hitFunc={() => {}}
                 />

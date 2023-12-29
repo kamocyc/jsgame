@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RecoilRoot } from 'recoil';
+import { useRecoilState } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { nn } from '../../common';
 import { importOutdiaFile } from '../../file';
@@ -11,6 +11,7 @@ import {
   OutlinedTimetableData,
   OutlinedTimetableFunc,
 } from '../../outlinedTimetableData';
+import { shouldChangeAfterTimeAtom, shouldDisplaySecondAtom } from '../konva-diagram-editor/konva-util';
 import { SetTimetable, SettingColumnComponent, TabComponent, getStationMap, reverseArray } from './common-component';
 import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
@@ -37,8 +38,6 @@ export function TrainListRowHeaderComponent({ stationIds }: { stationIds: DeepRe
 
 export function TimetableEditorTableComponent({
   stationIds,
-  shouldChangeAfterTime,
-  shouldDisplaySecond,
   trains,
   otherDirectionTrains,
   setTimetable,
@@ -83,8 +82,6 @@ export function TimetableEditorTableComponent({
       </div>
       <TrainListComponent
         stations={stations}
-        shouldChangeAfterTime={shouldChangeAfterTime}
-        shouldDisplaySecond={shouldDisplaySecond}
         setTimetable={setTimetable}
         errors={errors}
         stationIds={stationIds}
@@ -106,8 +103,6 @@ export function TimetableEditorTableComponent({
 export type TimetableEditorDirectedProps = {
   readonly stationIds: DeepReadonly<string[]>;
   // readonly setStations: (diaStations: StationLike[]) => void;
-  readonly shouldChangeAfterTime: boolean;
-  readonly shouldDisplaySecond: boolean;
   readonly stations: DeepReadonly<StationLike[]>;
   readonly trains: DeepReadonly<Train[]>;
   readonly otherDirectionTrains: DeepReadonly<readonly Train[]>;
@@ -147,8 +142,8 @@ export function TimetableEditorComponent({
     originalTrainIds: [],
   });
   const [settingData, setSettingData] = useState<DeepReadonly<SettingData> | null>(null);
-  const [shouldChangeAfterTime, setShouldChangeAfterTime] = useState(false);
-  const [shouldDisplaySecond, setShouldDisplaySecond] = useState(false);
+  const [shouldChangeAfterTime, setShouldChangeAfterTime] = useRecoilState(shouldChangeAfterTimeAtom);
+  const [shouldDisplaySecond, setShouldDisplaySecond] = useRecoilState(shouldDisplaySecondAtom);
   const [resetSeed, setResetSeed] = useState(1);
 
   const [inboundTrains, outboundTrains] = [
@@ -295,24 +290,27 @@ export function TimetableEditorComponent({
         >
           繰り返し
         </button>
-        <label htmlFor='checkbox_shouldChangeAfterTime'>後の時刻を共に移動</label>
-        <input
-          name='checkbox_shouldChangeAfterTime'
-          type='checkbox'
-          checked={shouldChangeAfterTime}
-          onChange={(e) => {
-            setShouldChangeAfterTime(e.target.checked);
-          }}
-        />
-        <label htmlFor='checkbox_shouldDisplaySecond'>秒を表示</label>
-        <input
-          name='checkbox_shouldDisplaySecond'
-          type='checkbox'
-          checked={shouldDisplaySecond}
-          onChange={(e) => {
-            setShouldDisplaySecond(e.target.checked);
-          }}
-        />
+        <label>
+          後の時刻を共に移動
+          <input
+            type='checkbox'
+            checked={shouldChangeAfterTime}
+            onChange={(e) => {
+              setShouldChangeAfterTime(e.target.checked);
+            }}
+          />
+        </label>
+        <label>
+          秒を表示
+          <input
+            name='checkbox_shouldDisplaySecond'
+            type='checkbox'
+            checked={shouldDisplaySecond}
+            onChange={(e) => {
+              setShouldDisplaySecond(e.target.checked);
+            }}
+          />
+        </label>
       </div>
       <div style={{ display: 'flex' }}>
         <div style={{ flex: '1 1 auto' }}>
@@ -328,8 +326,6 @@ export function TimetableEditorComponent({
                 component: () => (
                   <TimetableEditorTableComponent
                     stations={stations}
-                    shouldChangeAfterTime={shouldChangeAfterTime}
-                    shouldDisplaySecond={shouldDisplaySecond}
                     stationIds={timetable.stationIds}
                     trains={inboundTrains}
                     otherDirectionTrains={outboundTrains}
@@ -359,8 +355,6 @@ export function TimetableEditorComponent({
                 component: () => (
                   <TimetableEditorTableComponent
                     stations={reverseArray(stations)}
-                    shouldChangeAfterTime={shouldChangeAfterTime}
-                    shouldDisplaySecond={shouldDisplaySecond}
                     stationIds={reverseArray(timetable.stationIds)}
                     trains={outboundTrains}
                     otherDirectionTrains={inboundTrains}
@@ -408,19 +402,17 @@ export function TimetableEditorComponent({
                 tabText: 'ダイヤグラム',
                 component: () => {
                   return (
-                    <RecoilRoot>
-                      <KonvaCanvas
-                        timetable={timetable}
-                        stations={stations}
-                        stationIds={timetable.stationIds}
-                        trains={timetableTrains}
-                        crudTrain={crudTrain}
-                        clipboard={clipboard}
-                        setClipboard={setClipboard}
-                        railwayLine={railwayLine}
-                        errors={errors}
-                      />
-                    </RecoilRoot>
+                    <KonvaCanvas
+                      timetable={timetable}
+                      stations={stations}
+                      stationIds={timetable.stationIds}
+                      trains={timetableTrains}
+                      crudTrain={crudTrain}
+                      clipboard={clipboard}
+                      setClipboard={setClipboard}
+                      railwayLine={railwayLine}
+                      errors={errors}
+                    />
                   );
                 },
               },

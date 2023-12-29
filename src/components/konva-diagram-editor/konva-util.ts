@@ -295,6 +295,16 @@ export const stationCanvasWidthAtom = atom<number>({
   default: 100,
 });
 
+export const shouldDisplaySecondAtom = atom<boolean>({
+  key: 'shouldDisplaySecondAtom',
+  default: false,
+});
+
+export const shouldChangeAfterTimeAtom = atom<boolean>({
+  key: 'shouldChangeAfterTimeAtom',
+  default: false,
+});
+
 let mouseEventManager: MouseEventManager | null = null;
 
 export const getMouseEventManager = () => {

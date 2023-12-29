@@ -1,8 +1,10 @@
 import { RefObject, useEffect, useRef, useState } from 'react';
+import { useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { StateUpdater, parseTime, toStringFromSeconds } from '../../common';
 import { ContextData, StationLike, Train, getDefaultTime } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
+import { shouldDisplaySecondAtom } from '../konva-diagram-editor/konva-util';
 import './timetable-editor.css';
 
 export function getStationMap(stations: DeepReadonly<StationLike[]>): DeepReadonly<Map<string, StationLike>> {
@@ -86,9 +88,18 @@ export function EditableTextComponent({
   );
 }
 
-export function TimeInputComponent({ time, setTime }: { time: number | null; setTime: (time: number | null) => void }) {
+export function TimeInputComponent({
+  time,
+  setTime,
+  width,
+}: {
+  time: number | null;
+  setTime: (time: number | null) => void;
+  width: number;
+}) {
+  const shouldDisplaySecond = useRecoilValue(shouldDisplaySecondAtom);
   const toStringFromTime = (time: number | null) => {
-    return time == null ? '・・' : toStringFromSeconds(time);
+    return time == null ? '・・' : toStringFromSeconds(time, shouldDisplaySecond);
   };
   const initialValue = toStringFromTime(time);
   const [inputValue, setInputValue] = useState(initialValue);
@@ -108,6 +119,9 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
       ref.current?.setSelectionRange(0, ref.current?.value.length);
     }
   }, [isEditing]);
+  useEffect(() => {
+    setInputValue(toStringFromTime(time));
+  }, [shouldDisplaySecond]);
 
   function getNextTime(time: number | null) {
     if (time === null) {
@@ -125,14 +139,13 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
   }
 
   const height = 24;
-  const width = 44;
   const onChange = (value: string) => {
     if (value === '') {
       setTime(null);
       return true;
     }
 
-    const newTime = parseTime(value);
+    const newTime = parseTime(value, shouldDisplaySecond);
     if (newTime !== undefined) {
       setTime(newTime);
       return true;
@@ -163,7 +176,7 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
         onBlur={(e) => {
           const stringValue = (e.target as HTMLInputElement).value.trim();
           if (onChange(stringValue)) {
-            setInputValue(toStringFromTime(parseTime(stringValue) ?? null));
+            setInputValue(toStringFromTime(parseTime(stringValue, shouldDisplaySecond) ?? null));
           } else {
             setInputValue(initialValue);
           }
@@ -175,12 +188,12 @@ export function TimeInputComponent({ time, setTime }: { time: number | null; set
           if (e.key === 'ArrowUp') {
             const newTime = getNextTime(time);
             setTime(newTime);
-            setInputValue(toStringFromSeconds(newTime));
+            setInputValue(toStringFromSeconds(newTime, shouldDisplaySecond));
           }
           if (e.key === 'ArrowDown') {
             const newTime = getPrevTime(time);
             setTime(newTime);
-            setInputValue(toStringFromSeconds(newTime));
+            setInputValue(toStringFromSeconds(newTime, shouldDisplaySecond));
           }
         }}
       />

@@ -1,8 +1,10 @@
 import { Fragment } from 'react';
+import { useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { nn, toStringFromSeconds, upto } from '../../common';
 import { Operation, StationLike, Train } from '../../model';
 import { OutlinedTimetable, getDirection } from '../../outlinedTimetableData';
+import { shouldDisplaySecondAtom } from '../konva-diagram-editor/konva-util';
 import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonComponent';
 import { getMinAndMaxDiaTimeIndex } from '../track-editor/checkOperation';
 import './operation-table.css';
@@ -51,7 +53,9 @@ export function DiagramOperationComponent(props: DeepReadonly<DiagramOperationPr
 }
 
 export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOperationProps>) {
+  const shouldDisplaySecond = useRecoilValue(shouldDisplaySecondAtom);
   const maxTrainCount = Math.max(...props.operations.map((operation) => operation.trainIds.length));
+
   return (
     <>
       <table className='operation-table'>
@@ -109,8 +113,10 @@ export function DiagramOperationSubAllComponent(props: DeepReadonly<DiagramOpera
                       const arrivalTime = train.diaTimes[train.diaTimes.length - 1].arrivalTime;
                       return (
                         <Fragment key={i}>
-                          <td>{departureTime !== null ? toStringFromSeconds(departureTime) : null}</td>
-                          <td>{arrivalTime !== null ? toStringFromSeconds(arrivalTime) : null}</td>
+                          <td>
+                            {departureTime !== null ? toStringFromSeconds(departureTime, shouldDisplaySecond) : null}
+                          </td>
+                          <td>{arrivalTime !== null ? toStringFromSeconds(arrivalTime, shouldDisplaySecond) : null}</td>
                         </Fragment>
                       );
                     }
@@ -161,6 +167,7 @@ function getTrain(
 
 export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperationSubProps>) {
   const operation = props.operation;
+  const shouldDisplaySecond = useRecoilValue(shouldDisplaySecondAtom);
   return (
     <>
       <table className='operation-table'>
@@ -196,10 +203,10 @@ export function DiagramOperationSubComponent(props: DeepReadonly<DiagramOperatio
                 <td>{train.trainType?.trainTypeName}</td>
                 <td>{train.trainName}</td>
                 <td>{nn(props.stationMap.get(diaTime1.stationId)).stationName}</td>
-                <td>{time1 !== null ? toStringFromSeconds(time1) : ''}</td>
+                <td>{time1 !== null ? toStringFromSeconds(time1, shouldDisplaySecond) : ''}</td>
                 <td>{directionText}</td>
                 <td>{nn(props.stationMap.get(diaTime2.stationId)).stationName}</td>
-                <td>{time2 !== null ? toStringFromSeconds(time2) : ''}</td>
+                <td>{time2 !== null ? toStringFromSeconds(time2, shouldDisplaySecond) : ''}</td>
               </tr>
             );
           })}

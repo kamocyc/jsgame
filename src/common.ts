@@ -229,12 +229,18 @@ export function sum(arr: number[]): number {
 }
 
 // showTime
-export function toStringFromSeconds(timeSeconds: number): string {
+export function toStringFromSeconds(timeSeconds: number, shouldDisplaySecond: boolean): string {
+  const s = timeSeconds % 60;
   const m = Math.floor((timeSeconds / 60) % 60);
-  return '' + Math.floor(timeSeconds / 60 / 60) + (m < 10 ? '0' + m : '' + m);
+  return (
+    '' +
+    Math.floor(timeSeconds / 60 / 60) +
+    (m < 10 ? '0' + m : '' + m) +
+    (shouldDisplaySecond ? (s < 10 ? '0' + s : '' + s) : '')
+  );
 }
 
-export function parseTime(text: string): number | undefined {
+function parseTimeHM(text: string): number | undefined {
   if (text === '') {
     return undefined;
   }
@@ -242,7 +248,7 @@ export function parseTime(text: string): number | undefined {
     text = '0' + text;
   }
   const hour = parseInt(text.substring(0, 2));
-  const minute = parseInt(text.substring(2));
+  const minute = parseInt(text.substring(2, 4));
 
   if (isNaN(hour) || isNaN(minute)) {
     return undefined;
@@ -253,6 +259,37 @@ export function parseTime(text: string): number | undefined {
   }
 
   return hour * 60 * 60 + minute * 60;
+}
+
+function parseTimeHMS(text: string): number | undefined {
+  if (text === '') {
+    return undefined;
+  }
+  if (text.length < 6) {
+    text = '0' + text;
+  }
+  const hour = parseInt(text.substring(0, 2));
+  const minute = parseInt(text.substring(2, 4));
+  const second = parseInt(text.substring(4, 6));
+
+  if (isNaN(hour) || isNaN(minute) || isNaN(second)) {
+    return undefined;
+  }
+  // 1日の範囲害ならundefinedを返す
+  if (hour >= 24 || minute >= 60 || second >= 60 || hour < 0 || minute < 0 || second < 0) {
+    return undefined;
+  }
+
+  return hour * 60 * 60 + minute * 60 + second;
+}
+
+export function parseTime(text: string, shouldDisplaySecond: boolean): number | undefined {
+  text = text.replace(':', '');
+  if (shouldDisplaySecond && text.length >= 5) {
+    return parseTimeHMS(text);
+  } else {
+    return parseTimeHM(text);
+  }
 }
 
 export function nn<T>(v: T | undefined | null): T {

@@ -122,7 +122,7 @@ export function getRandomColor(): string {
  * @param   {number}  l       The lightness
  * @return  {Array}           The RGB representation
  */
-function hslToRgb(h: number, s: number, l: number) {
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   let r, g, b;
 
   if (s === 0) {
@@ -240,7 +240,7 @@ export function toStringFromSeconds(timeSeconds: number, shouldDisplaySecond: bo
   );
 }
 
-function parseTimeHM(text: string): number | undefined {
+export function parseTimeHM(text: string): number | undefined {
   if (text === '') {
     return undefined;
   }
@@ -261,7 +261,7 @@ function parseTimeHM(text: string): number | undefined {
   return hour * 60 * 60 + minute * 60;
 }
 
-function parseTimeHMS(text: string): number | undefined {
+export function parseTimeHMS(text: string): number | undefined {
   if (text === '') {
     return undefined;
   }

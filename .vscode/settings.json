@@ -13,5 +13,7 @@
   "search.exclude": {
     "**/node_modules/*/**": true
   },
+  "vitest.enable": true,
+  "vitest.commandLine": "vitest",
   "typescript.workspaceSymbols.scope": "currentProject"
 }

@@ -1,6 +1,6 @@
-import { test, expect } from 'vitest';
+import { expect, test } from 'vitest';
+import { parseTime, toStringFromSeconds } from '../src/common.js';
 import { abstractSearch } from '../src/trackUtil.js';
-import { moduloRoundUp } from '../src/common.js';
 
 class Graph<T> {
   nodes: T[] = [];
@@ -44,7 +44,7 @@ test('abstractSearch', () => {
 
   const result = abstractSearch(
     'A',
-    (c) => c.charCodeAt(0),
+    (c) => c.charCodeAt(0).toString(),
     (c) => g.getNextNode(c),
     (c1, c2) => g.getDistance(c1, c2),
     (c) => false
@@ -60,7 +60,100 @@ test('abstractSearch', () => {
   ).toBe('A: 0, B: 3, C: 7, D: 4, E: 12, F: 22, G: 12');
 });
 
-test('moduloRoundDown', () => {
-  expect(moduloRoundDown(15, 10)).toBe(10);
-  expect(moduloRoundDown(10, 10)).toBe(10);
+test('toStringFromSeconds', () => {
+  // 上1桁が0の場合は省略される
+  // 第2引数がtrueの場合は、秒の2桁が表示される
+
+  expect(toStringFromSeconds(0, true)).toBe('00000');
+  expect(toStringFromSeconds(0, false)).toBe('000');
+  expect(toStringFromSeconds(60, true)).toBe('00100');
+  expect(toStringFromSeconds(60, false)).toBe('001');
+  expect(toStringFromSeconds(60 * 60, true)).toBe('10000');
+  expect(toStringFromSeconds(60 * 60, false)).toBe('100');
+  expect(toStringFromSeconds(10 * 60 * 60, true)).toBe('100000');
+  expect(toStringFromSeconds(10 * 60 * 60, false)).toBe('1000');
+  expect(toStringFromSeconds(10 * 60 * 60 + 1, true)).toBe('100001');
+  expect(toStringFromSeconds(10 * 60 * 60 + 1, false)).toBe('1000');
+  expect(toStringFromSeconds(10 * 60 * 60 + 30, true)).toBe('100030');
+  expect(toStringFromSeconds(10 * 60 * 60 + 30, false)).toBe('1000');
+});
+
+test('parseTime HM 正常系', () => {
+  // 上1桁が0の場合は省略しても解釈される
+  expect(parseTime('000', false)).toBe(0);
+  expect(parseTime('001', false)).toBe(60);
+  expect(parseTime('100', false)).toBe(60 * 60);
+  // 上1桁が0の場合に入力しても解釈される
+  expect(parseTime('0000', false)).toBe(0);
+  expect(parseTime('0001', false)).toBe(60);
+  expect(parseTime('0100', false)).toBe(60 * 60);
+
+  expect(parseTime('1000', false)).toBe(10 * 60 * 60);
+  expect(parseTime('1001', false)).toBe(10 * 60 * 60 + 60);
+  expect(parseTime('1010', false)).toBe(10 * 60 * 60 + 10 * 60);
+  expect(parseTime('1111', false)).toBe(11 * 60 * 60 + 11 * 60);
+  // 第2引数がfalseの場合は5文字目以降は無視される
+  expect(parseTime('111101', false)).toBe(11 * 60 * 60 + 11 * 60);
+  expect(parseTime('111111', false)).toBe(11 * 60 * 60 + 11 * 60);
+
+  // 第2引数がtrueの場合でも、桁数が4桁以下なら、秒が無いものとして解釈される
+  expect(parseTime('000', true)).toBe(0);
+  expect(parseTime('001', true)).toBe(60);
+  expect(parseTime('100', true)).toBe(60 * 60);
+  expect(parseTime('0000', true)).toBe(0);
+  expect(parseTime('0001', true)).toBe(60);
+  expect(parseTime('0100', true)).toBe(60 * 60);
+  expect(parseTime('1000', true)).toBe(10 * 60 * 60);
+  expect(parseTime('1001', true)).toBe(10 * 60 * 60 + 60);
+  expect(parseTime('1010', true)).toBe(10 * 60 * 60 + 10 * 60);
+  expect(parseTime('1111', true)).toBe(11 * 60 * 60 + 11 * 60);
+});
+
+test('parseTime HM 異常系', () => {
+  // 空
+  expect(parseTime('', false)).toBe(undefined);
+  // 桁数が足りない
+  expect(parseTime('a', false)).toBe(undefined);
+  expect(parseTime('1', false)).toBe(undefined);
+  expect(parseTime('11', false)).toBe(undefined);
+  // parseIntが失敗
+  expect(parseTime('aa00', false)).toBe(undefined);
+  // 時間と分が範囲外
+  expect(parseTime('2400', false)).toBe(undefined);
+  expect(parseTime('0060', false)).toBe(undefined);
+
+  // 第2引数がtrueの場合も同様
+  expect(parseTime('', true)).toBe(undefined);
+  expect(parseTime('a', true)).toBe(undefined);
+  expect(parseTime('1', true)).toBe(undefined);
+  expect(parseTime('11', true)).toBe(undefined);
+  expect(parseTime('aa00', true)).toBe(undefined);
+  expect(parseTime('2400', true)).toBe(undefined);
+  expect(parseTime('0060', true)).toBe(undefined);
+});
+
+test('parseTime HMS 正常系', () => {
+  expect(parseTime('00000', true)).toBe(0);
+  expect(parseTime('00100', true)).toBe(60);
+  expect(parseTime('10000', true)).toBe(60 * 60);
+  expect(parseTime('000000', true)).toBe(0);
+  expect(parseTime('000100', true)).toBe(60);
+  expect(parseTime('010000', true)).toBe(60 * 60);
+  expect(parseTime('100000', true)).toBe(10 * 60 * 60);
+  expect(parseTime('100100', true)).toBe(10 * 60 * 60 + 60);
+  expect(parseTime('101000', true)).toBe(10 * 60 * 60 + 10 * 60);
+  expect(parseTime('111100', true)).toBe(11 * 60 * 60 + 11 * 60);
+  expect(parseTime('111101', true)).toBe(11 * 60 * 60 + 11 * 60 + 1);
+  expect(parseTime('111111', true)).toBe(11 * 60 * 60 + 11 * 60 + 11);
+});
+
+test('parseTimeHMS 異常系', () => {
+  expect(parseTime('', true)).toBe(undefined);
+  expect(parseTime('a00', true)).toBe(undefined);
+  expect(parseTime('100', true)).toBe(undefined);
+  expect(parseTime('1100', true)).toBe(undefined);
+  expect(parseTime('aa0000', true)).toBe(undefined);
+  expect(parseTime('240000', true)).toBe(undefined);
+  expect(parseTime('006000', true)).toBe(undefined);
+  expect(parseTime('000060', true)).toBe(undefined);
 });

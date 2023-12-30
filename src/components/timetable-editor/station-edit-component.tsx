@@ -5,7 +5,7 @@ import { nn } from '../../common';
 import { Station, StationLike, TimetableDirection, Train, generateId } from '../../model';
 import { ListSettingCommonComponent } from '../track-editor/ListSettingCommonComponent';
 import { EditableTextComponent, SetTimetable } from './common-component';
-import { createNewStation } from './timetable-util';
+import { createNewStation, fillMissingTimes } from './timetable-util';
 
 export function StationEditorListEntryComponent({
   stationIds,
@@ -60,7 +60,11 @@ export function StationEditListComponent({
         setTimetable((draftTimetable, trainData, stationMap) => {
           const newStation = newStations.find((s) => !stations.has(s.stationId));
           if (newStation !== undefined) {
-            createNewStationAndUpdate(trainData, newStation);
+            // TODO:
+            const newStationIds = [...stationIds, newStation.stationId];
+            for (const train of trainData.trains) {
+              train.diaTimes = fillMissingTimes(train.diaTimes, newStationIds);
+            }
           }
 
           const deletedStation = stationIds.find((stationId) => !newStations.some((s) => s.stationId === stationId));

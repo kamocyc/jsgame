@@ -196,21 +196,26 @@ export function getInitialTimetable(
   return [timetable, trains];
 }
 
-// 足りない駅の時刻を補完する
-export function fillMissingTimes(train: Train, stations: DeepReadonly<StationLike[]>): void {
-  for (const station of stations) {
-    const diaTime = train.diaTimes.find((diaTime) => diaTime.stationId === station.stationId);
-    if (diaTime === undefined) {
-      train.diaTimes.push({
+// 足りない駅の時刻を補完と削除する stationIdsを正とする
+export function fillMissingTimes(diaTimes: DeepReadonly<DiaTime[]>, stationIds: DeepReadonly<string[]>) {
+  const newDiaTimes: DiaTime[] = [];
+  for (const stationId of stationIds) {
+    const diaTime = diaTimes.find((diaTime) => diaTime.stationId === stationId);
+    if (diaTime !== undefined) {
+      newDiaTimes.push(diaTime);
+    } else {
+      newDiaTimes.push({
         diaTimeId: generateId(),
-        stationId: station.stationId,
-        platformId: null,
         arrivalTime: null,
         departureTime: null,
         isPassing: false,
-        isInService: true,
+        stationId: stationId,
+        platformId: null,
         trackId: null,
+        isInService: true,
       });
     }
   }
+
+  return newDiaTimes;
 }

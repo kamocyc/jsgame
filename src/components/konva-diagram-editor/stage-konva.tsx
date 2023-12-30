@@ -478,7 +478,10 @@ function commitDrawingLine(
       lastStationOperation: getDefaultConnectionType(),
     };
 
-    fillMissingTimes(newTrain, stations);
+    newTrain.diaTimes = fillMissingTimes(
+      newTrain.diaTimes,
+      stations.map((s) => s.stationId)
+    );
 
     diagramProps.crudTrain.addTrain(newTrain, direction);
   }

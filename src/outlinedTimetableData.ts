@@ -311,7 +311,6 @@ export const OutlinedTimetableFunc = {
     return undefined;
   },
 
-  updateStation(station: StationLike, updater: (station: StationLike) => void) {},
   updateTimetable(
     that: OutlinedTimetableData,
     timetableId: string,

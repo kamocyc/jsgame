@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { parseTime, toStringFromSeconds, upto } from '../src/common.js';
+import { parseTime, sum, toStringFromSeconds, upto } from '../src/common.js';
 import { abstractSearch } from '../src/trackUtil.js';
 
 class Graph<T> {
@@ -159,4 +159,8 @@ test('parseTimeHMS 異常系', () => {
 test('upto', () => {
   expect(upto(5)).toStrictEqual([0, 1, 2, 3, 4]);
   expect(upto(0)).toStrictEqual([]);
+});
+
+test('sum', () => {
+  expect(sum([1, 2, 3])).toBe(6);
 });

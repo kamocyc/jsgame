@@ -5,6 +5,7 @@ import { useRecoilState, useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { nn, upto } from '../../common';
 import { PlatformLike, StationLike } from '../../model';
+import { exceptionHandler } from '../timetable-editor/common-component';
 import {
   gridColor,
   isStationExpandedAtom,
@@ -308,7 +309,7 @@ export const StationKonva = forwardRef<Konva.Text | null, Props>(function Statio
 
 export type StationViewKonvaProps = DeepReadonly<{}>;
 
-export function StationViewKonva({}: StationViewKonvaProps) {
+export const StationViewKonva = exceptionHandler(({}: StationViewKonvaProps) => {
   const stationKonvaRef = useRef<(Konva.Text | null)[]>([]);
   const stationPositions = useRecoilValue(stationPositionsAtom).stationPositions;
   const [isStationExpanded, setIsStationExpanded] = useRecoilState(isStationExpandedAtom);
@@ -356,4 +357,4 @@ export function StationViewKonva({}: StationViewKonvaProps) {
       {stationKonvas}
     </Layer>
   );
-}
+});

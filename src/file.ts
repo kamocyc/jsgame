@@ -55,8 +55,9 @@ export async function loadCustomFile(file: File): Promise<null | OutlinedTimetab
         const rawData = JSON_retrocycle(JSON.parse(reader.result as string));
         if ('timetableData' in rawData) {
           // 独自形式
-          console.log(rawData.timetableData.timetable);
-          resolve(rawData.timetableData.timetable as OutlinedTimetableData);
+          console.log(rawData.timetableData);
+          rawData.timetableData._trains = new Map(Object.entries(rawData.timetableData._trains));
+          resolve(rawData.timetableData as OutlinedTimetableData);
         } else {
           // diaFreakの対応はとりあえず後回し
           // const diagram = getDiaFreaks(reader.result as string);

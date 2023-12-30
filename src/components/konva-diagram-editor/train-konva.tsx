@@ -5,6 +5,7 @@ import { DeepReadonly, assert } from 'ts-essentials';
 import { nn, toStringFromSeconds } from '../../common';
 import { DiaTime, Point, StationLike, Train } from '../../model';
 import { getDirection } from '../../outlinedTimetableData';
+import { exceptionHandler } from '../timetable-editor/common-component';
 import { DiagramProps } from './drawer-util';
 import { WarningKonva } from './hover-konva';
 import {
@@ -34,17 +35,6 @@ export type TrainKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;
   mouseEventManager: MouseEventManager;
 }>;
-
-export function exceptionHandler<T>(f: (props: T) => JSX.Element): (props: T) => JSX.Element {
-  return (props: T) => {
-    try {
-      return f(props);
-    } catch (e) {
-      console.warn(e);
-      return <></>;
-    }
-  };
-}
 
 export const TrainKonva = exceptionHandler((props: TrainKonvaProps) => {
   const { train, diagramProps, mouseEventManager } = props;

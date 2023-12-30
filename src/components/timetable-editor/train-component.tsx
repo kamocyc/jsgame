@@ -151,6 +151,43 @@ function TrainListItemComponent({
   const errorMap = toMap(errors, (error) => error.diaTimeId ?? undefined);
   const width = shouldDisplaySecond ? 60 : 44;
 
+  function changeTime(
+    diaTimeId: string,
+    oldTime: number | null,
+    newTime: number | null,
+    newTimeSetter: (diaTime: DiaTime, newTime_: number | null) => void
+  ) {
+    if (newTime === oldTime) {
+      return;
+    }
+
+    if (shouldChangeAfterTime) {
+      updateTrain((train) => {
+        const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTimeId);
+        assert(diaTimeIndex !== -1);
+        if (newTime === null || oldTime === null) {
+          const diaTime = train.diaTimes[diaTimeIndex];
+          newTimeSetter(diaTime, newTime);
+        } else {
+          const timeDiff = newTime - nn(oldTime);
+          for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
+            const diaTime = train.diaTimes[i];
+            if (diaTime.arrivalTime !== null) {
+              diaTime.arrivalTime += timeDiff;
+            }
+            if (diaTime.departureTime !== null) {
+              diaTime.departureTime += timeDiff;
+            }
+          }
+        }
+      });
+    } else {
+      updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
+        newTimeSetter(diaTime, newTime);
+      });
+    }
+  }
+
   return (
     <div
       style={{
@@ -207,36 +244,10 @@ function TrainListItemComponent({
         <TimeInputComponent
           time={diaTime.arrivalTime}
           width={width}
-          setTime={(time) => {
-            if (diaTime.arrivalTime === time) {
-              return;
-            }
-
-            if (shouldChangeAfterTime) {
-              updateTrain((train) => {
-                const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
-                assert(diaTimeIndex !== -1);
-                if (time === null || diaTime.arrivalTime === null) {
-                  const diaTime = train.diaTimes[diaTimeIndex];
-                  diaTime.arrivalTime = time;
-                } else {
-                  const timeDiff = time - nn(diaTime.arrivalTime);
-                  for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
-                    const diaTime = train.diaTimes[i];
-                    if (diaTime.arrivalTime !== null) {
-                      diaTime.arrivalTime += timeDiff;
-                    }
-                    if (diaTime.departureTime !== null) {
-                      diaTime.departureTime += timeDiff;
-                    }
-                  }
-                }
-              });
-            } else {
-              updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
-                diaTime.arrivalTime = time;
-              });
-            }
+          setTime={(newTime) => {
+            changeTime(diaTime.diaTimeId, diaTime.arrivalTime, newTime, (diaTime, newTime) => {
+              diaTime.arrivalTime = newTime;
+            });
           }}
         />
         <PlatformComponent
@@ -252,70 +263,9 @@ function TrainListItemComponent({
           time={diaTime.departureTime}
           width={width}
           setTime={(newTime) => {
-            // changeTime(diaTime.departureTime, (diaTime, newTime) => {
-            //   diaTime.departureTime = newTime;
-            // });
-            // function changeTime(oldTime: number | null, newTimeSetter: (diaTime: DiaTime, newTime_: number | null) => void) {
-            //   if (newTime === oldTime) {
-            //     return;
-            //   }
-
-            //   if (shouldChangeAfterTime) {
-            //     updateTrain((train) => {
-            //       const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
-            //       assert(diaTimeIndex !== -1);
-            //       if (newTime === null || oldTime === null) {
-            //         const diaTime = train.diaTimes[diaTimeIndex];
-            //         newTimeSetter(diaTime, newTime);
-            //       } else {
-            //         const timeDiff = newTime - nn(oldTime);
-            //         for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
-            //           const diaTime = train.diaTimes[i];
-            //           if (diaTime.arrivalTime !== null) {
-            //             diaTime.arrivalTime += timeDiff;
-            //           }
-            //           if (diaTime.departureTime !== null) {
-            //             diaTime.departureTime += timeDiff;
-            //           }
-            //         }
-            //       }
-            //     });
-            //   } else {
-            //     updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
-            //       newTimeSetter(diaTime, newTime);
-            //     });
-            //   }
-            // }
-
-            if (diaTime.departureTime === newTime) {
-              return;
-            }
-
-            if (shouldChangeAfterTime) {
-              updateTrain((train) => {
-                const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
-                assert(diaTimeIndex !== -1);
-                if (newTime === null || diaTime.departureTime === null) {
-                  const diaTime = train.diaTimes[diaTimeIndex];
-                  diaTime.departureTime = newTime;
-                } else {
-                  const timeDiff = newTime - nn(diaTime.departureTime);
-                  for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
-                    const diaTime = train.diaTimes[i];
-                    if (diaTime.arrivalTime !== null) {
-                      diaTime.arrivalTime += timeDiff;
-                    }
-                    if (diaTime.departureTime !== null) {
-                      diaTime.departureTime += timeDiff;
-                    }
-                  }
-                }
-              });
-            } else {
-              updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
-                diaTime.departureTime = newTime;
-              });
-            }
+            changeTime(diaTime.diaTimeId, diaTime.departureTime, newTime, (diaTime, newTime) => {
+              diaTime.departureTime = newTime;
+            });
           }}
         />
       </div>

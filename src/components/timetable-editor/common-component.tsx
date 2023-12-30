@@ -365,3 +365,14 @@ export type SetTimetable = (
     stationMap: Map<string, DeepReadonly<StationLike>> | null
   ) => void
 ) => void;
+
+export function exceptionHandler<T>(f: (props: T) => JSX.Element): (props: T) => JSX.Element {
+  return (props: T) => {
+    try {
+      return f(props);
+    } catch (e) {
+      console.warn(e);
+      return <></>;
+    }
+  };
+}

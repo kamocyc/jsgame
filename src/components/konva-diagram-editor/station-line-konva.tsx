@@ -3,10 +3,10 @@ import { useRecoilValue } from 'recoil';
 import { DeepReadonly } from 'ts-essentials';
 import { assert, nn, upto } from '../../common';
 import { StationLike } from '../../model';
+import { exceptionHandler } from '../timetable-editor/common-component';
 import { hitStrokeWidth } from './drawer-util';
 import { gridColor, isStationExpandedAtom, stationPositionsAtom, stationsAtom, virtualCanvasWidth } from './konva-util';
 import { getPlatformPositions } from './station-view-konva';
-import { exceptionHandler } from './train-konva';
 
 // 路線追加のイベントハンドラなどやりたい
 

@@ -23,9 +23,10 @@ function saveTimetableDataFile(timetableData: OutlinedTimetableData) {
 }
 
 function toStringTimeTableData(timetableData: OutlinedTimetableData) {
-  const obj = {
-    timetableData: timetableData,
+  const obj: any = {
+    timetableData: { ...timetableData },
   };
+  obj.timetableData._trains = mapToObject(timetableData._trains);
 
   return JSON.stringify(JSON_decycle(obj), null, 2);
 }

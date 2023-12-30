@@ -4,9 +4,9 @@ import { DeepReadonly } from 'ts-essentials';
 import { assert, lst_, nn, whileLoop } from '../../common';
 import { Operation } from '../../model';
 import { getDirection } from '../../outlinedTimetableData';
+import { exceptionHandler } from '../timetable-editor/common-component';
 import { DiagramProps, hitStrokeWidth } from './drawer-util';
 import { allTrainsMapAtom, createPositionDiaTimeMap, stationMapSelector, useViewStateValues } from './konva-util';
-import { exceptionHandler } from './train-konva';
 
 export type OperationKonvaProps = DeepReadonly<{
   diagramProps: DiagramProps;

@@ -41,13 +41,13 @@ export function getStationIdMapKey(stationId: string, platformId: string): strin
   return stationId + '__' + platformId;
 }
 
-export function moduloRoundDown(value: number, mod: number): number {
-  if (value % mod !== 0) {
-    return Math.floor(value / mod) * mod;
-  } else {
-    return value;
-  }
-}
+// export function moduloRoundDown(value: number, mod: number): number {
+//   if (value % mod !== 0) {
+//     return Math.floor(value / mod) * mod;
+//   } else {
+//     return value;
+//   }
+// }
 
 export function mapToObject<V>(map: DeepReadonly<Map<string, V>>) {
   return [...map.entries()].reduce((obj, [key, value]) => {

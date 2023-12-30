@@ -121,7 +121,7 @@ export function TimeInputComponent({
   }, [isEditing]);
   useEffect(() => {
     setInputValue(toStringFromTime(time));
-  }, [shouldDisplaySecond]);
+  }, [shouldDisplaySecond, time]);
 
   function getNextTime(time: number | null) {
     if (time === null) {

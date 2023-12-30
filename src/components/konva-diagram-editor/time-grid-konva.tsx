@@ -66,7 +66,6 @@ export function TimeGridKonva(props: TimeGridKonvaProps) {
               y={0}
               text={hour.toString()}
               fontSize={20 / scale}
-              fontFamily='Calibri'
               fill={gridColor}
               listening={false}
             />

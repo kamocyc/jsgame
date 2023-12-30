@@ -125,7 +125,7 @@ export function getInitialTimetable(
     return {
       diaTimeId: generateId(),
       arrivalTime: index === 0 ? null : currentTime,
-      departureTime: index === maxStopLength - 1 ? null : currentTime + 1,
+      departureTime: index === maxStopLength - 1 ? null : currentTime + 60,
       isPassing: false,
       stationId: stop.platform.stationId,
       platformId: stop.platform.platformId,

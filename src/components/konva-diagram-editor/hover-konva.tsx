@@ -30,7 +30,7 @@ export function HoverKonva(props: HoverKonvaProps) {
             width={100}
             height={100}
           />
-          <Text text={message} padding={2} fontSize={16 / scale} listening={false} fontFamily='Calibri' fill='black' />
+          <Text text={message} padding={2} fontSize={16 / scale} listening={false} fill='black' />
         </Label>
       ) : (
         <></>
@@ -57,7 +57,6 @@ export function WarningKonva(props: WarningKonvaProps) {
         x={x}
         y={y}
         fontSize={18 / scale}
-        fontFamily='Calibri'
         fill='red'
         onMouseEnter={() => {
           setIsHoverDisplayed(true);

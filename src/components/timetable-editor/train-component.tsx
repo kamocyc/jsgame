@@ -208,6 +208,10 @@ function TrainListItemComponent({
           time={diaTime.arrivalTime}
           width={width}
           setTime={(time) => {
+            if (diaTime.arrivalTime === time) {
+              return;
+            }
+
             if (shouldChangeAfterTime) {
               updateTrain((train) => {
                 const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
@@ -247,16 +251,55 @@ function TrainListItemComponent({
         <TimeInputComponent
           time={diaTime.departureTime}
           width={width}
-          setTime={(time) => {
+          setTime={(newTime) => {
+            // changeTime(diaTime.departureTime, (diaTime, newTime) => {
+            //   diaTime.departureTime = newTime;
+            // });
+            // function changeTime(oldTime: number | null, newTimeSetter: (diaTime: DiaTime, newTime_: number | null) => void) {
+            //   if (newTime === oldTime) {
+            //     return;
+            //   }
+
+            //   if (shouldChangeAfterTime) {
+            //     updateTrain((train) => {
+            //       const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
+            //       assert(diaTimeIndex !== -1);
+            //       if (newTime === null || oldTime === null) {
+            //         const diaTime = train.diaTimes[diaTimeIndex];
+            //         newTimeSetter(diaTime, newTime);
+            //       } else {
+            //         const timeDiff = newTime - nn(oldTime);
+            //         for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
+            //           const diaTime = train.diaTimes[i];
+            //           if (diaTime.arrivalTime !== null) {
+            //             diaTime.arrivalTime += timeDiff;
+            //           }
+            //           if (diaTime.departureTime !== null) {
+            //             diaTime.departureTime += timeDiff;
+            //           }
+            //         }
+            //       }
+            //     });
+            //   } else {
+            //     updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
+            //       newTimeSetter(diaTime, newTime);
+            //     });
+            //   }
+            // }
+
+            if (diaTime.departureTime === newTime) {
+              return;
+            }
+
             if (shouldChangeAfterTime) {
               updateTrain((train) => {
                 const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTime.diaTimeId);
                 assert(diaTimeIndex !== -1);
-                if (time === null || diaTime.departureTime === null) {
+                if (newTime === null || diaTime.departureTime === null) {
                   const diaTime = train.diaTimes[diaTimeIndex];
-                  diaTime.departureTime = time;
+                  diaTime.departureTime = newTime;
                 } else {
-                  const timeDiff = time - nn(diaTime.departureTime);
+                  const timeDiff = newTime - nn(diaTime.departureTime);
                   for (let i = diaTimeIndex; i < train.diaTimes.length; i++) {
                     const diaTime = train.diaTimes[i];
                     if (diaTime.arrivalTime !== null) {
@@ -270,7 +313,7 @@ function TrainListItemComponent({
               });
             } else {
               updateDiaTime(diaTime.diaTimeId, (diaTime: DiaTime) => {
-                diaTime.departureTime = time;
+                diaTime.departureTime = newTime;
               });
             }
           }}

@@ -16,6 +16,7 @@ import {
   stationCanvasWidthAtom,
   stationIdsAtom,
   stationsAtom,
+  timeUnitAtom,
 } from '../konva-diagram-editor/konva-util';
 import { MainViewKonva } from '../konva-diagram-editor/stage-konva';
 import { StationViewKonva } from '../konva-diagram-editor/station-view-konva';
@@ -32,6 +33,7 @@ export function KonvaCanvas(
   const [trains, setTrains] = useRecoilState(allTrainsMapAtom);
   const stationCanvasWidth = useRecoilValue(stationCanvasWidthAtom);
   const [selectedTrainIds, setSelectedTrainIds] = useRecoilState(selectedTrainIdsAtom);
+  const timeUnit = useRecoilValue(timeUnitAtom);
 
   const minTime = Math.min(
     ...(
@@ -73,7 +75,7 @@ export function KonvaCanvas(
         }
         if (e.key === 'ArrowLeft') {
           const startTimes = getDragStartTimes(selectedTrainIds, props.trains);
-          const timeDiff = -1 * 15;
+          const timeDiff = -1 * timeUnit;
           props.crudTrain.setTrains((trains) => {
             setDraggingPoint(selectedTrainIds, trains, timeDiff, startTimes);
           });
@@ -82,7 +84,7 @@ export function KonvaCanvas(
         }
         if (e.key === 'ArrowRight') {
           const startTimes = getDragStartTimes(selectedTrainIds, props.trains);
-          const timeDiff = 1 * 15;
+          const timeDiff = 1 * timeUnit;
           props.crudTrain.setTrains((trains) => {
             setDraggingPoint(selectedTrainIds, trains, timeDiff, startTimes);
           });

@@ -11,7 +11,7 @@ import {
   OutlinedTimetableData,
   OutlinedTimetableFunc,
 } from '../../outlinedTimetableData';
-import { shouldChangeAfterTimeAtom, shouldDisplaySecondAtom } from '../konva-diagram-editor/konva-util';
+import { shouldChangeAfterTimeAtom, shouldDisplaySecondAtom, timeUnitAtom } from '../konva-diagram-editor/konva-util';
 import { SetTimetable, SettingColumnComponent, TabComponent, getStationMap, reverseArray } from './common-component';
 import { KonvaCanvas } from './diagram-component';
 import { DiagramOperationComponent } from './diagram-operation-component';
@@ -144,6 +144,7 @@ export function TimetableEditorComponent({
   const [settingData, setSettingData] = useState<DeepReadonly<SettingData> | null>(null);
   const [shouldChangeAfterTime, setShouldChangeAfterTime] = useRecoilState(shouldChangeAfterTimeAtom);
   const [shouldDisplaySecond, setShouldDisplaySecond] = useRecoilState(shouldDisplaySecondAtom);
+  const [timeUnit, setTimeUnit] = useRecoilState(timeUnitAtom);
   const [resetSeed, setResetSeed] = useState(1);
 
   const [inboundTrains, outboundTrains] = [
@@ -310,6 +311,23 @@ export function TimetableEditorComponent({
               setShouldDisplaySecond(e.target.checked);
             }}
           />
+        </label>
+        <label>
+          時間の変更単位
+          <select
+            value={timeUnit}
+            onChange={(e) => {
+              setTimeUnit(parseInt(e.target.value));
+            }}
+          >
+            <option value='1'>1</option>
+            <option value='5'>5</option>
+            <option value='10'>10</option>
+            <option value='15'>15</option>
+            <option value='20'>20</option>
+            <option value='30'>30</option>
+            <option value='60'>60</option>
+          </select>
         </label>
       </div>
       <div style={{ display: 'flex' }}>

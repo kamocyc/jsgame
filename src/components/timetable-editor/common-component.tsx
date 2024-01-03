@@ -4,7 +4,7 @@ import { DeepReadonly } from 'ts-essentials';
 import { StateUpdater, parseTime, toStringFromSeconds } from '../../common';
 import { ContextData, StationLike, Train, getDefaultTime } from '../../model';
 import { OutlinedTimetable } from '../../outlinedTimetableData';
-import { shouldDisplaySecondAtom } from '../konva-diagram-editor/konva-util';
+import { shouldDisplaySecondAtom, timeUnitAtom } from '../konva-diagram-editor/konva-util';
 import './timetable-editor.css';
 
 export function getStationMap(stations: DeepReadonly<StationLike[]>): DeepReadonly<Map<string, StationLike>> {
@@ -104,6 +104,7 @@ export function TimeInputComponent({
   const initialValue = toStringFromTime(time);
   const [inputValue, setInputValue] = useState(initialValue);
   const [isEditing, setIsEditing] = useState(false);
+  const timeUnit = useRecoilValue(timeUnitAtom);
 
   // コントロール外をクリックしたときに編集を終了する
   const ref = useRef<HTMLInputElement>(null);
@@ -123,18 +124,18 @@ export function TimeInputComponent({
     setInputValue(toStringFromTime(time));
   }, [shouldDisplaySecond, time]);
 
-  function getNextTime(time: number | null) {
+  function getNextTime(time: number | null, timeUnit: number) {
     if (time === null) {
       return getDefaultTime();
     } else {
-      return (time + 60) % (24 * 60 * 60);
+      return (time + timeUnit) % (24 * 60 * 60);
     }
   }
-  function getPrevTime(time: number | null) {
+  function getPrevTime(time: number | null, timeUnit: number) {
     if (time === null) {
       return getDefaultTime();
     } else {
-      return (time - 60 + 24 * 60 * 60) % (24 * 60 * 60);
+      return (time - timeUnit + 24 * 60 * 60) % (24 * 60 * 60);
     }
   }
 
@@ -186,12 +187,12 @@ export function TimeInputComponent({
         onKeyDown={(e) => {
           // 上キーが押されたら数字を増やす
           if (e.key === 'ArrowUp') {
-            const newTime = getNextTime(time);
+            const newTime = getNextTime(time, timeUnit);
             setTime(newTime);
             setInputValue(toStringFromSeconds(newTime, shouldDisplaySecond));
           }
           if (e.key === 'ArrowDown') {
-            const newTime = getPrevTime(time);
+            const newTime = getPrevTime(time, timeUnit);
             setTime(newTime);
             setInputValue(toStringFromSeconds(newTime, shouldDisplaySecond));
           }

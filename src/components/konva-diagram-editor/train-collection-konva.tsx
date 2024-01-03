@@ -9,7 +9,9 @@ import {
   getPointerPosition,
   secondWidthAtom,
   selectedTrainIdsAtom,
+  shouldChangeAfterTimeAtom,
   stationMapSelector,
+  timeUnitAtom,
   useViewStateValues,
 } from './konva-util';
 import { MouseEventManager } from './mouse-event-manager';
@@ -26,9 +28,11 @@ function getNewTime(
   diaTime: DiaTime,
   orgTime: number,
   timeDiff: number,
-  arrivalOrDeparture: 'ArrivalTime' | 'DepartureTime'
+  arrivalOrDeparture: 'ArrivalTime' | 'DepartureTime',
+  shouldChangeAfterTime: boolean,
+  timeUnit: number
 ): number {
-  let newTime = orgTime + timeDiff;
+  let newTime = orgTime + (timeUnit === 1 ? timeDiff : Math.round(timeDiff / timeUnit) * timeUnit);
 
   // 前の時間以降にする
   const diaTimes = train.diaTimes;
@@ -37,10 +41,13 @@ function getNewTime(
   // console.log({ index, newTime, orgTime: orgTime });
 
   if (arrivalOrDeparture === 'ArrivalTime') {
-    const departureTime = diaTimes[index].departureTime;
-    if (departureTime !== null) {
-      if (newTime > departureTime) {
-        newTime = departureTime;
+    // 後の時刻を一緒に変更するときは、出発時刻も変えるので、制限をかけない
+    if (!shouldChangeAfterTime) {
+      const departureTime = diaTimes[index].departureTime;
+      if (departureTime !== null) {
+        if (newTime > departureTime) {
+          newTime = departureTime;
+        }
       }
     }
   } else if (arrivalOrDeparture === 'DepartureTime') {
@@ -80,7 +87,9 @@ function setDraggingPointForTime(
   arrivalOrDeparture: 'arrivalTime' | 'departureTime',
   movePlatform: boolean,
   newPlatformId: string | null,
-  dragStartTrainTimes: DeepReadonly<{ trainId: string; diaTimes: DiaTime[] }[]>
+  dragStartTrainTimes: DeepReadonly<{ trainId: string; diaTimes: DiaTime[] }[]>,
+  shouldChangeAfterTime: boolean,
+  timeUnit: number
 ) {
   const diaTime = train.diaTimes.find((diaTime) => diaTime.diaTimeId === diaTimeId);
   assert(diaTime !== undefined);
@@ -105,12 +114,88 @@ function setDraggingPointForTime(
     }
   }
 
+  let actualTimeDiff: null | number = null;
   if (orgDepartureTime !== null) {
-    diaTime.departureTime = getNewTime(train, diaTime, orgDepartureTime, timeDiff, 'DepartureTime');
+    diaTime.departureTime = getNewTime(
+      train,
+      diaTime,
+      orgDepartureTime,
+      timeDiff,
+      'DepartureTime',
+      shouldChangeAfterTime,
+      timeUnit
+    );
+    actualTimeDiff = diaTime.departureTime - orgDepartureTime;
   }
   if (orgArrivalTime !== null) {
-    diaTime.arrivalTime = getNewTime(train, diaTime, orgArrivalTime, timeDiff, 'ArrivalTime');
+    diaTime.arrivalTime = getNewTime(
+      train,
+      diaTime,
+      orgArrivalTime,
+      timeDiff,
+      'ArrivalTime',
+      shouldChangeAfterTime,
+      timeUnit
+    );
+    actualTimeDiff = diaTime.arrivalTime - orgArrivalTime;
   }
+
+  if (shouldChangeAfterTime && actualTimeDiff !== null) {
+    const diaTimeIndex = train.diaTimes.findIndex((diaTime) => diaTime.diaTimeId === diaTimeId);
+    assert(diaTimeIndex !== -1);
+
+    const orgTrainTimesMap: Map<string, DiaTime> = new Map(
+      dragStartTrainTimes
+        .filter((tt) => tt.trainId === train.trainId)
+        .flatMap((tt) => tt.diaTimes)
+        .map((diaTime) => [diaTime.diaTimeId, diaTime])
+    );
+
+    // 到着時間を変更していて、発車時間が設定されているとき
+    const orgDepartureTime = nn(orgTrainTimesMap.get(diaTime.diaTimeId)).departureTime;
+    if (arrivalOrDeparture === 'arrivalTime' && orgDepartureTime !== null) {
+      if (diaTime.departureTime !== null && orgDepartureTime !== null) {
+        diaTime.departureTime = getNewTime(
+          train,
+          diaTime,
+          orgDepartureTime,
+          actualTimeDiff,
+          'DepartureTime',
+          shouldChangeAfterTime,
+          timeUnit
+        );
+      }
+    }
+
+    for (let i = diaTimeIndex + 1; i < train.diaTimes.length; i++) {
+      const diaTime = train.diaTimes[i];
+      const orgArrivalTime = nn(orgTrainTimesMap.get(diaTime.diaTimeId)).arrivalTime;
+      if (diaTime.arrivalTime !== null && orgArrivalTime !== null) {
+        diaTime.arrivalTime = getNewTime(
+          train,
+          diaTime,
+          orgArrivalTime,
+          actualTimeDiff,
+          'ArrivalTime',
+          shouldChangeAfterTime,
+          timeUnit
+        );
+      }
+      const orgDepartureTime = nn(orgTrainTimesMap.get(diaTime.diaTimeId)).departureTime;
+      if (diaTime.departureTime !== null && orgDepartureTime !== null) {
+        diaTime.departureTime = getNewTime(
+          train,
+          diaTime,
+          orgDepartureTime,
+          actualTimeDiff,
+          'DepartureTime',
+          shouldChangeAfterTime,
+          timeUnit
+        );
+      }
+    }
+  }
+
   if (movePlatform && newPlatformId !== null) {
     diaTime.platformId = newPlatformId;
   }
@@ -181,6 +266,8 @@ export function TrainCollectionKonva(props: TrainCollectionKonvaProps) {
   const selectedTrainIds = useRecoilValue(selectedTrainIdsAtom);
   const trains = useRecoilValue(allTrainsMapAtom);
   const stationMap = useRecoilValue(stationMapSelector);
+  const shouldChangeAfterTime = useRecoilValue(shouldChangeAfterTimeAtom);
+  const timeUnit = useRecoilValue(timeUnitAtom);
 
   mouseEventManager.registerDragStartHandler('train-line-group', (e) => {
     if (e.evt.button !== 0) return null;
@@ -217,7 +304,9 @@ export function TrainCollectionKonva(props: TrainCollectionKonvaProps) {
           timeType,
           platformOrStation === 'platform',
           platformId ?? null,
-          dragStartTimes
+          dragStartTimes,
+          shouldChangeAfterTime,
+          timeUnit
         );
       });
     } else {

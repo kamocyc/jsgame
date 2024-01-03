@@ -195,6 +195,10 @@ export const stationMapSelector = selector<DeepReadonly<Map<string, StationLike>
     return getStationMap(stations);
   },
 });
+export const timeUnitAtom = atom<number>({
+  key: 'timeUnitAtom',
+  default: 60,
+});
 
 export const stationPositionsAtom = selector<
   DeepReadonly<{ stationPositions: StationPosition[]; lastPosition: number }>
